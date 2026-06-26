@@ -50,5 +50,7 @@ void     cmd_settings(App *app);
 void     cmd_buffer_next(App *app);
 void     cmd_buffer_prev(App *app);
 void     cmd_buffer_close(App *app);
+void     cmd_open_workspace(App *app);
+void     cmd_change_dir(App *app);
 
 #endif

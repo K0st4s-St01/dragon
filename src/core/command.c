@@ -35,6 +35,8 @@ void command_registry_init(void) {
     command_register("bn",             "Buffer next",         "Buffer",  cmd_buffer_next);
     command_register("bp",             "Buffer previous",     "Buffer",  cmd_buffer_prev);
     command_register("bc",             "Buffer close",        "Buffer",  cmd_buffer_close);
+    command_register("open-workspace", "Open workspace",      "Workspace", cmd_open_workspace);
+    command_register("cwd",            "Change working dir",  "Workspace", cmd_change_dir);
 }
 
 void command_register(const char *name, const char *label,
@@ -184,4 +186,15 @@ void cmd_buffer_prev(App *app) {
 void cmd_buffer_close(App *app) {
     int current = app_get_current_buffer_index(app);
     app_close_buffer(app, current);
+}
+
+void cmd_open_workspace(App *app) {
+    /* For now, use file browser to select workspace directory */
+    extern void panel_file_browser_open(App *);
+    panel_file_browser_open(app);
+}
+
+void cmd_change_dir(App *app) {
+    (void)app;
+    /* TODO: Implement directory change prompt */
 }

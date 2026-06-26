@@ -13,6 +13,7 @@ typedef struct {
     char   *filepath;
     bool    dirty;
     int     scroll_y;
+    int     scroll_x;
     int     viewport_lines;
     History history;
     char   *clipboard;
@@ -103,6 +104,7 @@ void document_find_char_backward(Document *doc, char c);
 void document_till_char_forward(Document *doc, char c);
 void document_till_char_backward(Document *doc, char c);
 void document_scroll_center(Document *doc);
+void document_scroll_horizontal_center(Document *doc);
 void document_scroll_top(Document *doc, int viewport_h);
 void document_scroll_bottom(Document *doc, int viewport_h);
 void document_search_next(Document *doc);
@@ -164,5 +166,10 @@ void document_match_bracket(Document *doc);
 void document_goto_last_modification(Document *doc);
 void document_insert_file(Document *doc, const char *path);
 void document_move_file(Document *doc, const char *path);
+void document_pipe_selection(Document *doc, const char *cmd);
+void document_pipe_to(Document *doc, const char *cmd);
+void document_insert_output(Document *doc, const char *cmd);
+void document_append_output(Document *doc, const char *cmd);
+void document_filter_selection(Document *doc, const char *cmd);
 
 #endif

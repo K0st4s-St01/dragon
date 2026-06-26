@@ -100,6 +100,26 @@ static void fb_scan_dir(const char *dir, int depth) {
 
 static void fb_rebuild(void) {
     fb_count = 0;
+    
+    /* Add parent directory entry (..) at the top */
+    if (strcmp(fb_root, "/") != 0) {
+        FbEntry parent;
+        /* Compute parent path more safely */
+        char parent_path[FB_PATH_MAX];
+        snprintf(parent_path, sizeof(parent_path), "%s", fb_root);
+        char *last_slash = strrchr(parent_path, '/');
+        if (last_slash && last_slash != parent_path) {
+            *last_slash = '\0';
+        } else if (last_slash == parent_path) {
+            snprintf(parent_path, sizeof(parent_path), "/");
+        }
+        snprintf(parent.path, sizeof(parent.path), "%s", parent_path);
+        snprintf(parent.name, sizeof(parent.name), "..");
+        parent.depth = 0;
+        parent.is_dir = true;
+        fb_entries[fb_count++] = parent;
+    }
+    
     fb_scan_dir(fb_root, 0);
     if (fb_selected >= fb_count) fb_selected = fb_count > 0 ? fb_count - 1 : 0;
     if (fb_selected < 0) fb_selected = 0;
@@ -112,6 +132,34 @@ void panel_file_browser_open(App *app) {
     fb_scroll = 0;
     if (!getcwd(fb_root, sizeof(fb_root)))
         snprintf(fb_root, sizeof(fb_root), ".");
+    fb_rebuild();
+}
+
+void panel_file_browser_open_at(App *app, const char *root) {
+    (void)app;
+    fb_open = true;
+    fb_selected = 0;
+    fb_scroll = 0;
+    
+    /* Resolve to absolute path */
+    char resolved[FB_PATH_MAX];
+    if (realpath(root ? root : ".", resolved)) {
+        snprintf(fb_root, sizeof(fb_root), "%s", resolved);
+    } else {
+        snprintf(fb_root, sizeof(fb_root), "%s", root ? root : ".");
+    }
+    
+    fb_rebuild();
+}
+
+void panel_file_browser_open_at_home(App *app) {
+    (void)app;
+    const char *home = getenv("HOME");
+    if (!home) home = ".";
+    fb_open = true;
+    fb_selected = 0;
+    fb_scroll = 0;
+    snprintf(fb_root, sizeof(fb_root), "%s", home);
     fb_rebuild();
 }
 
@@ -182,10 +230,39 @@ void panel_file_browser_key(App *app, int key) {
         if (fb_count == 0) break;
         FbEntry *e = &fb_entries[fb_selected];
         if (e->is_dir) {
-            fb_set_expanded(e->path, !fb_is_expanded(e->path));
-            fb_rebuild();
+            /* Handle parent directory (..) specially */
+            if (strcmp(e->name, "..") == 0) {
+                /* Navigate to parent directory */
+                char parent[FB_PATH_MAX];
+                snprintf(parent, sizeof(parent), "%s", fb_root);
+                char *last_slash = strrchr(parent, '/');
+                if (last_slash && last_slash != parent) {
+                    *last_slash = '\0';
+                    snprintf(fb_root, sizeof(fb_root), "%s", parent);
+                } else if (last_slash == parent) {
+                    snprintf(fb_root, sizeof(fb_root), "/");
+                }
+                fb_selected = 0;
+                fb_scroll = 0;
+                fb_rebuild();
+            } else {
+                /* Toggle expand/collapse for regular directories */
+                fb_set_expanded(e->path, !fb_is_expanded(e->path));
+                fb_rebuild();
+            }
         } else {
             app_open_file(app, e->path);
+            panel_file_browser_close(app);
+        }
+        break;
+    }
+    case GLFW_KEY_W: {
+        /* Set workspace root to selected directory */
+        if (fb_count == 0) break;
+        FbEntry *e = &fb_entries[fb_selected];
+        if (e->is_dir) {
+            extern void app_set_workspace_root(App *, const char *);
+            app_set_workspace_root(app, e->path);
             panel_file_browser_close(app);
         }
         break;
@@ -285,7 +362,7 @@ void panel_file_browser_render(Gui *g, App *app) {
     renderer_draw_rect(r, px, footer_y - 4, pw, 1,
                        t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], 0.3f);
     font_draw(&g->font, r,
-              "j/k move  l/Enter open  h collapse  Esc close",
+              "j/k move  l open  h collapse  w workspace  Esc close",
               px + 14, footer_y,
               t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 }

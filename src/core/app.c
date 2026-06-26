@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define MAX_BUFFERS 64
 
@@ -26,6 +27,7 @@ struct App {
     double      last_time;
     int         win_w, win_h;
     char       *clipboard;
+    char       *workspace_root;
 };
 
 static void framebuffer_cb(GLFWwindow *win, int w, int h) {
@@ -103,6 +105,9 @@ App *app_create(int width, int height, const char *title) {
     
     command_registry_init();
 
+    /* Initialize workspace to current directory */
+    app->workspace_root = getcwd(NULL, 0);
+
     app->last_time = glfwGetTime();
     return app;
 }
@@ -117,6 +122,7 @@ void app_destroy(App *app) {
     glfwDestroyWindow(app->window);
     glfwTerminate();
     free(app->clipboard);
+    free(app->workspace_root);
     free(app);
 }
 
@@ -193,4 +199,14 @@ bool app_close_buffer(App *app, int index) {
     }
     
     return true;
+}
+
+/* Workspace management */
+const char *app_get_workspace_root(App *app) {
+    return app->workspace_root ? app->workspace_root : ".";
+}
+
+void app_set_workspace_root(App *app, const char *path) {
+    free(app->workspace_root);
+    app->workspace_root = strdup(path);
 }

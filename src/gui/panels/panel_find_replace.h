@@ -11,6 +11,11 @@ typedef enum {
     FR_ACTION_SPLIT,
     FR_ACTION_KEEP,
     FR_ACTION_REMOVE,
+    FR_ACTION_PIPE,
+    FR_ACTION_PIPE_TO,
+    FR_ACTION_INSERT_OUTPUT,
+    FR_ACTION_APPEND_OUTPUT,
+    FR_ACTION_FILTER,
 } FindAction;
 
 void panel_find_open(App *app, Document *doc);

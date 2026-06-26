@@ -979,6 +979,14 @@ void document_scroll_center(Document *doc) {
     if (doc->scroll_y < 0) doc->scroll_y = 0;
 }
 
+void document_scroll_horizontal_center(Document *doc) {
+    Cursor *cur = &doc->cursors[0];
+    /* Center horizontally - assume average viewport width of 80 chars */
+    int viewport_width = 80;
+    doc->scroll_x = cur->col - viewport_width / 2;
+    if (doc->scroll_x < 0) doc->scroll_x = 0;
+}
+
 void document_scroll_top(Document *doc, int viewport_h) {
     (void)viewport_h;
     Cursor *cur = &doc->cursors[0];
@@ -2154,4 +2162,203 @@ void document_move_file(Document *doc, const char *path) {
     doc->filepath = strdup(path);
     buffer_save(&doc->buffer, path);
     doc->dirty = false;
+}
+
+/* Shell command helpers */
+static char *get_selection_text(Document *doc, size_t *len_out) {
+    Cursor *cur = &doc->cursors[0];
+    if (!cur->has_selection) return NULL;
+    int sr, sc, er, ec;
+    cursor_normalize(cur, &sr, &sc, &er, &ec);
+    size_t start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
+    size_t end = buffer_pos_from_row_col(&doc->buffer, er, ec);
+    size_t len = end - start;
+    char *text = malloc(len + 1);
+    if (!text) return NULL;
+    memcpy(text, doc->buffer.text + start, len);
+    text[len] = '\0';
+    *len_out = len;
+    return text;
+}
+
+static char *run_shell_command(const char *cmd, const char *input, size_t input_len, size_t *output_len) {
+    char *result = NULL;
+    FILE *pin = NULL, *pout = NULL;
+    
+    /* Create temp file for input if needed */
+    if (input && input_len > 0) {
+        pin = tmpfile();
+        if (!pin) return NULL;
+        fwrite(input, 1, input_len, pin);
+        rewind(pin);
+    }
+    
+    /* Run command with popen */
+    char cmd_buf[4096];
+    if (input && input_len > 0) {
+        snprintf(cmd_buf, sizeof(cmd_buf), "%s", cmd);
+    } else {
+        snprintf(cmd_buf, sizeof(cmd_buf), "%s", cmd);
+    }
+    
+    pout = popen(cmd_buf, input ? "r" : "r");
+    if (!pout) {
+        if (pin) fclose(pin);
+        return NULL;
+    }
+    
+    /* Read output */
+    size_t cap = 4096;
+    size_t len = 0;
+    result = malloc(cap);
+    if (!result) {
+        pclose(pout);
+        if (pin) fclose(pin);
+        return NULL;
+    }
+    
+    size_t n;
+    while ((n = fread(result + len, 1, cap - len, pout)) > 0) {
+        len += n;
+        if (len >= cap) {
+            cap *= 2;
+            char *tmp = realloc(result, cap);
+            if (!tmp) {
+                free(result);
+                pclose(pout);
+                if (pin) fclose(pin);
+                return NULL;
+            }
+            result = tmp;
+        }
+    }
+    
+    pclose(pout);
+    if (pin) fclose(pin);
+    
+    *output_len = len;
+    return result;
+}
+
+void document_pipe_selection(Document *doc, const char *cmd) {
+    size_t sel_len = 0;
+    char *sel_text = get_selection_text(doc, &sel_len);
+    if (!sel_text) return;
+    
+    size_t out_len = 0;
+    char *output = run_shell_command(cmd, sel_text, sel_len, &out_len);
+    free(sel_text);
+    if (!output) return;
+    
+    /* Replace selection with output */
+    Cursor *cur = &doc->cursors[0];
+    int sr, sc, er, ec;
+    cursor_normalize(cur, &sr, &sc, &er, &ec);
+    size_t start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
+    size_t end = buffer_pos_from_row_col(&doc->buffer, er, ec);
+    size_t del_len = end - start;
+    
+    char *deleted = malloc(del_len);
+    memcpy(deleted, doc->buffer.text + start, del_len);
+    buffer_delete(&doc->buffer, start, del_len);
+    history_push_delete(&doc->history, start, deleted, del_len, sr, sc);
+    free(deleted);
+    
+    buffer_insert(&doc->buffer, start, output, out_len);
+    history_push_insert(&doc->history, start, output, out_len, sr, sc);
+    
+    /* Update cursor position */
+    int row = sr, col = sc;
+    for (size_t i = 0; i < out_len; i++) {
+        if (output[i] == '\n') { row++; col = 0; }
+        else col++;
+    }
+    cursor_move_to(cur, row, col);
+    cursor_clear_selection(cur);
+    
+    free(output);
+    doc->dirty = true;
+}
+
+void document_pipe_to(Document *doc, const char *cmd) {
+    size_t sel_len = 0;
+    char *sel_text = get_selection_text(doc, &sel_len);
+    if (!sel_text) return;
+    
+    size_t out_len = 0;
+    char *output = run_shell_command(cmd, sel_text, sel_len, &out_len);
+    free(sel_text);
+    free(output); /* Ignore output, just run command */
+    
+    cursor_clear_selection(&doc->cursors[0]);
+}
+
+void document_insert_output(Document *doc, const char *cmd) {
+    size_t out_len = 0;
+    char *output = run_shell_command(cmd, NULL, 0, &out_len);
+    if (!output) return;
+    
+    Cursor *cur = &doc->cursors[0];
+    size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
+    buffer_insert(&doc->buffer, pos, output, out_len);
+    history_push_insert(&doc->history, pos, output, out_len, cur->row, cur->col);
+    
+    /* Move cursor to end of inserted text */
+    for (size_t i = 0; i < out_len; i++) {
+        if (output[i] == '\n') { cur->row++; cur->col = 0; }
+        else cur->col++;
+    }
+    
+    free(output);
+    doc->dirty = true;
+}
+
+void document_append_output(Document *doc, const char *cmd) {
+    size_t out_len = 0;
+    char *output = run_shell_command(cmd, NULL, 0, &out_len);
+    if (!output) return;
+    
+    Cursor *cur = &doc->cursors[0];
+    
+    /* Move to end of line */
+    int row = cur->row;
+    int col = (int)buffer_line_len(&doc->buffer, row);
+    
+    size_t pos = buffer_pos_from_row_col(&doc->buffer, row, col);
+    buffer_insert(&doc->buffer, pos, output, out_len);
+    history_push_insert(&doc->history, pos, output, out_len, row, col);
+    
+    /* Move cursor to end of inserted text */
+    cur->row = row;
+    cur->col = col;
+    for (size_t i = 0; i < out_len; i++) {
+        if (output[i] == '\n') { cur->row++; cur->col = 0; }
+        else cur->col++;
+    }
+    
+    free(output);
+    doc->dirty = true;
+}
+
+void document_filter_selection(Document *doc, const char *cmd) {
+    size_t sel_len = 0;
+    char *sel_text = get_selection_text(doc, &sel_len);
+    if (!sel_text) return;
+    
+    size_t out_len = 0;
+    char *output = run_shell_command(cmd, sel_text, sel_len, &out_len);
+    free(sel_text);
+    if (!output) return;
+    
+    /* Keep only lines that match (have output) */
+    Cursor *cur = &doc->cursors[0];
+    if (out_len > 0) {
+        /* Selection remains */
+        cursor_clear_selection(cur);
+    } else {
+        /* Delete selection */
+        document_delete_selection(doc);
+    }
+    
+    free(output);
 }

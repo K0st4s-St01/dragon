@@ -30,4 +30,8 @@ void app_next_buffer(App *app);
 void app_prev_buffer(App *app);
 bool app_close_buffer(App *app, int index);
 
+/* Workspace management */
+const char *app_get_workspace_root(App *app);
+void app_set_workspace_root(App *app, const char *path);
+
 #endif

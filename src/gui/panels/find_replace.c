@@ -115,6 +115,26 @@ void panel_find_key(App *app, Document *doc, int key) {
             document_remove_matching(doc, fr_query, fr_query_len);
             panel_find_close(app);
             return;
+        } else if (fr_action == FR_ACTION_PIPE) {
+            document_pipe_selection(doc, fr_query);
+            panel_find_close(app);
+            return;
+        } else if (fr_action == FR_ACTION_PIPE_TO) {
+            document_pipe_to(doc, fr_query);
+            panel_find_close(app);
+            return;
+        } else if (fr_action == FR_ACTION_INSERT_OUTPUT) {
+            document_insert_output(doc, fr_query);
+            panel_find_close(app);
+            return;
+        } else if (fr_action == FR_ACTION_APPEND_OUTPUT) {
+            document_append_output(doc, fr_query);
+            panel_find_close(app);
+            return;
+        } else if (fr_action == FR_ACTION_FILTER) {
+            document_filter_selection(doc, fr_query);
+            panel_find_close(app);
+            return;
         }
     } else if (key == GLFW_KEY_TAB) {
         fr_active_field = 1 - fr_active_field;
@@ -149,34 +169,60 @@ void panel_find_render(Gui *g, App *app, Document *doc) {
     renderer_draw_rect(r, px, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1);
     renderer_draw_rect(r, px+pw-1, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1);
 
-    font_draw(&g->font, r, "Find:", px+14, py+10, t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
-    renderer_draw_rect(r, px+70, py+6, pw-84, g->font.glyph_h+8,
+    /* Determine label based on action */
+    const char *label = "Find:";
+    const char *btn_label = "Find Next";
+    if (fr_action == FR_ACTION_PIPE) {
+        label = "Pipe |:";
+        btn_label = "Execute";
+    } else if (fr_action == FR_ACTION_PIPE_TO) {
+        label = "Pipe to Alt-|:";
+        btn_label = "Execute";
+    } else if (fr_action == FR_ACTION_INSERT_OUTPUT) {
+        label = "Insert !:";
+        btn_label = "Execute";
+    } else if (fr_action == FR_ACTION_APPEND_OUTPUT) {
+        label = "Append Alt-!:";
+        btn_label = "Execute";
+    } else if (fr_action == FR_ACTION_FILTER) {
+        label = "Filter $:";
+        btn_label = "Execute";
+    } else if (fr_action == FR_ACTION_SELECT) {
+        btn_label = "Select All";
+    } else if (fr_action == FR_ACTION_SPLIT) {
+        btn_label = "Split";
+    } else if (fr_action == FR_ACTION_KEEP) {
+        btn_label = "Keep";
+    } else if (fr_action == FR_ACTION_REMOVE) {
+        btn_label = "Remove";
+    }
+
+    font_draw(&g->font, r, label, px+14, py+10, t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
+    renderer_draw_rect(r, px+110, py+6, pw-124, g->font.glyph_h+8,
                        t->gutter_bg[0], t->gutter_bg[1], t->gutter_bg[2], t->gutter_bg[3]);
     char buf[260];
     snprintf(buf, sizeof(buf), "%s%s", fr_query, (fr_active_field==0 && fr_cursor_visible) ? "_" : " ");
-    font_draw(&g->font, r, buf, px+74, py+10,
+    font_draw(&g->font, r, buf, px+114, py+10,
               t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
 
-    font_draw(&g->font, r, "Replace:", px+14, py+36, t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
-    renderer_draw_rect(r, px+70, py+32, pw-84, g->font.glyph_h+8,
-                       t->gutter_bg[0], t->gutter_bg[1], t->gutter_bg[2], t->gutter_bg[3]);
-    snprintf(buf, sizeof(buf), "%s%s", fr_replace, (fr_active_field==1 && fr_cursor_visible) ? "_" : " ");
-    font_draw(&g->font, r, buf, px+74, py+36,
-              t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+    /* Hide replace field for shell commands */
+    if (fr_action < FR_ACTION_PIPE) {
+        font_draw(&g->font, r, "Replace:", px+14, py+36, t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
+        renderer_draw_rect(r, px+70, py+32, pw-84, g->font.glyph_h+8,
+                           t->gutter_bg[0], t->gutter_bg[1], t->gutter_bg[2], t->gutter_bg[3]);
+        snprintf(buf, sizeof(buf), "%s%s", fr_replace, (fr_active_field==1 && fr_cursor_visible) ? "_" : " ");
+        font_draw(&g->font, r, buf, px+74, py+36,
+                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+    }
 
     /* Buttons */
     float btn_y = py + 60;
-    renderer_draw_rect(r, px+14, btn_y, 90, g->font.glyph_h+8,
+    renderer_draw_rect(r, px+14, btn_y, 120, g->font.glyph_h+8,
                        t->accent[0], t->accent[1], t->accent[2], 1);
-    font_draw(&g->font, r, "Find Next", px+20, btn_y+4, 1, 1, 1, 1);
+    font_draw(&g->font, r, btn_label, px+20, btn_y+4, 1, 1, 1, 1);
 
-    renderer_draw_rect(r, px+114, btn_y, 90, g->font.glyph_h+8,
+    renderer_draw_rect(r, px+144, btn_y, 90, g->font.glyph_h+8,
                        t->gutter_bg[0], t->gutter_bg[1], t->gutter_bg[2], t->gutter_bg[3]);
-    font_draw(&g->font, r, "Replace", px+126, btn_y+4,
-              t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
-
-    renderer_draw_rect(r, px+214, btn_y, 90, g->font.glyph_h+8,
-                       t->gutter_bg[0], t->gutter_bg[1], t->gutter_bg[2], t->gutter_bg[3]);
-    font_draw(&g->font, r, "Close", px+234, btn_y+4,
+    font_draw(&g->font, r, "Close", px+164, btn_y+4,
               t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
 }

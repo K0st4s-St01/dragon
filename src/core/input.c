@@ -246,6 +246,12 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         if (pk == 'z') {
             bool handled = false;
             if (key == GLFW_KEY_Z) { document_scroll_center(doc); handled = true; }
+            else if (key == GLFW_KEY_C) { document_scroll_center(doc); handled = true; }
+            else if (key == GLFW_KEY_M) { 
+                /* zm - horizontally center/middle align cursor */
+                document_scroll_horizontal_center(doc); 
+                handled = true; 
+            }
             else if (key == GLFW_KEY_T) { document_scroll_top(doc, doc->viewport_lines); handled = true; }
             else if (key == GLFW_KEY_B && !(mods & GLFW_MOD_CONTROL)) { document_scroll_bottom(doc, doc->viewport_lines); handled = true; }
             else if (key == GLFW_KEY_J) { document_scroll_down(doc); handled = true; }
@@ -353,14 +359,9 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             return;
         }
         if (pk == ' ') {
-            /* Shift closes the space menu */
-            if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT) {
-                panel_space_menu_close(app);
-                mode->pending_len = 0;
-                return;
-            }
-            /* Other standalone modifier presses keep the menu open */
-            if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL ||
+            /* Standalone modifier presses keep the menu open */
+            if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT ||
+                key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL ||
                 key == GLFW_KEY_LEFT_ALT || key == GLFW_KEY_RIGHT_ALT ||
                 key == GLFW_KEY_LEFT_SUPER || key == GLFW_KEY_RIGHT_SUPER) {
                 mode->pending_key = ' ';
@@ -371,13 +372,28 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             panel_space_menu_close(app);
             
             if (key == GLFW_KEY_F) {
-                panel_file_browser_open(app);
+                /* Space F - file browser at current directory */
+                if (mods & GLFW_MOD_SHIFT) {
+                    panel_file_browser_open(app);
+                } else {
+                    /* Space f - file browser at workspace root */
+                    const char *workspace = app_get_workspace_root(app);
+                    extern void panel_file_browser_open_at(App *, const char *);
+                    panel_file_browser_open_at(app, workspace);
+                }
                 mode->pending_len = 0;
                 return;
             }
             if (key == GLFW_KEY_B) {
                 /* Space b - buffer picker */
                 panel_buffer_picker_open(app);
+                mode->pending_len = 0;
+                return;
+            }
+            if (key == GLFW_KEY_O) {
+                /* Space o - file picker at $HOME */
+                extern void panel_file_browser_open_at_home(App *);
+                panel_file_browser_open_at_home(app);
                 mode->pending_len = 0;
                 return;
             }
@@ -430,6 +446,10 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             document_move_cursor(doc, 1, 0);
         else if (key == GLFW_KEY_K)
             document_move_cursor(doc, -1, 0);
+        else if (key == GLFW_KEY_N)
+            app_next_buffer(app); /* gn - go to next buffer */
+        else if (key == GLFW_KEY_P)
+            app_prev_buffer(app); /* gp - go to previous buffer */
         else if (key == GLFW_KEY_PERIOD)
             document_goto_last_modification(doc); /* g. - go to last modification */
         else if (key == GLFW_KEY_BACKSLASH) {
@@ -710,6 +730,47 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
     if (key == GLFW_KEY_K && (mods & GLFW_MOD_ALT)) {
         panel_find_open_ex(app, doc, FR_ACTION_REMOVE);
         return;
+    }
+
+    /* Shell commands */
+    /* | - Pipe selection through shell command */
+    if (key == GLFW_KEY_BACKSLASH && (mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_ALT)) {
+        Cursor *cur = &doc->cursors[0];
+        if (cur->has_selection) {
+            panel_find_open_ex(app, doc, FR_ACTION_PIPE);
+        }
+        return;
+    }
+
+    /* Alt-| - Pipe selection to command (ignore output) */
+    if (key == GLFW_KEY_BACKSLASH && (mods & GLFW_MOD_SHIFT) && (mods & GLFW_MOD_ALT)) {
+        Cursor *cur = &doc->cursors[0];
+        if (cur->has_selection) {
+            panel_find_open_ex(app, doc, FR_ACTION_PIPE_TO);
+        }
+        return;
+    }
+
+    /* ! - Insert command output at cursor */
+    if (key == GLFW_KEY_1 && (mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_ALT)) {
+        panel_find_open_ex(app, doc, FR_ACTION_INSERT_OUTPUT);
+        return;
+    }
+
+    /* Alt-! - Append command output to end of line */
+    if (key == GLFW_KEY_1 && (mods & GLFW_MOD_SHIFT) && (mods & GLFW_MOD_ALT)) {
+        panel_find_open_ex(app, doc, FR_ACTION_APPEND_OUTPUT);
+        return;
+    }
+
+    /* $ - Filter selection through shell command (without alt) or end of line (without selection) */
+    if (key == GLFW_KEY_4 && (mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_ALT)) {
+        Cursor *cur = &doc->cursors[0];
+        if (cur->has_selection) {
+            panel_find_open_ex(app, doc, FR_ACTION_FILTER);
+            return;
+        }
+        /* Fall through to normal $ behavior below */
     }
 
     switch (key) {

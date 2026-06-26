@@ -188,11 +188,11 @@ Removed Vim-style items:
 
 ## 2.5 Shell Commands
 
-- [ ] `|` — pipe each selection through shell command and replace with output.
-- [ ] `Alt-|` — pipe each selection into shell command and ignore output.
-- [ ] `!` — run shell command and insert output before each selection.
-- [ ] `Alt-!` — run shell command and append output after each selection.
-- [ ] `$` — keep selections where shell command returns exit code 0.
+- [x] `|` — pipe each selection through shell command and replace with output.
+- [x] `Alt-|` — pipe each selection into shell command and ignore output.
+- [x] `!` — run shell command and insert output before each selection.
+- [x] `Alt-!` — run shell command and append output after each selection.
+- [x] `$` — keep selections where shell command returns exit code 0.
 
 ---
 
@@ -208,7 +208,7 @@ Required select-mode equivalents:
 - [x] `h/j/k/l`, arrows — extend by character/visual line.
 - [x] `w/b/e/W/B/E` — extend by word/WORD.
 - [x] `f/F/t/T` — extend to character.
-- [ ] `Alt-.` — repeat last motion while extending.
+- [x] `Alt-.` — repeat last motion while extending.
 - [x] `Ctrl-f` / `Ctrl-b` — page while extending.
 - [x] `Ctrl-d` / `Ctrl-u` — half-page while extending.
 - [x] `d` — delete selection.
@@ -274,8 +274,8 @@ Enter with `g`.
 - [ ] `gi` — go to implementation using LSP.
 - [ ] `ga` — go to last accessed / alternate file.
 - [ ] `gm` — go to last modified / alternate file.
-- [ ] `gn` — go to next buffer.
-- [ ] `gp` — go to previous buffer.
+- [x] `gn` — go to next buffer.
+- [x] `gp` — go to previous buffer.
 - [x] `g.` — go to last modification in current file.
 - [x] `gj` — move down by textual line.
 - [x] `gk` — move up by textual line.
@@ -317,7 +317,7 @@ Sticky view mode enters with `Z`.
 - [x] `zz` or `zc` — vertically center current line.
 - [x] `zt` — align current line to top.
 - [x] `zb` — align current line to bottom.
-- [ ] `zm` — horizontally center/middle align.
+- [x] `zm` — horizontally center/middle align.
 - [x] `zj` / `zDown` — scroll view down.
 - [x] `zk` / `zUp` — scroll view up.
 - [x] `zCtrl-f` / `zPageDown` — page down.
@@ -350,8 +350,9 @@ Enter with `Ctrl-w`.
 
 Enter with `Space`.
 
-- [ ] `Space f` — file picker at LSP workspace root.
+- [x] `Space f` — file picker at LSP workspace root.
 - [x] `Space F` — file picker at current working directory.
+- [x] `Space o` — file picker at $HOME directory.
 - [x] `Space b` — buffer picker.
 - [x] `Space j` — jumplist picker.
 - [ ] `Space g` — changed-file picker.
