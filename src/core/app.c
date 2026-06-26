@@ -12,12 +12,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_BUFFERS 64
+
 struct App {
     GLFWwindow *window;
     Renderer    renderer;
     Gui         gui;
     ModeState   mode;
-    Document    doc;
+    Document    documents[MAX_BUFFERS];
+    int         doc_count;
+    int         current_doc;
     double      dt;
     double      last_time;
     int         win_w, win_h;
@@ -44,7 +48,7 @@ static void char_cb(GLFWwindow *win, unsigned int c) {
 int app_get_width(App *app)   { return app->win_w; }
 int app_get_height(App *app)  { return app->win_h; }
 double app_get_dt(App *app)   { return app->dt; }
-void *app_get_doc(App *app)    { return &app->doc; }
+void *app_get_doc(App *app)    { return &app->documents[app->current_doc]; }
 void *app_get_mode(App *app)  { return &app->mode; }
 Renderer *app_get_renderer(App *app) { return &app->renderer; }
 
@@ -91,7 +95,12 @@ App *app_create(int width, int height, const char *title) {
     renderer_init(&app->renderer, width, height);
     gui_init(&app->gui);
     mode_init(&app->mode);
-    document_init(&app->doc);
+    
+    /* Initialize first buffer */
+    app->doc_count = 1;
+    app->current_doc = 0;
+    document_init(&app->documents[0]);
+    
     command_registry_init();
 
     app->last_time = glfwGetTime();
@@ -102,7 +111,9 @@ void app_destroy(App *app) {
     if (!app) return;
     gui_free(&app->gui);
     renderer_free(&app->renderer);
-    document_free(&app->doc);
+    for (int i = 0; i < app->doc_count; i++) {
+        document_free(&app->documents[i]);
+    }
     glfwDestroyWindow(app->window);
     glfwTerminate();
     free(app->clipboard);
@@ -119,7 +130,7 @@ void app_run(App *app) {
 
         renderer_clear(&app->renderer);
         gui_begin(&app->gui);
-        gui_render(&app->gui, app, &app->doc, &app->mode);
+        gui_render(&app->gui, app, &app->documents[app->current_doc], &app->mode);
         gui_end(&app->gui);
 
         glfwSwapBuffers(app->window);
@@ -131,5 +142,55 @@ void app_quit(App *app) {
 }
 
 void app_open_file(App *app, const char *path) {
-    document_open(&app->doc, path);
+    document_open(&app->documents[app->current_doc], path);
+}
+
+/* Buffer management */
+int app_get_buffer_count(App *app) {
+    return app->doc_count;
+}
+
+int app_get_current_buffer_index(App *app) {
+    return app->current_doc;
+}
+
+void app_switch_to_buffer(App *app, int index) {
+    if (index >= 0 && index < app->doc_count) {
+        app->current_doc = index;
+    }
+}
+
+void app_next_buffer(App *app) {
+    if (app->doc_count > 1) {
+        app->current_doc = (app->current_doc + 1) % app->doc_count;
+    }
+}
+
+void app_prev_buffer(App *app) {
+    if (app->doc_count > 1) {
+        app->current_doc = (app->current_doc - 1 + app->doc_count) % app->doc_count;
+    }
+}
+
+bool app_close_buffer(App *app, int index) {
+    if (index < 0 || index >= app->doc_count) return false;
+    if (app->doc_count == 1) return false; /* Can't close last buffer */
+    
+    /* Free the document */
+    document_free(&app->documents[index]);
+    
+    /* Shift remaining documents */
+    for (int i = index; i < app->doc_count - 1; i++) {
+        app->documents[i] = app->documents[i + 1];
+    }
+    app->doc_count--;
+    
+    /* Adjust current_doc if needed */
+    if (app->current_doc >= app->doc_count) {
+        app->current_doc = app->doc_count - 1;
+    } else if (app->current_doc > index) {
+        app->current_doc--;
+    }
+    
+    return true;
 }

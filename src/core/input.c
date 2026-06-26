@@ -8,6 +8,9 @@
 #include "panel_find_replace.h"
 #include "panel_goto.h"
 #include "panel_about.h"
+#include "panel_buffer_picker.h"
+#include "panel_jumplist_picker.h"
+#include "panel_space_menu.h"
 #include <GLFW/glfw3.h>
 #include <string.h>
 #include <stdlib.h>
@@ -42,6 +45,9 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
         if (panel_find_is_open()) { panel_find_close(app); return; }
         if (panel_goto_is_open()) { panel_goto_close(app); return; }
         if (panel_about_is_open()) { panel_about_close(app); return; }
+        if (panel_buffer_picker_is_open()) { panel_buffer_picker_close(app); return; }
+        if (panel_jumplist_picker_is_open()) { panel_jumplist_picker_close(app); return; }
+        if (panel_space_menu_is_open()) { panel_space_menu_close(app); return; }
         if (mode_is(mode, MODE_COMMAND_PALETTE)) {
             panel_palette_close(app);
             mode_set(mode, MODE_NORMAL);
@@ -57,6 +63,12 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
             mode_set(mode, MODE_NORMAL);
             return;
         }
+        /* Exit sticky view mode on Escape */
+        if (mode->view_mode_sticky) {
+            mode->view_mode_sticky = false;
+            mode->pending_key = 0;
+            return;
+        }
     }
 
     /* Route keys to find panel when open */
@@ -69,6 +81,24 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
     /* Route keys to palette when open */
     if (panel_palette_is_open()) {
         panel_palette_key(app, key);
+        return;
+    }
+
+    /* Route keys to file browser when open */
+    if (panel_file_browser_is_open()) {
+        panel_file_browser_key(app, key);
+        return;
+    }
+
+    /* Route keys to buffer picker when open */
+    if (panel_buffer_picker_is_open()) {
+        panel_buffer_picker_key(app, key);
+        return;
+    }
+
+    /* Route keys to jumplist picker when open */
+    if (panel_jumplist_picker_is_open()) {
+        panel_jumplist_picker_key(app, key);
         return;
     }
 
@@ -170,7 +200,11 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
             else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
             else if (key == GLFW_KEY_SPACE) c = ' ';
-            if (c) document_find_char_forward(doc, c);
+            if (c) {
+                document_find_char_forward(doc, c);
+                mode->last_motion_type = 'f';
+                mode->last_motion_char = c;
+            }
             return;
         }
         if (pk == 'F') {
@@ -178,7 +212,11 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
             else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
             else if (key == GLFW_KEY_SPACE) c = ' ';
-            if (c) document_find_char_backward(doc, c);
+            if (c) {
+                document_find_char_backward(doc, c);
+                mode->last_motion_type = 'F';
+                mode->last_motion_char = c;
+            }
             return;
         }
         if (pk == 't') {
@@ -186,7 +224,11 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
             else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
             else if (key == GLFW_KEY_SPACE) c = ' ';
-            if (c) document_till_char_forward(doc, c);
+            if (c) {
+                document_till_char_forward(doc, c);
+                mode->last_motion_type = 't';
+                mode->last_motion_char = c;
+            }
             return;
         }
         if (pk == 'T') {
@@ -194,19 +236,29 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
             else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
             else if (key == GLFW_KEY_SPACE) c = ' ';
-            if (c) document_till_char_backward(doc, c);
+            if (c) {
+                document_till_char_backward(doc, c);
+                mode->last_motion_type = 'T';
+                mode->last_motion_char = c;
+            }
             return;
         }
         if (pk == 'z') {
-            if (key == GLFW_KEY_Z) document_scroll_center(doc);
-            else if (key == GLFW_KEY_T) document_scroll_top(doc, doc->viewport_lines);
-            else if (key == GLFW_KEY_B && !(mods & GLFW_MOD_CONTROL)) document_scroll_bottom(doc, doc->viewport_lines);
-            else if (key == GLFW_KEY_J) document_scroll_down(doc);
-            else if (key == GLFW_KEY_K) document_scroll_up(doc);
-            else if (key == GLFW_KEY_F) document_view_page_down(doc);
-            else if (key == GLFW_KEY_B && (mods & GLFW_MOD_CONTROL)) document_view_page_up(doc);
-            else if (key == GLFW_KEY_D) document_view_half_page_down(doc);
-            else if (key == GLFW_KEY_U) document_view_half_page_up(doc);
+            bool handled = false;
+            if (key == GLFW_KEY_Z) { document_scroll_center(doc); handled = true; }
+            else if (key == GLFW_KEY_T) { document_scroll_top(doc, doc->viewport_lines); handled = true; }
+            else if (key == GLFW_KEY_B && !(mods & GLFW_MOD_CONTROL)) { document_scroll_bottom(doc, doc->viewport_lines); handled = true; }
+            else if (key == GLFW_KEY_J) { document_scroll_down(doc); handled = true; }
+            else if (key == GLFW_KEY_K) { document_scroll_up(doc); handled = true; }
+            else if (key == GLFW_KEY_F) { document_view_page_down(doc); handled = true; }
+            else if (key == GLFW_KEY_B && (mods & GLFW_MOD_CONTROL)) { document_view_page_up(doc); handled = true; }
+            else if (key == GLFW_KEY_D) { document_view_half_page_down(doc); handled = true; }
+            else if (key == GLFW_KEY_U) { document_view_half_page_up(doc); handled = true; }
+            
+            /* If not sticky, clear pending_key after command */
+            if (handled && !mode->view_mode_sticky) {
+                mode->pending_key = 0;
+            }
             return;
         }
         if (pk == 'm') {
@@ -229,7 +281,8 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                 return;
             }
             if (key == GLFW_KEY_M) {
-                /* mm = go to matching bracket - stub */
+                /* mm = go to matching bracket */
+                document_match_bracket(doc);
                 return;
             }
             return;
@@ -300,21 +353,53 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             return;
         }
         if (pk == ' ') {
-            /* Space mode sub-commands */
+            /* Shift closes the space menu */
+            if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT) {
+                panel_space_menu_close(app);
+                mode->pending_len = 0;
+                return;
+            }
+            /* Other standalone modifier presses keep the menu open */
+            if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL ||
+                key == GLFW_KEY_LEFT_ALT || key == GLFW_KEY_RIGHT_ALT ||
+                key == GLFW_KEY_LEFT_SUPER || key == GLFW_KEY_RIGHT_SUPER) {
+                mode->pending_key = ' ';
+                return;
+            }
+
+            /* Space mode sub-commands - close menu after command */
+            panel_space_menu_close(app);
+            
             if (key == GLFW_KEY_F) {
                 panel_file_browser_open(app);
+                mode->pending_len = 0;
+                return;
+            }
+            if (key == GLFW_KEY_B) {
+                /* Space b - buffer picker */
+                panel_buffer_picker_open(app);
+                mode->pending_len = 0;
+                return;
+            }
+            if (key == GLFW_KEY_J) {
+                /* Space j - jumplist picker */
+                panel_jumplist_picker_open(app);
+                mode->pending_len = 0;
                 return;
             }
             if (key == GLFW_KEY_SLASH) {
                 /* Space ? - command palette */
                 mode_set(mode, MODE_COMMAND_PALETTE);
                 panel_palette_open(app);
+                mode->pending_len = 0;
                 return;
             }
             if (key == GLFW_KEY_C) {
                 document_comment_toggle(doc);
+                mode->pending_len = 0;
                 return;
             }
+            mode->pending_len = 0;
             return;
         }
         return;
@@ -346,7 +431,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         else if (key == GLFW_KEY_K)
             document_move_cursor(doc, -1, 0);
         else if (key == GLFW_KEY_PERIOD)
-            {} /* g. - go to last modification (stub) */
+            document_goto_last_modification(doc); /* g. - go to last modification */
         else if (key == GLFW_KEY_BACKSLASH) {
             /* g| - go to column number (count required) */
             if (mode->count > 0) {
@@ -389,6 +474,39 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             return;
         case GLFW_KEY_GRAVE_ACCENT:
             document_uppercase(doc);
+            return;
+        case GLFW_KEY_PERIOD:
+            /* Alt-. - Repeat last motion */
+            if (mode->last_motion_type) {
+                char c = mode->last_motion_char;
+                switch (mode->last_motion_type) {
+                case 'f': document_find_char_forward(doc, c); break;
+                case 'F': document_find_char_backward(doc, c); break;
+                case 't': document_till_char_forward(doc, c); break;
+                case 'T': document_till_char_backward(doc, c); break;
+                }
+            }
+            return;
+        case GLFW_KEY_9:
+            /* Alt-( - Rotate selection contents backward */
+            if (mods & GLFW_MOD_SHIFT) {
+                document_rotate_selection_contents_backward(doc);
+            }
+            return;
+        case GLFW_KEY_0:
+            /* Alt-) - Rotate selection contents forward */
+            if (mods & GLFW_MOD_SHIFT) {
+                document_rotate_selection_contents_forward(doc);
+            }
+            return;
+        case GLFW_KEY_U:
+            /* Alt-U - Move forward in history tree (redo) */
+            if (mods & GLFW_MOD_SHIFT) {
+                document_redo(doc);
+            } else {
+                /* Alt-u - Move backward in history tree (undo) */
+                document_undo(doc);
+            }
             return;
         default: break;
         }
@@ -607,6 +725,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                      cursor_select_start(&doc->cursors[0]); break;
     case GLFW_KEY_SPACE:
         mode->pending_key = ' ';
+        panel_space_menu_open(app);
         break;
     case GLFW_KEY_SLASH: {
         Document *doc2 = (Document *)app_get_doc(app);
@@ -736,7 +855,15 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         mode->pending_key = (mods & GLFW_MOD_SHIFT) ? 'T' : 't';
         break;
     case GLFW_KEY_Z:
-        mode->pending_key = 'z';
+        if (mods & GLFW_MOD_SHIFT) {
+            /* Z - sticky view mode */
+            mode->pending_key = 'z';
+            mode->view_mode_sticky = true;
+        } else {
+            /* z - normal view mode */
+            mode->pending_key = 'z';
+            mode->view_mode_sticky = false;
+        }
         break;
     case GLFW_KEY_MINUS:
         document_trim_whitespace(doc);
@@ -964,15 +1091,38 @@ static void handle_command_key(App *app, int key, int action, int mods) {
     } else if (strcmp(cmd_buf, "wq!") == 0 || strcmp(cmd_buf, "x!") == 0) {
         document_save(doc);
         cmd_quit(app);
+    } else if (strcmp(cmd_buf, "qa") == 0 || strcmp(cmd_buf, "quit-all") == 0 ||
+               strcmp(cmd_buf, "qa!") == 0 || strcmp(cmd_buf, "quit-all!") == 0) {
+        cmd_quit(app);
+    } else if (strcmp(cmd_buf, "bn") == 0 || strcmp(cmd_buf, "bnext") == 0 ||
+               strcmp(cmd_buf, "buffer-next") == 0) {
+        app_next_buffer(app);
+    } else if (strcmp(cmd_buf, "bp") == 0 || strcmp(cmd_buf, "bprev") == 0 ||
+               strcmp(cmd_buf, "buffer-previous") == 0) {
+        app_prev_buffer(app);
+    } else if (strcmp(cmd_buf, "bc") == 0 || strcmp(cmd_buf, "bclose") == 0 ||
+               strcmp(cmd_buf, "buffer-close") == 0 ||
+               strcmp(cmd_buf, "bc!") == 0 || strcmp(cmd_buf, "bclose!") == 0 ||
+               strcmp(cmd_buf, "buffer-close!") == 0) {
+        app_close_buffer(app, app_get_current_buffer_index(app));
     } else if (strcmp(cmd_buf, "new") == 0 || strcmp(cmd_buf, "n") == 0) {
         document_new(doc);
     } else if (strncmp(cmd_buf, "e ", 2) == 0 || strncmp(cmd_buf, "open ", 5) == 0 || strncmp(cmd_buf, "edit ", 5) == 0) {
         const char *path = cmd_buf[2] == ' ' ? cmd_buf + 3 :
                            cmd_buf[5] == ' ' ? cmd_buf + 6 : cmd_buf + 6;
         document_open(doc, path);
-    } else if (strcmp(cmd_buf, "reload") == 0 || strcmp(cmd_buf, "rl") == 0) {
+    } else if (strncmp(cmd_buf, "r ", 2) == 0 || strncmp(cmd_buf, "read ", 5) == 0) {
+        const char *path = cmd_buf[1] == ' ' ? cmd_buf + 2 : cmd_buf + 5;
+        document_insert_file(doc, path);
+    } else if (strncmp(cmd_buf, "mv ", 3) == 0 || strncmp(cmd_buf, "move ", 5) == 0) {
+        const char *path = cmd_buf[2] == ' ' ? cmd_buf + 3 : cmd_buf + 5;
+        document_move_file(doc, path);
+    } else if (strcmp(cmd_buf, "reload") == 0 || strcmp(cmd_buf, "rl") == 0 ||
+               strcmp(cmd_buf, "reload-all") == 0 || strcmp(cmd_buf, "rla") == 0) {
         if (doc->filepath)
             document_open(doc, doc->filepath);
+    } else if (strcmp(cmd_buf, "sort") == 0) {
+        document_sort_selection(doc);
     } else if (strcmp(cmd_buf, "fmt") == 0 || strcmp(cmd_buf, "format") == 0) {
         document_format_selection(doc);
     } else if (cmd_buf[0] >= '1' && cmd_buf[0] <= '9') {
@@ -999,6 +1149,34 @@ static void handle_select_key(App *app, int key, int action, int mods) {
     {
         Cursor *cur = &doc->cursors[0];
         if (!cur->has_selection) cursor_select_start(cur);
+    }
+
+    /* g pending in select mode - goto motions extend the selection */
+    if (mode->g_pending) {
+        mode->g_pending = false;
+        if (key == GLFW_KEY_G)
+            document_cursor_doc_start(doc);
+        else if (key == GLFW_KEY_E)
+            document_cursor_doc_end(doc);
+        else if (key == GLFW_KEY_S)
+            document_cursor_first_non_blank(doc);
+        else if (key == GLFW_KEY_H)
+            document_goto_line_start(doc);
+        else if (key == GLFW_KEY_L)
+            document_goto_line_end(doc);
+        else if (key == GLFW_KEY_T)
+            document_goto_view_top(doc);
+        else if (key == GLFW_KEY_C)
+            document_goto_view_center(doc);
+        else if (key == GLFW_KEY_B)
+            document_goto_view_bottom(doc);
+        else if (key == GLFW_KEY_J)
+            document_move_cursor(doc, 1, 0);
+        else if (key == GLFW_KEY_K)
+            document_move_cursor(doc, -1, 0);
+        else if (key == GLFW_KEY_PERIOD)
+            document_goto_last_modification(doc);
+        return;
     }
 
     /* Ctrl combinations in select mode */
@@ -1040,6 +1218,19 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             mode_set(mode, MODE_INSERT);
             return;
         }
+        if (key == GLFW_KEY_PERIOD) {
+            /* Alt-. - Repeat last motion in select mode */
+            if (mode->last_motion_type) {
+                char c = mode->last_motion_char;
+                switch (mode->last_motion_type) {
+                case 'f': document_find_char_forward(doc, c); break;
+                case 'F': document_find_char_backward(doc, c); break;
+                case 't': document_till_char_forward(doc, c); break;
+                case 'T': document_till_char_backward(doc, c); break;
+                }
+            }
+            return;
+        }
     }
 
     /* > (Shift+.) - Indent selection */
@@ -1064,7 +1255,11 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
             else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
             else if (key == GLFW_KEY_SPACE) c = ' ';
-            if (c) document_find_char_forward(doc, c);
+            if (c) {
+                document_find_char_forward(doc, c);
+                mode->last_motion_type = 'f';
+                mode->last_motion_char = c;
+            }
             return;
         }
         if (pk == 'F') {
@@ -1072,7 +1267,11 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
             else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
             else if (key == GLFW_KEY_SPACE) c = ' ';
-            if (c) document_find_char_backward(doc, c);
+            if (c) {
+                document_find_char_backward(doc, c);
+                mode->last_motion_type = 'F';
+                mode->last_motion_char = c;
+            }
             return;
         }
         if (pk == 't') {
@@ -1080,7 +1279,11 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
             else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
             else if (key == GLFW_KEY_SPACE) c = ' ';
-            if (c) document_till_char_forward(doc, c);
+            if (c) {
+                document_till_char_forward(doc, c);
+                mode->last_motion_type = 't';
+                mode->last_motion_char = c;
+            }
             return;
         }
         if (pk == 'T') {
@@ -1088,7 +1291,11 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
             else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
             else if (key == GLFW_KEY_SPACE) c = ' ';
-            if (c) document_till_char_backward(doc, c);
+            if (c) {
+                document_till_char_backward(doc, c);
+                mode->last_motion_type = 'T';
+                mode->last_motion_char = c;
+            }
             return;
         }
         return;
@@ -1113,6 +1320,14 @@ static void handle_select_key(App *app, int key, int action, int mods) {
     case GLFW_KEY_W: document_cursor_word_forward(doc); break;
     case GLFW_KEY_B: document_cursor_word_backward(doc); break;
     case GLFW_KEY_E: document_cursor_word_end(doc); break;
+
+    /* g - enter goto mode (extends selection) */
+    case GLFW_KEY_G:
+        if (mods & GLFW_MOD_SHIFT)
+            document_cursor_doc_end(doc);
+        else
+            mode->g_pending = true;
+        break;
 
     /* x - Extend selection to next line */
     case GLFW_KEY_X: {

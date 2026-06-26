@@ -22,4 +22,12 @@ Renderer  *app_get_renderer(App *app);
 void app_set_clipboard(App *app, const char *text);
 const char *app_get_clipboard(App *app);
 
+/* Buffer management */
+int  app_get_buffer_count(App *app);
+int  app_get_current_buffer_index(App *app);
+void app_switch_to_buffer(App *app, int index);
+void app_next_buffer(App *app);
+void app_prev_buffer(App *app);
+bool app_close_buffer(App *app, int index);
+
 #endif

@@ -32,6 +32,9 @@ void command_registry_init(void) {
     command_register("goto-end",       "Go to end of line",   "Navigation", cmd_goto_end);
     command_register("about",          "About",               "Help",    cmd_about);
     command_register("settings",       "Settings",            "Help",    cmd_settings);
+    command_register("bn",             "Buffer next",         "Buffer",  cmd_buffer_next);
+    command_register("bp",             "Buffer previous",     "Buffer",  cmd_buffer_prev);
+    command_register("bc",             "Buffer close",        "Buffer",  cmd_buffer_close);
 }
 
 void command_register(const char *name, const char *label,
@@ -169,3 +172,16 @@ void cmd_about(App *app) {
 }
 
 void cmd_settings(App *app) { (void)app; }
+
+void cmd_buffer_next(App *app) {
+    app_next_buffer(app);
+}
+
+void cmd_buffer_prev(App *app) {
+    app_prev_buffer(app);
+}
+
+void cmd_buffer_close(App *app) {
+    int current = app_get_current_buffer_index(app);
+    app_close_buffer(app, current);
+}

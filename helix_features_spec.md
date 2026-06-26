@@ -28,7 +28,7 @@ Helix is selection-first:
   - [x] Goto mode: `g`
   - [x] Match mode: `m`
   - [x] View mode: `z`
-  - [ ] Sticky view mode: `Z`
+  - [x] Sticky view mode: `Z`
   - [ ] Window mode: `Ctrl-w`
   - [ ] Space mode: `Space`
 
@@ -49,8 +49,8 @@ Helix is selection-first:
 
 - [x] `u` — undo.
 - [x] `U` — redo.
-- [ ] `Alt-u` — move backward in history.
-- [ ] `Alt-U` — move forward in history.
+- [x] `Alt-u` — move backward in history.
+- [x] `Alt-U` — move forward in history.
 - [x] Insert-mode edits become one undo checkpoint when leaving insert mode.
 - [x] `Ctrl-s` in insert mode commits an undo checkpoint.
 
@@ -74,7 +74,7 @@ Helix is selection-first:
 - [x] `F<char>` — find previous character.
 - [x] `t<char>` — find till next character.
 - [x] `T<char>` — find till previous character.
-- [ ] `Alt-.` — repeat last motion.
+- [x] `Alt-.` — repeat last motion.
 - [x] `G` — go to line number if count is provided, otherwise end of file.
 - [x] `Home` — go to line start.
 - [x] `End` — go to line end.
@@ -143,8 +143,8 @@ Removed Vim-style items:
 - [x] `Alt-C` — copy selection onto previous line / add cursor above.
 - [x] `(` — rotate main selection backward.
 - [x] `)` — rotate main selection forward.
-- [ ] `Alt-(` — rotate selection contents backward.
-- [ ] `Alt-)` — rotate selection contents forward.
+- [x] `Alt-(` — rotate selection contents backward.
+- [x] `Alt-)` — rotate selection contents forward.
 - [x] `%` — select entire file.
 - [x] `x` — select current line; if already line-selected, extend to next line.
 - [x] `X` — extend selection to line bounds.
@@ -201,7 +201,7 @@ Removed Vim-style items:
 - [x] Enter with `v`.
 - [x] `Escape` returns to normal mode.
 - [x] Normal movement commands must become extending movement commands.
-- [ ] Goto-mode motions must also extend selection.
+- [x] Goto-mode motions must also extend selection.
 - [x] Editing commands remain mostly the same as normal mode.
 
 Required select-mode equivalents:
@@ -293,7 +293,7 @@ Removed/changed:
 
 Enter with `m`.
 
-- [ ] `mm` — go to matching bracket/tree-sitter bracket.
+- [x] `mm` — go to matching bracket/tree-sitter bracket.
 - [x] `ms<char>` — surround current selection with character.
 - [x] `md<char>` — delete surrounding delimiter.
 - [x] `mr<from><to>` — replace surrounding delimiter.
@@ -352,8 +352,8 @@ Enter with `Space`.
 
 - [ ] `Space f` — file picker at LSP workspace root.
 - [x] `Space F` — file picker at current working directory.
-- [ ] `Space b` — buffer picker.
-- [ ] `Space j` — jumplist picker.
+- [x] `Space b` — buffer picker.
+- [x] `Space j` — jumplist picker.
 - [ ] `Space g` — changed-file picker.
 - [ ] `Space k` — hover documentation.
 - [ ] `Space s` — document symbol picker.
@@ -384,18 +384,18 @@ Helix has fuzzy pickers, not a traditional built-in tree file browser.
 
 ### Picker navigation
 
-- [ ] `Tab` / `Down` / `Ctrl-n` — next entry.
-- [ ] `Shift-Tab` / `Up` / `Ctrl-p` — previous entry.
-- [ ] `PageDown` / `Ctrl-d` — page down.
-- [ ] `PageUp` / `Ctrl-u` — page up.
-- [ ] `Home` — first entry.
-- [ ] `End` — last entry.
-- [ ] `Enter` — open selected item.
+- [x] `Tab` / `Down` / `Ctrl-n` — next entry.
+- [x] `Shift-Tab` / `Up` / `Ctrl-p` — previous entry.
+- [x] `PageDown` / `Ctrl-d` — page down.
+- [x] `PageUp` / `Ctrl-u` — page up.
+- [x] `Home` — first entry.
+- [x] `End` — last entry.
+- [x] `Enter` — open selected item.
 - [ ] `Alt-Enter` — open selected item in background.
 - [ ] `Ctrl-s` — open horizontally.
 - [ ] `Ctrl-v` — open vertically.
 - [ ] `Ctrl-t` — toggle preview.
-- [ ] `Escape` / `Ctrl-c` — close picker.
+- [x] `Escape` / `Ctrl-c` — close picker.
 
 ### File picker behavior
 
@@ -433,19 +433,19 @@ Enter with `:`.
 - [x] `:write-quit!`, `:wq!`, `:x! [path]` — force write and quit.
 - [x] `:quit`, `:q` — close current view.
 - [x] `:quit!`, `:q!` — force close current view.
-- [ ] `:quit-all`, `:qa` — close all views.
-- [ ] `:quit-all!`, `:qa!` — force close all views.
-- [ ] `:buffer-next`, `:bn`, `:bnext` — next buffer.
-- [ ] `:buffer-previous`, `:bp`, `:bprev` — previous buffer.
-- [ ] `:buffer-close`, `:bc`, `:bclose` — close current buffer.
-- [ ] `:buffer-close!`, `:bc!`, `:bclose!` — force close current buffer.
+- [x] `:quit-all`, `:qa` — close all views.
+- [x] `:quit-all!`, `:qa!` — force close all views.
+- [x] `:buffer-next`, `:bn`, `:bnext` — next buffer.
+- [x] `:buffer-previous`, `:bp`, `:bprev` — previous buffer.
+- [x] `:buffer-close`, `:bc`, `:bclose` — close current buffer.
+- [x] `:buffer-close!`, `:bc!`, `:bclose!` — force close current buffer.
 - [ ] `:buffer-close-others`, `:bco` — close other buffers.
 - [ ] `:buffer-close-all`, `:bca` — close all buffers without quitting.
 - [x] `:new`, `:n` — new scratch buffer.
-- [ ] `:read`, `:r <path>` — insert file contents into buffer.
-- [ ] `:move`, `:mv <path>` — move current buffer and file to a new path.
+- [x] `:read`, `:r <path>` — insert file contents into buffer.
+- [x] `:move`, `:mv <path>` — move current buffer and file to a new path.
 - [x] `:reload`, `:rl` — reload current file from disk.
-- [ ] `:reload-all`, `:rla` — reload all files.
+- [x] `:reload-all`, `:rla` — reload all files.
 
 Changed from original:
 - [ ] Do not require `:bf` / `:bl` as default first/last buffer commands unless adding custom extensions.
@@ -453,7 +453,7 @@ Changed from original:
 ### Editing commands
 
 - [x] `:format`, `:fmt` — format current file with formatter/LSP.
-- [ ] `:sort` — sort ranges in selection.
+- [x] `:sort` — sort ranges in selection.
 - [ ] `:reflow` — hard-wrap current selection.
 - [ ] `:indent-style` — set tabs/spaces indentation.
 - [ ] `:line-ending` — set CRLF/LF.

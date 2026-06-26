@@ -34,6 +34,9 @@ set(EDITOR_SOURCES
     src/gui/panels/find_replace.c
     src/gui/panels/goto_line.c
     src/gui/panels/about.c
+    src/gui/panels/buffer_picker.c
+    src/gui/panels/jumplist_picker.c
+    src/gui/panels/space_menu.c
 )
 
 add_executable(${PROJECT_NAME} ${EDITOR_SOURCES})

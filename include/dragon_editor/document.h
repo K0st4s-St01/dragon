@@ -123,6 +123,8 @@ void document_half_page_up(Document *doc, int viewport_h);
 void document_force_selection_forward(Document *doc);
 void document_rotate_selections_backward(Document *doc);
 void document_rotate_selections_forward(Document *doc);
+void document_rotate_selection_contents_backward(Document *doc);
+void document_rotate_selection_contents_forward(Document *doc);
 void document_delete_word_forward(Document *doc);
 void document_split_selection_newlines(Document *doc);
 void document_merge_selections(Document *doc);
@@ -158,5 +160,9 @@ void document_view_page_down(Document *doc);
 void document_view_page_up(Document *doc);
 void document_view_half_page_down(Document *doc);
 void document_view_half_page_up(Document *doc);
+void document_match_bracket(Document *doc);
+void document_goto_last_modification(Document *doc);
+void document_insert_file(Document *doc, const char *path);
+void document_move_file(Document *doc, const char *path);
 
 #endif

@@ -30,6 +30,10 @@ typedef struct {
     int   last_insert_len;
     int   last_insert_cursor_delta;
     bool  has_last_insert;
+    /* Last motion tracking for Alt-. */
+    char  last_motion_type;  /* 'f', 'F', 't', 'T', or 0 */
+    char  last_motion_char;  /* character used in last motion */
+    bool  view_mode_sticky;  /* Z - sticky view mode stays active */
 } ModeState;
 
 void mode_init(ModeState *ms);

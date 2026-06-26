@@ -47,5 +47,8 @@ void     cmd_goto_start(App *app);
 void     cmd_goto_end(App *app);
 void     cmd_about(App *app);
 void     cmd_settings(App *app);
+void     cmd_buffer_next(App *app);
+void     cmd_buffer_prev(App *app);
+void     cmd_buffer_close(App *app);
 
 #endif

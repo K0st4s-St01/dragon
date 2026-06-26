@@ -7,6 +7,7 @@
 void panel_file_browser_open(App *app);
 void panel_file_browser_close(App *app);
 bool panel_file_browser_is_open(void);
+void panel_file_browser_key(App *app, int key);
 void panel_file_browser_render(Gui *g, App *app);
 
 #endif

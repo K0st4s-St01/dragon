@@ -12,6 +12,9 @@
 #include "panel_find_replace.h"
 #include "panel_goto.h"
 #include "panel_about.h"
+#include "panel_buffer_picker.h"
+#include "panel_jumplist_picker.h"
+#include "panel_space_menu.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -141,4 +144,7 @@ void gui_render(Gui *g, App *app, Document *doc, ModeState *mode) {
     panel_find_render(g, app, doc);
     panel_goto_render(g, app, doc);
     panel_about_render(g, app);
+    panel_buffer_picker_render(g, app);
+    panel_jumplist_picker_render(g, app);
+    panel_space_menu_render(g, app);
 }

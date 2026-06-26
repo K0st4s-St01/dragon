@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/xator/Projects/dragon_editor
+CMAKE_SOURCE_DIR = /home/xator/Projects/dragon
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/xator/Projects/dragon_editor/build
+CMAKE_BINARY_DIR = /home/xator/Projects/dragon/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/xator/Projects/dragon_editor/build/CMakeFiles /home/xator/Projects/dragon_editor/build//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xator/Projects/dragon/build/CMakeFiles /home/xator/Projects/dragon/build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/xator/Projects/dragon_editor/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xator/Projects/dragon/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -406,6 +406,30 @@ src/gui/panels/about.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.s
 .PHONY : src/gui/panels/about.c.s
 
+src/gui/panels/buffer_picker.o: src/gui/panels/buffer_picker.c.o
+.PHONY : src/gui/panels/buffer_picker.o
+
+# target to build an object file
+src/gui/panels/buffer_picker.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o
+.PHONY : src/gui/panels/buffer_picker.c.o
+
+src/gui/panels/buffer_picker.i: src/gui/panels/buffer_picker.c.i
+.PHONY : src/gui/panels/buffer_picker.i
+
+# target to preprocess a source file
+src/gui/panels/buffer_picker.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.i
+.PHONY : src/gui/panels/buffer_picker.c.i
+
+src/gui/panels/buffer_picker.s: src/gui/panels/buffer_picker.c.s
+.PHONY : src/gui/panels/buffer_picker.s
+
+# target to generate assembly for a file
+src/gui/panels/buffer_picker.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.s
+.PHONY : src/gui/panels/buffer_picker.c.s
+
 src/gui/panels/file_browser.o: src/gui/panels/file_browser.c.o
 .PHONY : src/gui/panels/file_browser.o
 
@@ -478,6 +502,30 @@ src/gui/panels/goto_line.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.s
 .PHONY : src/gui/panels/goto_line.c.s
 
+src/gui/panels/jumplist_picker.o: src/gui/panels/jumplist_picker.c.o
+.PHONY : src/gui/panels/jumplist_picker.o
+
+# target to build an object file
+src/gui/panels/jumplist_picker.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/jumplist_picker.c.o
+.PHONY : src/gui/panels/jumplist_picker.c.o
+
+src/gui/panels/jumplist_picker.i: src/gui/panels/jumplist_picker.c.i
+.PHONY : src/gui/panels/jumplist_picker.i
+
+# target to preprocess a source file
+src/gui/panels/jumplist_picker.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/jumplist_picker.c.i
+.PHONY : src/gui/panels/jumplist_picker.c.i
+
+src/gui/panels/jumplist_picker.s: src/gui/panels/jumplist_picker.c.s
+.PHONY : src/gui/panels/jumplist_picker.s
+
+# target to generate assembly for a file
+src/gui/panels/jumplist_picker.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/jumplist_picker.c.s
+.PHONY : src/gui/panels/jumplist_picker.c.s
+
 src/gui/panels/palette.o: src/gui/panels/palette.c.o
 .PHONY : src/gui/panels/palette.o
 
@@ -501,6 +549,30 @@ src/gui/panels/palette.s: src/gui/panels/palette.c.s
 src/gui/panels/palette.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.s
 .PHONY : src/gui/panels/palette.c.s
+
+src/gui/panels/space_menu.o: src/gui/panels/space_menu.c.o
+.PHONY : src/gui/panels/space_menu.o
+
+# target to build an object file
+src/gui/panels/space_menu.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/space_menu.c.o
+.PHONY : src/gui/panels/space_menu.c.o
+
+src/gui/panels/space_menu.i: src/gui/panels/space_menu.c.i
+.PHONY : src/gui/panels/space_menu.i
+
+# target to preprocess a source file
+src/gui/panels/space_menu.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/space_menu.c.i
+.PHONY : src/gui/panels/space_menu.c.i
+
+src/gui/panels/space_menu.s: src/gui/panels/space_menu.c.s
+.PHONY : src/gui/panels/space_menu.s
+
+# target to generate assembly for a file
+src/gui/panels/space_menu.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/space_menu.c.s
+.PHONY : src/gui/panels/space_menu.c.s
 
 src/gui/panels/statusbar.o: src/gui/panels/statusbar.c.o
 .PHONY : src/gui/panels/statusbar.o
@@ -665,6 +737,9 @@ help:
 	@echo "... src/gui/panels/about.o"
 	@echo "... src/gui/panels/about.i"
 	@echo "... src/gui/panels/about.s"
+	@echo "... src/gui/panels/buffer_picker.o"
+	@echo "... src/gui/panels/buffer_picker.i"
+	@echo "... src/gui/panels/buffer_picker.s"
 	@echo "... src/gui/panels/file_browser.o"
 	@echo "... src/gui/panels/file_browser.i"
 	@echo "... src/gui/panels/file_browser.s"
@@ -674,9 +749,15 @@ help:
 	@echo "... src/gui/panels/goto_line.o"
 	@echo "... src/gui/panels/goto_line.i"
 	@echo "... src/gui/panels/goto_line.s"
+	@echo "... src/gui/panels/jumplist_picker.o"
+	@echo "... src/gui/panels/jumplist_picker.i"
+	@echo "... src/gui/panels/jumplist_picker.s"
 	@echo "... src/gui/panels/palette.o"
 	@echo "... src/gui/panels/palette.i"
 	@echo "... src/gui/panels/palette.s"
+	@echo "... src/gui/panels/space_menu.o"
+	@echo "... src/gui/panels/space_menu.i"
+	@echo "... src/gui/panels/space_menu.s"
 	@echo "... src/gui/panels/statusbar.o"
 	@echo "... src/gui/panels/statusbar.i"
 	@echo "... src/gui/panels/statusbar.s"

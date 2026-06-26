@@ -54,10 +54,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/xator/Projects/dragon_editor
+CMAKE_SOURCE_DIR = /home/xator/Projects/dragon
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/xator/Projects/dragon_editor/build
+CMAKE_BINARY_DIR = /home/xator/Projects/dragon/build
 
 #=============================================================================
 # Directory level rules for the build root directory
@@ -88,14 +88,14 @@ clean: CMakeFiles/dragon_editor.dir/clean
 CMakeFiles/glad.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/glad.dir/build.make CMakeFiles/glad.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/glad.dir/build.make CMakeFiles/glad.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/xator/Projects/dragon_editor/build/CMakeFiles --progress-num=21,22 "Built target glad"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/xator/Projects/dragon/build/CMakeFiles --progress-num=24,25 "Built target glad"
 .PHONY : CMakeFiles/glad.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/glad.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/xator/Projects/dragon_editor/build/CMakeFiles 2
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xator/Projects/dragon/build/CMakeFiles 2
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/glad.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/xator/Projects/dragon_editor/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xator/Projects/dragon/build/CMakeFiles 0
 .PHONY : CMakeFiles/glad.dir/rule
 
 # Convenience name for target.
@@ -105,7 +105,7 @@ glad: CMakeFiles/glad.dir/rule
 # codegen rule for target.
 CMakeFiles/glad.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/glad.dir/build.make CMakeFiles/glad.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/xator/Projects/dragon_editor/build/CMakeFiles --progress-num=21,22 "Finished codegen for target glad"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/xator/Projects/dragon/build/CMakeFiles --progress-num=24,25 "Finished codegen for target glad"
 .PHONY : CMakeFiles/glad.dir/codegen
 
 # clean rule for target.
@@ -120,14 +120,14 @@ CMakeFiles/glad.dir/clean:
 CMakeFiles/dragon_editor.dir/all: CMakeFiles/glad.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/xator/Projects/dragon_editor/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20 "Built target dragon_editor"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/xator/Projects/dragon/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23 "Built target dragon_editor"
 .PHONY : CMakeFiles/dragon_editor.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/dragon_editor.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/xator/Projects/dragon_editor/build/CMakeFiles 22
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xator/Projects/dragon/build/CMakeFiles 25
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/dragon_editor.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/xator/Projects/dragon_editor/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/xator/Projects/dragon/build/CMakeFiles 0
 .PHONY : CMakeFiles/dragon_editor.dir/rule
 
 # Convenience name for target.
@@ -137,7 +137,7 @@ dragon_editor: CMakeFiles/dragon_editor.dir/rule
 # codegen rule for target.
 CMakeFiles/dragon_editor.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/xator/Projects/dragon_editor/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20 "Finished codegen for target dragon_editor"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/xator/Projects/dragon/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23 "Finished codegen for target dragon_editor"
 .PHONY : CMakeFiles/dragon_editor.dir/codegen
 
 # clean rule for target.

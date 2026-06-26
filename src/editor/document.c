@@ -1209,6 +1209,176 @@ void document_rotate_selections_forward(Document *doc) {
     (void)doc;
 }
 
+void document_rotate_selection_contents_backward(Document *doc) {
+    if (doc->cursor_count < 2) return;
+    
+    /* Extract text from each selection */
+    char *contents[64];
+    int count = 0;
+    
+    for (int i = 0; i < doc->cursor_count && i < 64; i++) {
+        Cursor *cur = &doc->cursors[i];
+        if (!cur->has_selection) continue;
+        
+        int sr, sc, er, ec;
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+        
+        /* Calculate total length needed */
+        size_t total_len = 0;
+        for (int r = sr; r <= er; r++) {
+            size_t line_len = buffer_line_len(&doc->buffer, r);
+            int start = (r == sr) ? sc : 0;
+            int end = (r == er) ? ec : (int)line_len;
+            if (end > start) total_len += (end - start);
+            if (r < er) total_len++; /* newline */
+        }
+        
+        /* Extract text */
+        char *text = malloc(total_len + 1);
+        size_t pos = 0;
+        for (int r = sr; r <= er; r++) {
+            const char *line = buffer_line_ptr(&doc->buffer, r);
+            size_t line_len = buffer_line_len(&doc->buffer, r);
+            int start = (r == sr) ? sc : 0;
+            int end = (r == er) ? ec : (int)line_len;
+            if (end > start) {
+                memcpy(text + pos, line + start, end - start);
+                pos += (end - start);
+            }
+            if (r < er) {
+                text[pos++] = '\n';
+            }
+        }
+        text[pos] = '\0';
+        
+        contents[count++] = text;
+    }
+    
+    if (count < 2) {
+        for (int i = 0; i < count; i++) free(contents[i]);
+        return;
+    }
+    
+    /* Rotate contents backward (move first to end) */
+    char *first = contents[0];
+    for (int i = 0; i < count - 1; i++) {
+        contents[i] = contents[i + 1];
+    }
+    contents[count - 1] = first;
+    
+    /* Replace selections with rotated content */
+    int idx = 0;
+    for (int i = 0; i < doc->cursor_count && idx < count; i++) {
+        Cursor *cur = &doc->cursors[i];
+        if (!cur->has_selection) continue;
+        
+        int sr, sc, er, ec;
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+        
+        /* Delete selection */
+        size_t start_pos = buffer_pos_from_row_col(&doc->buffer, sr, sc);
+        size_t end_pos = buffer_pos_from_row_col(&doc->buffer, er, ec);
+        size_t del_len = end_pos - start_pos;
+        
+        buffer_delete(&doc->buffer, start_pos, del_len);
+        buffer_insert(&doc->buffer, start_pos, contents[idx], strlen(contents[idx]));
+        
+        /* Update cursor position */
+        buffer_row_col_from_pos(&doc->buffer, start_pos + strlen(contents[idx]), &cur->row, &cur->col);
+        cur->has_selection = false;
+        
+        idx++;
+    }
+    
+    for (int i = 0; i < count; i++) free(contents[i]);
+    doc->dirty = true;
+}
+
+void document_rotate_selection_contents_forward(Document *doc) {
+    if (doc->cursor_count < 2) return;
+    
+    /* Extract text from each selection */
+    char *contents[64];
+    int count = 0;
+    
+    for (int i = 0; i < doc->cursor_count && i < 64; i++) {
+        Cursor *cur = &doc->cursors[i];
+        if (!cur->has_selection) continue;
+        
+        int sr, sc, er, ec;
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+        
+        /* Calculate total length needed */
+        size_t total_len = 0;
+        for (int r = sr; r <= er; r++) {
+            size_t line_len = buffer_line_len(&doc->buffer, r);
+            int start = (r == sr) ? sc : 0;
+            int end = (r == er) ? ec : (int)line_len;
+            if (end > start) total_len += (end - start);
+            if (r < er) total_len++; /* newline */
+        }
+        
+        /* Extract text */
+        char *text = malloc(total_len + 1);
+        size_t pos = 0;
+        for (int r = sr; r <= er; r++) {
+            const char *line = buffer_line_ptr(&doc->buffer, r);
+            size_t line_len = buffer_line_len(&doc->buffer, r);
+            int start = (r == sr) ? sc : 0;
+            int end = (r == er) ? ec : (int)line_len;
+            if (end > start) {
+                memcpy(text + pos, line + start, end - start);
+                pos += (end - start);
+            }
+            if (r < er) {
+                text[pos++] = '\n';
+            }
+        }
+        text[pos] = '\0';
+        
+        contents[count++] = text;
+    }
+    
+    if (count < 2) {
+        for (int i = 0; i < count; i++) free(contents[i]);
+        return;
+    }
+    
+    /* Rotate contents forward (move last to beginning) */
+    char *last = contents[count - 1];
+    for (int i = count - 1; i > 0; i--) {
+        contents[i] = contents[i - 1];
+    }
+    contents[0] = last;
+    
+    /* Replace selections with rotated content */
+    int idx = 0;
+    for (int i = 0; i < doc->cursor_count && idx < count; i++) {
+        Cursor *cur = &doc->cursors[i];
+        if (!cur->has_selection) continue;
+        
+        int sr, sc, er, ec;
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+        
+        /* Delete selection */
+        size_t start_pos = buffer_pos_from_row_col(&doc->buffer, sr, sc);
+        size_t end_pos = buffer_pos_from_row_col(&doc->buffer, er, ec);
+        size_t del_len = end_pos - start_pos;
+        
+        buffer_delete(&doc->buffer, start_pos, del_len);
+        buffer_insert(&doc->buffer, start_pos, contents[idx], strlen(contents[idx]));
+        
+        /* Update cursor position */
+        buffer_row_col_from_pos(&doc->buffer, start_pos + strlen(contents[idx]), &cur->row, &cur->col);
+        cur->has_selection = false;
+        
+        idx++;
+    }
+    
+    for (int i = 0; i < count; i++) free(contents[i]);
+    doc->dirty = true;
+}
+
 void document_delete_word_forward(Document *doc) {
     Cursor *cur = &doc->cursors[0];
     const char *line = buffer_line_ptr(&doc->buffer, cur->row);
@@ -1866,4 +2036,122 @@ void document_view_half_page_down(Document *doc) {
 void document_view_half_page_up(Document *doc) {
     doc->scroll_y -= doc->viewport_lines / 2;
     if (doc->scroll_y < 0) doc->scroll_y = 0;
+}
+
+static int de_is_open_bracket(char c)  { return c == '(' || c == '[' || c == '{'; }
+static int de_is_close_bracket(char c) { return c == ')' || c == ']' || c == '}'; }
+static char de_matching_bracket(char c) {
+    switch (c) {
+    case '(': return ')';
+    case ')': return '(';
+    case '[': return ']';
+    case ']': return '[';
+    case '{': return '}';
+    case '}': return '{';
+    default:  return 0;
+    }
+}
+
+void document_match_bracket(Document *doc) {
+    Cursor *cur = &doc->cursors[0];
+    size_t total = doc->buffer.len;
+    if (total == 0) return;
+    size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
+    if (pos >= total) pos = total - 1;
+    char c = doc->buffer.text[pos];
+
+    /* If not on a bracket, scan forward on the current line for one. */
+    if (!de_is_open_bracket(c) && !de_is_close_bracket(c)) {
+        size_t p = pos;
+        while (p < total && doc->buffer.text[p] != '\n') {
+            char cc = doc->buffer.text[p];
+            if (de_is_open_bracket(cc) || de_is_close_bracket(cc)) {
+                pos = p;
+                c = cc;
+                break;
+            }
+            p++;
+        }
+        if (!de_is_open_bracket(c) && !de_is_close_bracket(c)) return;
+    }
+
+    char match = de_matching_bracket(c);
+    if (!match) return;
+
+    int depth = 0;
+    if (de_is_open_bracket(c)) {
+        for (size_t p = pos; p < total; p++) {
+            char cc = doc->buffer.text[p];
+            if (cc == c) depth++;
+            else if (cc == match) {
+                depth--;
+                if (depth == 0) {
+                    int r, cl;
+                    buffer_row_col_from_pos(&doc->buffer, p, &r, &cl);
+                    cursor_move_to(cur, r, cl);
+                    return;
+                }
+            }
+        }
+    } else {
+        size_t p = pos + 1;
+        while (p-- > 0) {
+            char cc = doc->buffer.text[p];
+            if (cc == c) depth++;
+            else if (cc == match) {
+                depth--;
+                if (depth == 0) {
+                    int r, cl;
+                    buffer_row_col_from_pos(&doc->buffer, p, &r, &cl);
+                    cursor_move_to(cur, r, cl);
+                    return;
+                }
+            }
+        }
+    }
+}
+
+void document_goto_last_modification(Document *doc) {
+    History *h = &doc->history;
+    if (h->current <= 0) return;
+    HistoryEntry *e = &h->entries[h->current - 1];
+    size_t pos = e->pos;
+    if (pos > doc->buffer.len) pos = doc->buffer.len;
+    int r, c;
+    buffer_row_col_from_pos(&doc->buffer, pos, &r, &c);
+    cursor_move_to(&doc->cursors[0], r, c);
+}
+
+void document_insert_file(Document *doc, const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return;
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (size <= 0) { fclose(f); return; }
+    char *data = malloc((size_t)size);
+    if (!data) { fclose(f); return; }
+    size_t got = fread(data, 1, (size_t)size, f);
+    fclose(f);
+
+    Cursor *cur = &doc->cursors[0];
+    size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
+    buffer_insert(&doc->buffer, pos, data, got);
+    history_push_insert(&doc->history, pos, data, got, cur->row, cur->col);
+    for (size_t i = 0; i < got; i++) {
+        if (data[i] == '\n') { cur->row++; cur->col = 0; }
+        else cur->col++;
+    }
+    free(data);
+    doc->dirty = true;
+}
+
+void document_move_file(Document *doc, const char *path) {
+    if (doc->filepath) {
+        rename(doc->filepath, path);
+        free(doc->filepath);
+    }
+    doc->filepath = strdup(path);
+    buffer_save(&doc->buffer, path);
+    doc->dirty = false;
 }
