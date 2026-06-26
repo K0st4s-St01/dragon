@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/xator/Projects/dragon_editor/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

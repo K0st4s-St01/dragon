@@ -1,0 +1,4 @@
+/home/xator/Projects/dragon_editor/build/CMakeFiles/glad.dir
+/home/xator/Projects/dragon_editor/build/CMakeFiles/dragon_editor.dir
+/home/xator/Projects/dragon_editor/build/CMakeFiles/edit_cache.dir
+/home/xator/Projects/dragon_editor/build/CMakeFiles/rebuild_cache.dir

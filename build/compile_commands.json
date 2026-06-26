@@ -1,0 +1,122 @@
+[
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/vendor/glad/include -g -std=gnu11 -o CMakeFiles/glad.dir/vendor/glad/src/glad.c.o -c /home/xator/Projects/dragon_editor/vendor/glad/src/glad.c",
+  "file": "/home/xator/Projects/dragon_editor/vendor/glad/src/glad.c",
+  "output": "CMakeFiles/glad.dir/vendor/glad/src/glad.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/main.c.o -c /home/xator/Projects/dragon_editor/src/main.c",
+  "file": "/home/xator/Projects/dragon_editor/src/main.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/main.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/core/app.c.o -c /home/xator/Projects/dragon_editor/src/core/app.c",
+  "file": "/home/xator/Projects/dragon_editor/src/core/app.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/core/app.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/core/renderer.c.o -c /home/xator/Projects/dragon_editor/src/core/renderer.c",
+  "file": "/home/xator/Projects/dragon_editor/src/core/renderer.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/core/renderer.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/core/mode.c.o -c /home/xator/Projects/dragon_editor/src/core/mode.c",
+  "file": "/home/xator/Projects/dragon_editor/src/core/mode.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/core/mode.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/core/command.c.o -c /home/xator/Projects/dragon_editor/src/core/command.c",
+  "file": "/home/xator/Projects/dragon_editor/src/core/command.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/core/command.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/core/input.c.o -c /home/xator/Projects/dragon_editor/src/core/input.c",
+  "file": "/home/xator/Projects/dragon_editor/src/core/input.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/core/input.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/editor/cursor.c.o -c /home/xator/Projects/dragon_editor/src/editor/cursor.c",
+  "file": "/home/xator/Projects/dragon_editor/src/editor/cursor.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/editor/cursor.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/editor/buffer.c.o -c /home/xator/Projects/dragon_editor/src/editor/buffer.c",
+  "file": "/home/xator/Projects/dragon_editor/src/editor/buffer.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/editor/buffer.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/editor/document.c.o -c /home/xator/Projects/dragon_editor/src/editor/document.c",
+  "file": "/home/xator/Projects/dragon_editor/src/editor/document.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/editor/document.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/editor/history.c.o -c /home/xator/Projects/dragon_editor/src/editor/history.c",
+  "file": "/home/xator/Projects/dragon_editor/src/editor/history.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/editor/history.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/gui.c.o -c /home/xator/Projects/dragon_editor/src/gui/gui.c",
+  "file": "/home/xator/Projects/dragon_editor/src/gui/gui.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/gui.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/text.c.o -c /home/xator/Projects/dragon_editor/src/gui/text.c",
+  "file": "/home/xator/Projects/dragon_editor/src/gui/text.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/text.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/theme.c.o -c /home/xator/Projects/dragon_editor/src/gui/theme.c",
+  "file": "/home/xator/Projects/dragon_editor/src/gui/theme.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/theme.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o -c /home/xator/Projects/dragon_editor/src/gui/panels/statusbar.c",
+  "file": "/home/xator/Projects/dragon_editor/src/gui/panels/statusbar.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o -c /home/xator/Projects/dragon_editor/src/gui/panels/palette.c",
+  "file": "/home/xator/Projects/dragon_editor/src/gui/panels/palette.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o -c /home/xator/Projects/dragon_editor/src/gui/panels/file_browser.c",
+  "file": "/home/xator/Projects/dragon_editor/src/gui/panels/file_browser.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/find_replace.c.o -c /home/xator/Projects/dragon_editor/src/gui/panels/find_replace.c",
+  "file": "/home/xator/Projects/dragon_editor/src/gui/panels/find_replace.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/find_replace.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o -c /home/xator/Projects/dragon_editor/src/gui/panels/goto_line.c",
+  "file": "/home/xator/Projects/dragon_editor/src/gui/panels/goto_line.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o"
+},
+{
+  "directory": "/home/xator/Projects/dragon_editor/build",
+  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon_editor/include -I/home/xator/Projects/dragon_editor/include/dragon_editor -I/home/xator/Projects/dragon_editor/vendor/glad/include -I/home/xator/Projects/dragon_editor/vendor/stb -g -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o -c /home/xator/Projects/dragon_editor/src/gui/panels/about.c",
+  "file": "/home/xator/Projects/dragon_editor/src/gui/panels/about.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o"
+}
+]
