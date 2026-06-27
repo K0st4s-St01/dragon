@@ -83,9 +83,6 @@ SyntaxType syntax_get_type_at(SyntaxHighlighting *sh, int row, int col) {
 void syntax_update_from_lsp(SyntaxHighlighting *sh, const char *response) {
     if (!response || !sh) return;
     
-    /* Clear existing tokens to prevent accumulation */
-    syntax_clear(sh);
-    
     /* Find the "data" array */
     const char *data_start = strstr(response, "\"data\"");
     if (!data_start) return;
@@ -95,6 +92,13 @@ void syntax_update_from_lsp(SyntaxHighlighting *sh, const char *response) {
     if (!bracket) return;
     
     const char *p = bracket + 1;
+    
+    /* Check if data array is empty */
+    while (*p && (*p == ' ' || *p == '\n' || *p == '\t')) p++;
+    if (*p == ']') return;  /* Empty array - don't clear existing tokens */
+    
+    /* Clear existing tokens only when we have new LSP data */
+    syntax_clear(sh);
     
     /* Parse delta-encoded tokens */
     int cur_line = 0;

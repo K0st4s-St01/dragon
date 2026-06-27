@@ -37,6 +37,14 @@ init_submodules() {
         echo "[*] Initializing git submodules..."
         git submodule update --init --recursive
     fi
+    
+    # Verify vendor files exist
+    if [ ! -f vendor/tomlc99/toml.c ]; then
+        echo "[!] vendor/tomlc99/toml.c not found!"
+        echo "    If you downloaded a zip, clone the repo instead:"
+        echo "    git clone --recurse-submodules <repo-url>"
+        exit 1
+    fi
 }
 
 # Parse arguments

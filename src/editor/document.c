@@ -50,7 +50,7 @@ void document_open(Document *doc, const char *path) {
     buffer_load(&doc->buffer, path);
     free(doc->filepath);
     doc->filepath = strdup(path);
-    doc->dirty = false;
+    doc->dirty = true;
     doc->cursors[0] = (Cursor){0};
     doc->scroll_y = 0;
     history_clear(&doc->history);
