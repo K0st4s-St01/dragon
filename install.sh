@@ -31,6 +31,14 @@ clean_build() {
     fi
 }
 
+# Init git submodules
+init_submodules() {
+    if [ -f .gitmodules ]; then
+        echo "[*] Initializing git submodules..."
+        git submodule update --init --recursive
+    fi
+}
+
 # Parse arguments
 INSTALL_DEPS=false
 CLEAN=true
