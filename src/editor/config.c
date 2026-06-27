@@ -38,7 +38,7 @@ Config *config_default(void) {
     cfg->theme.bg[0] = cfg->theme.bg[1] = cfg->theme.bg[2] = 0.0f;
     cfg->theme.bg[3] = 1.0f;
     
-    cfg->theme.fg[0] = 1.0f; cfg->theme.fg[1] = 0.0f; cfg->theme.fg[2] = 0.0f;
+    cfg->theme.fg[0] = cfg->theme.fg[1] = cfg->theme.fg[2] = 1.0f;
     cfg->theme.fg[3] = 1.0f;
     
     cfg->theme.gutter_bg[0] = cfg->theme.gutter_bg[1] = cfg->theme.gutter_bg[2] = 0.0f;

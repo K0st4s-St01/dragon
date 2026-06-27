@@ -452,10 +452,21 @@ static void treesitter_walk_node(TSNode node, SyntaxHighlighting *sh) {
 void treesitter_generate_syntax_tokens(TreeSitterLanguage *lang, SyntaxHighlighting *sh) {
     if (!lang || !lang->tree || !sh) return;
     
-    /* Clear existing tokens */
-    syntax_clear(sh);
+    /* Save existing tokens in case tree-sitter produces nothing */
+    int saved_count = sh->token_count;
     
-    /* Walk the tree and generate tokens */
+    /* Walk the tree and generate tokens into a temporary area past the existing count */
     TSNode root = ts_tree_root_node(lang->tree);
     treesitter_walk_node(root, sh);
+    
+    /* Only replace if tree-sitter actually produced new tokens */
+    if (sh->token_count > saved_count) {
+        /* Move new tokens to the beginning, discarding old ones */
+        memmove(sh->tokens, sh->tokens + saved_count,
+                (sh->token_count - saved_count) * sizeof(SyntaxToken));
+        sh->token_count = sh->token_count - saved_count;
+    } else {
+        /* Tree-sitter produced nothing — keep existing tokens */
+        sh->token_count = saved_count;
+    }
 }
