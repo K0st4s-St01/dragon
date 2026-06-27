@@ -42,6 +42,7 @@ void lsp_manager_init(LSPManager *manager) {
     manager->clients = NULL;
     manager->client_count = 0;
     manager->client_capacity = 0;
+    manager->workspace_root = NULL;
 }
 
 void lsp_manager_free(LSPManager *manager) {
@@ -57,9 +58,11 @@ void lsp_manager_free(LSPManager *manager) {
         }
     }
     free(manager->clients);
+    free(manager->workspace_root);
     manager->clients = NULL;
     manager->client_count = 0;
     manager->client_capacity = 0;
+    manager->workspace_root = NULL;
 }
 
 void lsp_manager_add_server(LSPManager *manager, const char *language_id,
@@ -179,7 +182,7 @@ void lsp_client_stop(LSPClient *client) {
     client->initialized = false;
 }
 
-bool lsp_client_initialize(LSPClient *client) {
+bool lsp_client_initialize(LSPClient *client, const char *workspace_root) {
     if (client->initialized) {
         return true;
     }
@@ -191,16 +194,18 @@ bool lsp_client_initialize(LSPClient *client) {
     }
     
     /* Send initialize request */
-    const char *init_params = "{"
+    char init_params[1024];
+    snprintf(init_params, sizeof(init_params), "{"
         "\"processId\":null,"
-        "\"rootPath\":null,"
+        "\"rootPath\":\"%s\","
+        "\"rootUri\":\"file://%s\","
         "\"capabilities\":{"
             "\"textDocument\":{"
-                "\"synchronization\":{\"didSave\":true},"
+                "\"synchronization\":{\"didOpen\":true,\"didChange\":true,\"didSave\":true},"
                 "\"semanticTokens\":{\"requests\":{\"full\":true}}"
             "}"
         "}"
-    "}";
+    "}", workspace_root ? workspace_root : ".", workspace_root ? workspace_root : ".");
     
     char buffer[4096];
     snprintf(buffer, sizeof(buffer),
@@ -413,6 +418,80 @@ void lsp_client_send_implementation_request(LSPClient *client, const char *file_
     write(client->stdin_fd, buffer, content_len);
 }
 
+void lsp_client_send_didOpen(LSPClient *client, const char *file_uri, const char *language_id, const char *text) {
+    if (client->status != LSP_STATUS_INITIALIZED) return;
+    
+    /* Escape text for JSON */
+    size_t text_len = strlen(text);
+    size_t escaped_len = text_len * 2 + 1;
+    char *escaped = malloc(escaped_len);
+    size_t j = 0;
+    for (size_t i = 0; i < text_len; i++) {
+        char c = text[i];
+        if (c == '"') { escaped[j++] = '\\'; escaped[j++] = '"'; }
+        else if (c == '\\') { escaped[j++] = '\\'; escaped[j++] = '\\'; }
+        else if (c == '\n') { escaped[j++] = '\\'; escaped[j++] = 'n'; }
+        else if (c == '\r') { escaped[j++] = '\\'; escaped[j++] = 'r'; }
+        else if (c == '\t') { escaped[j++] = '\\'; escaped[j++] = 't'; }
+        else { escaped[j++] = c; }
+    }
+    escaped[j] = '\0';
+    
+    char params[4096];
+    snprintf(params, sizeof(params),
+             "{\"textDocument\":{\"uri\":\"%s\",\"languageId\":\"%s\",\"version\":1,\"text\":\"%s\"}}",
+             file_uri, language_id, escaped);
+    free(escaped);
+    
+    char buffer[8192];
+    snprintf(buffer, sizeof(buffer),
+             "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":%s}",
+             params);
+    
+    char header[256];
+    int content_len = strlen(buffer);
+    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
+    write(client->stdin_fd, header, strlen(header));
+    write(client->stdin_fd, buffer, content_len);
+}
+
+void lsp_client_send_didChange(LSPClient *client, const char *file_uri, const char *text) {
+    if (client->status != LSP_STATUS_INITIALIZED) return;
+    
+    /* Escape text for JSON */
+    size_t text_len = strlen(text);
+    size_t escaped_len = text_len * 2 + 1;
+    char *escaped = malloc(escaped_len);
+    size_t j = 0;
+    for (size_t i = 0; i < text_len; i++) {
+        char c = text[i];
+        if (c == '"') { escaped[j++] = '\\'; escaped[j++] = '"'; }
+        else if (c == '\\') { escaped[j++] = '\\'; escaped[j++] = '\\'; }
+        else if (c == '\n') { escaped[j++] = '\\'; escaped[j++] = 'n'; }
+        else if (c == '\r') { escaped[j++] = '\\'; escaped[j++] = 'r'; }
+        else if (c == '\t') { escaped[j++] = '\\'; escaped[j++] = 't'; }
+        else { escaped[j++] = c; }
+    }
+    escaped[j] = '\0';
+    
+    char params[4096];
+    snprintf(params, sizeof(params),
+             "{\"textDocument\":{\"uri\":\"%s\",\"version\":2},\"contentChanges\":[{\"text\":\"%s\"}]}",
+             file_uri, escaped);
+    free(escaped);
+    
+    char buffer[8192];
+    snprintf(buffer, sizeof(buffer),
+             "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didChange\",\"params\":%s}",
+             params);
+    
+    char header[256];
+    int content_len = strlen(buffer);
+    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
+    write(client->stdin_fd, header, strlen(header));
+    write(client->stdin_fd, buffer, content_len);
+}
+
 char *lsp_client_read_response(LSPClient *client) {
     if (client->status != LSP_STATUS_INITIALIZED) {
         return NULL;
@@ -612,8 +691,12 @@ const char *lsp_hover_get_contents(LSPHover *hover) {
 LSPClient *lsp_manager_get_client(LSPManager *manager, const char *language_id) {
     for (int i = 0; i < manager->client_count; i++) {
         if (strcmp(manager->clients[i].language_id, language_id) == 0) {
+            /* Don't retry failed servers too frequently */
+            if (manager->clients[i].status == LSP_STATUS_ERROR) {
+                return NULL;
+            }
             if (manager->clients[i].status != LSP_STATUS_INITIALIZED) {
-                if (!lsp_client_initialize(&manager->clients[i])) {
+                if (!lsp_client_initialize(&manager->clients[i], manager->workspace_root)) {
                     continue;
                 }
             }

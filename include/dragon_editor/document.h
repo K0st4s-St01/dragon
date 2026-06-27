@@ -44,6 +44,8 @@ void document_free(Document *doc);
 void document_open(Document *doc, const char *path);
 void document_save(Document *doc);
 void document_save_as(Document *doc, const char *path);
+void document_notify_lsp_open(Document *doc, void *lsp_manager);
+void document_notify_lsp_change(Document *doc, void *lsp_manager);
 
 void document_insert_char(Document *doc, char c);
 void document_delete_char(Document *doc);

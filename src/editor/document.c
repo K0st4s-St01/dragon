@@ -2502,6 +2502,72 @@ static char *filepath_to_uri(const char *filepath) {
     return uri;
 }
 
+void document_notify_lsp_open(Document *doc, void *lsp_manager) {
+    if (!doc || !doc->filepath || !doc->language_id || !lsp_manager) return;
+    
+    LSPManager *manager = (LSPManager *)lsp_manager;
+    LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
+    if (!client) return;
+    
+    size_t total_lines = buffer_line_count(&doc->buffer);
+    size_t total_len = 0;
+    for (size_t i = 0; i < total_lines; i++)
+        total_len += buffer_line_len(&doc->buffer, i);
+    
+    if (total_len == 0) return;
+    
+    char *text = malloc(total_len + 1);
+    if (!text) return;
+    
+    size_t pos = 0;
+    for (size_t i = 0; i < total_lines; i++) {
+        const char *line = buffer_line_ptr(&doc->buffer, i);
+        size_t line_len = buffer_line_len(&doc->buffer, i);
+        memcpy(text + pos, line, line_len);
+        pos += line_len;
+    }
+    text[total_len] = '\0';
+    
+    char *uri = filepath_to_uri(doc->filepath);
+    if (uri) {
+        lsp_client_send_didOpen(client, uri, doc->language_id, text);
+        free(uri);
+    }
+    free(text);
+}
+
+void document_notify_lsp_change(Document *doc, void *lsp_manager) {
+    if (!doc || !doc->filepath || !doc->language_id || !lsp_manager) return;
+    
+    LSPManager *manager = (LSPManager *)lsp_manager;
+    LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
+    if (!client) return;
+    
+    size_t total_lines = buffer_line_count(&doc->buffer);
+    size_t total_len = 0;
+    for (size_t i = 0; i < total_lines; i++)
+        total_len += buffer_line_len(&doc->buffer, i);
+    
+    char *text = malloc(total_len + 1);
+    if (!text) return;
+    
+    size_t pos = 0;
+    for (size_t i = 0; i < total_lines; i++) {
+        const char *line = buffer_line_ptr(&doc->buffer, i);
+        size_t line_len = buffer_line_len(&doc->buffer, i);
+        memcpy(text + pos, line, line_len);
+        pos += line_len;
+    }
+    text[total_len] = '\0';
+    
+    char *uri = filepath_to_uri(doc->filepath);
+    if (uri) {
+        lsp_client_send_didChange(client, uri, text);
+        free(uri);
+    }
+    free(text);
+}
+
 /* Helper: Navigate cursor to line/col with bounds checking */
 static void document_goto_position(Document *doc, int line, int col) {
     Cursor *cur = &doc->cursors[0];

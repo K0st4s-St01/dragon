@@ -96,6 +96,7 @@ typedef struct {
     LSPClient *clients;
     int        client_count;
     int        client_capacity;
+    char      *workspace_root;
 } LSPManager;
 
 /* Initialization and management */
@@ -107,7 +108,7 @@ void lsp_manager_add_server(LSPManager *manager, const char *language_id,
 /* Server lifecycle */
 bool lsp_client_start(LSPClient *client);
 void lsp_client_stop(LSPClient *client);
-bool lsp_client_initialize(LSPClient *client);
+bool lsp_client_initialize(LSPClient *client, const char *workspace_root);
 LSPStatus lsp_client_get_status(LSPClient *client);
 
 /* Communication - text position based on row/col */
@@ -119,6 +120,8 @@ void lsp_client_send_hover_request(LSPClient *client, const char *file_uri, int 
 void lsp_client_send_rename_request(LSPClient *client, const char *file_uri, int line, int character, const char *new_name);
 void lsp_client_send_code_action_request(LSPClient *client, const char *file_uri, int start_line, int start_character, int end_line, int end_character);
 void lsp_client_send_semantic_tokens_request(LSPClient *client, const char *file_uri);
+void lsp_client_send_didOpen(LSPClient *client, const char *file_uri, const char *language_id, const char *text);
+void lsp_client_send_didChange(LSPClient *client, const char *file_uri, const char *text);
 
 /* Response parsing */
 char *lsp_client_read_response(LSPClient *client);

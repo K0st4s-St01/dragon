@@ -117,15 +117,16 @@ App *app_create(int width, int height, const char *title) {
     lsp_config_load_defaults(&app->lsp_manager);
     app->ts_manager = treesitter_manager_new();
     
+    /* Initialize workspace to current directory */
+    app->workspace_root = getcwd(NULL, 0);
+    app->lsp_manager.workspace_root = strdup(app->workspace_root);
+    
     /* Initialize first buffer */
     app->doc_count = 1;
     app->current_doc = 0;
     document_init(&app->documents[0]);
     
     command_registry_init();
-
-    /* Initialize workspace to current directory */
-    app->workspace_root = getcwd(NULL, 0);
 
     app->last_time = glfwGetTime();
     app->syntax_update_timer = 0;
@@ -179,6 +180,11 @@ void app_run(App *app) {
         if (doc && app->ts_manager && doc->dirty) {
             extern void document_parse_treesitter(Document *, void *);
             document_parse_treesitter(doc, app->ts_manager);
+            
+            /* Notify LSP of document changes */
+            extern void document_notify_lsp_change(Document *, void *);
+            document_notify_lsp_change(doc, &app->lsp_manager);
+            
             doc->dirty = false;
         }
 
@@ -207,6 +213,7 @@ void app_quit(App *app) {
 
 void app_open_file(App *app, const char *path) {
     document_open(&app->documents[app->current_doc], path);
+    document_notify_lsp_open(&app->documents[app->current_doc], &app->lsp_manager);
 }
 
 /* Buffer management */
