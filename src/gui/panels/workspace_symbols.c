@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <ctype.h>
 
 #define WS_MAX_SYMBOLS 512
 #define WS_MAX_FILES 256
@@ -65,6 +66,82 @@ static char *read_file(const char *path, size_t *len_out) {
     return data;
 }
 
+static bool ident_start(char c) {
+    return isalpha((unsigned char)c) || c == '_';
+}
+
+static bool ident_char(char c) {
+    return isalnum((unsigned char)c) || c == '_';
+}
+
+static void add_symbol(const char *name, const char *kind, const char *path, int line) {
+    if (!name || !name[0] || ws_count >= WS_MAX_SYMBOLS) return;
+    snprintf(ws_symbols[ws_count].name, sizeof(ws_symbols[ws_count].name), "%s", name);
+    snprintf(ws_symbols[ws_count].kind, sizeof(ws_symbols[ws_count].kind), "%s", kind ? kind : "symbol");
+    snprintf(ws_symbols[ws_count].path, sizeof(ws_symbols[ws_count].path), "%s", path);
+    ws_symbols[ws_count].line = line;
+    ws_count++;
+}
+
+static void fallback_scan_symbols(const char *path, const char *ext, const char *text) {
+    int line = 0;
+    const char *p = text;
+    while (*p && ws_count < WS_MAX_SYMBOLS) {
+        const char *line_start = p;
+        while (*p && *p != '\n') p++;
+        const char *line_end = p;
+        while (line_start < line_end && isspace((unsigned char)*line_start)) line_start++;
+
+        char name[160] = {0};
+        const char *kind = NULL;
+        if (strcmp(ext, "py") == 0) {
+            if (strncmp(line_start, "def ", 4) == 0 || strncmp(line_start, "class ", 6) == 0) {
+                kind = line_start[0] == 'd' ? "function" : "class";
+                const char *s = line_start + (line_start[0] == 'd' ? 4 : 6);
+                int n = 0;
+                while (s < line_end && ident_char(*s) && n < (int)sizeof(name) - 1)
+                    name[n++] = *s++;
+                name[n] = '\0';
+            }
+        } else if (strcmp(ext, "go") == 0 && strncmp(line_start, "func ", 5) == 0) {
+            kind = "function";
+            const char *s = line_start + 5;
+            if (*s == '(') {
+                while (s < line_end && *s != ')') s++;
+                if (s < line_end) s++;
+                while (s < line_end && isspace((unsigned char)*s)) s++;
+            }
+            int n = 0;
+            while (s < line_end && ident_char(*s) && n < (int)sizeof(name) - 1)
+                name[n++] = *s++;
+            name[n] = '\0';
+        } else {
+            const char *open = strchr(line_start, '(');
+            const char *close = open ? strchr(open, ')') : NULL;
+            const char *semi = line_start;
+            while (semi < line_end && *semi != ';') semi++;
+            if (open && close && (!semi || semi >= line_end || semi > close)) {
+                const char *s = open;
+                while (s > line_start && isspace((unsigned char)s[-1])) s--;
+                const char *end = s;
+                while (s > line_start && ident_char(s[-1])) s--;
+                if (s < end && ident_start(*s)) {
+                    int n = (int)(end - s);
+                    if (n >= (int)sizeof(name)) n = (int)sizeof(name) - 1;
+                    memcpy(name, s, (size_t)n);
+                    name[n] = '\0';
+                    kind = "function";
+                }
+            }
+        }
+        if (kind && name[0])
+            add_symbol(name, kind, path, line);
+
+        if (*p == '\n') p++;
+        line++;
+    }
+}
+
 static void scan_file(TreeSitterManager *mgr, const char *path) {
     if (ws_count >= WS_MAX_SYMBOLS || ws_files_seen >= WS_MAX_FILES) return;
     const char *ext = path_ext(path);
@@ -77,11 +154,13 @@ static void scan_file(TreeSitterManager *mgr, const char *path) {
     if (!text) return;
 
     if (!treesitter_load_language(mgr, ext)) {
+        fallback_scan_symbols(path, ext, text);
         free(text);
         return;
     }
     TreeSitterLanguage *lang = treesitter_get_language(mgr, lang_name);
     if (!lang) {
+        fallback_scan_symbols(path, ext, text);
         free(text);
         return;
     }
@@ -89,12 +168,10 @@ static void scan_file(TreeSitterManager *mgr, const char *path) {
     treesitter_parse(lang, text, (uint32_t)len);
     TreeSitterSymbols syms = treesitter_extract_symbols(lang);
     for (uint32_t i = 0; i < syms.count && ws_count < WS_MAX_SYMBOLS; i++) {
-        snprintf(ws_symbols[ws_count].name, sizeof(ws_symbols[ws_count].name), "%s", syms.symbols[i].name);
-        snprintf(ws_symbols[ws_count].kind, sizeof(ws_symbols[ws_count].kind), "%s", syms.symbols[i].kind);
-        snprintf(ws_symbols[ws_count].path, sizeof(ws_symbols[ws_count].path), "%s", path);
-        ws_symbols[ws_count].line = (int)syms.symbols[i].start_row;
-        ws_count++;
+        add_symbol(syms.symbols[i].name, syms.symbols[i].kind, path, (int)syms.symbols[i].start_row);
     }
+    if (syms.count == 0)
+        fallback_scan_symbols(path, ext, text);
     treesitter_symbols_free(&syms);
     free(text);
 }

@@ -102,6 +102,7 @@ void treesitter_manager_free(TreeSitterManager *mgr) {
         if (lang->parser) ts_parser_delete(lang->parser);
         if (lang->tree) ts_tree_delete(lang->tree);
         if (lang->highlight_query) ts_query_delete(lang->highlight_query);
+        free(lang->name);
         free(lang->source_text);
         free(lang);
     }
@@ -118,7 +119,9 @@ bool treesitter_load_language(TreeSitterManager *mgr, const char *file_extension
     /* Check if already loaded */
     for (uint32_t i = 0; i < mgr->language_count; i++) {
         if (mgr->languages[i] && mgr->languages[i]->language) {
-            if (strcmp(ts_language_name(mgr->languages[i]->language), lang_name) == 0) {
+            const char *loaded_name = ts_language_name(mgr->languages[i]->language);
+            if ((mgr->languages[i]->name && strcmp(mgr->languages[i]->name, lang_name) == 0) ||
+                (loaded_name && strcmp(loaded_name, lang_name) == 0)) {
                 return true;
             }
         }
@@ -130,9 +133,15 @@ bool treesitter_load_language(TreeSitterManager *mgr, const char *file_extension
     TreeSitterLanguage *lang = (TreeSitterLanguage *)malloc(sizeof(TreeSitterLanguage));
     if (!lang) return false;
     
+    lang->name = strdup(lang_name);
     lang->language = language;
     lang->parser = ts_parser_new();
-    ts_parser_set_language(lang->parser, language);
+    if (!lang->parser || !ts_parser_set_language(lang->parser, language)) {
+        if (lang->parser) ts_parser_delete(lang->parser);
+        free(lang->name);
+        free(lang);
+        return false;
+    }
     lang->tree = NULL;
     lang->highlight_query = NULL;
     lang->capture_names = NULL;
@@ -151,7 +160,9 @@ TreeSitterLanguage* treesitter_get_language(TreeSitterManager *mgr, const char *
         TreeSitterLanguage *lang = mgr->languages[i];
         if (!lang || !lang->language) continue;
         
-        if (strcmp(ts_language_name(lang->language), language_name) == 0) {
+        const char *loaded_name = ts_language_name(lang->language);
+        if ((lang->name && strcmp(lang->name, language_name) == 0) ||
+            (loaded_name && strcmp(loaded_name, language_name) == 0)) {
             return lang;
         }
     }

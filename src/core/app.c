@@ -166,8 +166,23 @@ void app_run(App *app) {
 
         glfwPollEvents();
         
-        /* Throttled syntax highlighting update every 30 frames (~500ms at 60fps) */
         Document *doc = &app->documents[app->current_doc];
+
+        /* Produce visible syntax highlighting locally first; LSP semantic tokens are a refinement. */
+        if (doc && doc->syntax_dirty && !doc->ts_attempted) {
+            bool parsed = app->ts_manager ? document_parse_treesitter(doc, app->ts_manager) : false;
+            doc->ts_attempted = true;
+            if (!parsed)
+                parsed = document_update_syntax_fallback(doc);
+            doc->ts_parsed = parsed;
+            if (parsed)
+                doc->syntax_dirty = false;
+
+            /* Notify LSP of document changes */
+            document_notify_lsp_change(doc, &app->lsp_manager);
+        }
+
+        /* Throttled LSP semantic-token update for languages without local highlighting. */
         app->syntax_update_timer++;
         if (app->syntax_update_timer >= 30 && doc && doc->language_id && doc->syntax_dirty && !doc->ts_parsed) {
             app->syntax_update_timer = 0;
@@ -179,20 +194,6 @@ void app_run(App *app) {
         /* Check for LSP diagnostics notifications (non-blocking) */
         if (doc && doc->language_id) {
             document_update_diagnostics_from_lsp(doc, &app->lsp_manager);
-        }
-        
-        /* Parse document with treesitter for better syntax highlighting (only when dirty) */
-        if (doc && app->ts_manager && doc->syntax_dirty && !doc->ts_attempted) {
-            bool parsed = document_parse_treesitter(doc, app->ts_manager);
-            doc->ts_attempted = true;
-            if (!parsed)
-                parsed = document_update_syntax_fallback(doc);
-            doc->ts_parsed = parsed;
-            if (parsed)
-                doc->syntax_dirty = false;
-            
-            /* Notify LSP of document changes */
-            document_notify_lsp_change(doc, &app->lsp_manager);
         }
 
         renderer_clear(&app->renderer);

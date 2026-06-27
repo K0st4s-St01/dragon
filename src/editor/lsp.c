@@ -4,25 +4,70 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
 
+static const char *find_bytes(const char *haystack, size_t haystack_len,
+                              const char *needle, size_t needle_len) {
+    if (!haystack || !needle || needle_len == 0 || haystack_len < needle_len) return NULL;
+    for (size_t i = 0; i <= haystack_len - needle_len; i++) {
+        if (memcmp(haystack + i, needle, needle_len) == 0)
+            return haystack + i;
+    }
+    return NULL;
+}
+
+static bool lsp_client_buffer_append(LSPClient *client, const char *data, size_t len) {
+    if (!client || !data || len == 0) return true;
+    if (client->read_len + len + 1 > client->read_capacity) {
+        size_t next = client->read_capacity ? client->read_capacity : 16384;
+        while (next < client->read_len + len + 1)
+            next *= 2;
+        char *buf = realloc(client->read_buffer, next);
+        if (!buf) return false;
+        client->read_buffer = buf;
+        client->read_capacity = next;
+    }
+    memcpy(client->read_buffer + client->read_len, data, len);
+    client->read_len += len;
+    client->read_buffer[client->read_len] = '\0';
+    return true;
+}
+
 /* Helper: Extract JSON string value */
 static char *json_extract_string(const char *json, const char *key) {
     char search[256];
-    snprintf(search, sizeof(search), "\"%s\":\"", key);
+    snprintf(search, sizeof(search), "\"%s\"", key);
     const char *pos = strstr(json, search);
     if (!pos) return NULL;
     
     pos += strlen(search);
-    const char *end = strchr(pos, '"');
-    if (!end) return NULL;
-    
-    int len = end - pos;
-    char *result = malloc(len + 1);
-    memcpy(result, pos, len);
+    while (*pos && (*pos == ' ' || *pos == '\t' || *pos == '\n' || *pos == '\r')) pos++;
+    if (*pos != ':') return NULL;
+    pos++;
+    while (*pos && (*pos == ' ' || *pos == '\t' || *pos == '\n' || *pos == '\r')) pos++;
+    if (*pos != '"') return NULL;
+    pos++;
+
+    size_t cap = strlen(pos) + 1;
+    char *result = malloc(cap);
+    if (!result) return NULL;
+    size_t len = 0;
+    while (*pos && *pos != '"') {
+        if (*pos == '\\' && pos[1]) {
+            pos++;
+            if (*pos == 'n') result[len++] = '\n';
+            else if (*pos == 'r') result[len++] = '\r';
+            else if (*pos == 't') result[len++] = '\t';
+            else result[len++] = *pos;
+            pos++;
+        } else {
+            result[len++] = *pos++;
+        }
+    }
     result[len] = '\0';
     return result;
 }
@@ -30,11 +75,15 @@ static char *json_extract_string(const char *json, const char *key) {
 /* Helper: Extract JSON number value */
 static int json_extract_number(const char *json, const char *key) {
     char search[256];
-    snprintf(search, sizeof(search), "\"%s\":", key);
+    snprintf(search, sizeof(search), "\"%s\"", key);
     const char *pos = strstr(json, search);
     if (!pos) return -1;
     
     pos += strlen(search);
+    while (*pos && (*pos == ' ' || *pos == '\t' || *pos == '\n' || *pos == '\r')) pos++;
+    if (*pos != ':') return -1;
+    pos++;
+    while (*pos && (*pos == ' ' || *pos == '\t' || *pos == '\n' || *pos == '\r')) pos++;
     return (int)strtol(pos, NULL, 10);
 }
 
@@ -56,6 +105,7 @@ void lsp_manager_free(LSPManager *manager) {
             }
             free(manager->clients[i].config.args);
         }
+        free(manager->clients[i].read_buffer);
     }
     free(manager->clients);
     free(manager->workspace_root);
@@ -97,6 +147,9 @@ void lsp_manager_add_server(LSPManager *manager, const char *language_id,
     client->stdin_fd = -1;
     client->stdout_fd = -1;
     client->initialized = false;
+    client->read_buffer = NULL;
+    client->read_len = 0;
+    client->read_capacity = 0;
     
     manager->client_count++;
 }
@@ -153,7 +206,7 @@ bool lsp_client_start(LSPClient *client) {
         }
         argv[argc - 1] = NULL;
         
-        execv(client->config.path, argv);
+        execvp(client->config.path, argv);
         exit(1);
     } else {
         /* Parent process */
@@ -194,6 +247,7 @@ void lsp_client_stop(LSPClient *client) {
     
     client->status = LSP_STATUS_DISCONNECTED;
     client->initialized = false;
+    client->read_len = 0;
 }
 
 bool lsp_client_initialize(LSPClient *client, const char *workspace_root) {
@@ -555,51 +609,73 @@ char *lsp_client_read_response(LSPClient *client) {
     if (client->status != LSP_STATUS_INITIALIZED) {
         return NULL;
     }
-    
-    char buffer[8192];
-    int bytes_read = read(client->stdout_fd, buffer, sizeof(buffer) - 1);
-    if (bytes_read <= 0) {
+
+    char chunk[8192];
+    for (;;) {
+        ssize_t bytes_read = read(client->stdout_fd, chunk, sizeof(chunk));
+        if (bytes_read > 0) {
+            if (!lsp_client_buffer_append(client, chunk, (size_t)bytes_read))
+                return NULL;
+            continue;
+        }
+        if (bytes_read < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+            break;
+        if (bytes_read <= 0)
+            break;
+    }
+
+    const char *header_start = find_bytes(client->read_buffer, client->read_len,
+                                          "Content-Length:", strlen("Content-Length:"));
+    if (!header_start) {
+        if (client->read_len > 4096)
+            client->read_len = 0;
         return NULL;
     }
-    
-    buffer[bytes_read] = '\0';
-    
-    /* Parse Content-Length header */
+
+    size_t prefix_len = (size_t)(header_start - client->read_buffer);
+    if (prefix_len > 0) {
+        memmove(client->read_buffer, header_start, client->read_len - prefix_len);
+        client->read_len -= prefix_len;
+        client->read_buffer[client->read_len] = '\0';
+    }
+
+    const char *body_start = find_bytes(client->read_buffer, client->read_len, "\r\n\r\n", 4);
+    if (!body_start)
+        return NULL;
+
+    size_t header_len = (size_t)(body_start - client->read_buffer);
+    char header[512];
+    size_t header_copy = header_len < sizeof(header) - 1 ? header_len : sizeof(header) - 1;
+    memcpy(header, client->read_buffer, header_copy);
+    header[header_copy] = '\0';
+
     int content_len = 0;
-    if (sscanf(buffer, "Content-Length: %d", &content_len) != 1) {
+    if (sscanf(header, "Content-Length: %d", &content_len) != 1) {
         return NULL;
     }
-    
-    if (content_len <= 0 || content_len > sizeof(buffer)) {
+
+    if (content_len <= 0 || content_len > 1024 * 1024) {
+        client->read_len = 0;
+        if (client->read_buffer)
+            client->read_buffer[0] = '\0';
         return NULL;
     }
-    
-    /* Find body start */
-    const char *body_start = strstr(buffer, "\r\n\r\n");
-    if (!body_start) {
+
+    size_t frame_len = header_len + 4 + (size_t)content_len;
+    if (client->read_len < frame_len)
         return NULL;
-    }
-    
-    body_start += 4;
-    
-    /* Allocate and copy response */
-    char *response = malloc(content_len + 1);
-    int header_len = body_start - buffer;
-    int already_read = bytes_read - header_len;
-    
-    if (already_read > 0) {
-        memcpy(response, body_start, already_read);
-    }
-    
-    /* Read remaining if needed */
-    int offset = already_read;
-    while (offset < content_len) {
-        bytes_read = read(client->stdout_fd, response + offset, content_len - offset);
-        if (bytes_read <= 0) break;
-        offset += bytes_read;
-    }
-    
-    response[offset] = '\0';
+
+    char *response = malloc((size_t)content_len + 1);
+    if (!response) return NULL;
+    memcpy(response, client->read_buffer + header_len + 4, (size_t)content_len);
+    response[content_len] = '\0';
+
+    size_t remaining = client->read_len - frame_len;
+    if (remaining > 0)
+        memmove(client->read_buffer, client->read_buffer + frame_len, remaining);
+    client->read_len = remaining;
+    if (client->read_buffer)
+        client->read_buffer[client->read_len] = '\0';
     return response;
 }
 
@@ -847,20 +923,20 @@ LSPDiagnostics *lsp_parse_diagnostics_response(const char *response) {
         /* Parse range.start.line */
         const char *line_str = strstr(p, "\"line\"");
         if (line_str) {
-            sscanf(line_str + 6, "%d", &d->start_line);
+            d->start_line = json_extract_number(line_str, "line");
         }
         
         /* Parse range.start.character */
         const char *char_str = strstr(p, "\"character\"");
         if (char_str) {
-            sscanf(char_str + 11, "%d", &d->start_col);
+            d->start_col = json_extract_number(char_str, "character");
         }
         
         /* Parse severity (1=error, 2=warning, 3=info, 4=hint) */
         const char *sev_str = strstr(p, "\"severity\"");
         if (sev_str) {
-            int sev = 1;
-            sscanf(sev_str + 10, "%d", &sev);
+            int sev = json_extract_number(sev_str, "severity");
+            if (sev < 1) sev = 1;
             d->severity = sev;
         } else {
             d->severity = LSP_DIAG_ERROR;
@@ -948,21 +1024,21 @@ LSPDiagnostics *lsp_parse_publish_diagnostics_notification(const char *response)
         if (range_str) {
             const char *line_str = strstr(range_str, "\"line\"");
             if (line_str) {
-                sscanf(line_str + 6, "%d", &d->start_line);
+                d->start_line = json_extract_number(line_str, "line");
             }
             
             /* Parse range.start.character */
             const char *char_str = strstr(range_str, "\"character\"");
             if (char_str) {
-                sscanf(char_str + 11, "%d", &d->start_col);
+                d->start_col = json_extract_number(char_str, "character");
             }
         }
         
         /* Parse severity (1=error, 2=warning, 3=info, 4=hint) */
         const char *sev_str = strstr(p, "\"severity\"");
         if (sev_str) {
-            int sev = 1;
-            sscanf(sev_str + 10, "%d", &sev);
+            int sev = json_extract_number(sev_str, "severity");
+            if (sev < 1) sev = 1;
             d->severity = sev;
         } else {
             d->severity = LSP_DIAG_ERROR;

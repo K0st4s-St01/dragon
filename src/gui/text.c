@@ -107,17 +107,30 @@ static int utf8_decode(const char **p) {
         *p = (const char *)s;
         return c;
     } else if ((c & 0xE0) == 0xC0) {
+        if (!s[0] || (s[0] & 0xC0) != 0x80) {
+            *p = (const char *)s;
+            return 0xFFFD;
+        }
         c = (c & 0x1F) << 6;
         c |= (*s++ & 0x3F);
         *p = (const char *)s;
         return c;
     } else if ((c & 0xF0) == 0xE0) {
+        if (!s[0] || !s[1] || (s[0] & 0xC0) != 0x80 || (s[1] & 0xC0) != 0x80) {
+            *p = (const char *)s;
+            return 0xFFFD;
+        }
         c = (c & 0x0F) << 12;
         c |= (*s++ & 0x3F) << 6;
         c |= (*s++ & 0x3F);
         *p = (const char *)s;
         return c;
     } else if ((c & 0xF8) == 0xF0) {
+        if (!s[0] || !s[1] || !s[2] ||
+            (s[0] & 0xC0) != 0x80 || (s[1] & 0xC0) != 0x80 || (s[2] & 0xC0) != 0x80) {
+            *p = (const char *)s;
+            return 0xFFFD;
+        }
         c = (c & 0x07) << 18;
         c |= (*s++ & 0x3F) << 12;
         c |= (*s++ & 0x3F) << 6;

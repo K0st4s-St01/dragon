@@ -97,20 +97,24 @@ bool panel_lsp_hover_is_open(void) {
     return hover_open;
 }
 
-void panel_lsp_hover_key(App *app, int key, int mods) {
-    if (!hover_open) return;
+bool panel_lsp_hover_key(App *app, int key, int mods) {
+    if (!hover_open) return false;
     if ((key == GLFW_KEY_D && (mods & GLFW_MOD_CONTROL)) || key == GLFW_KEY_PAGE_DOWN) {
         hover_scroll += 6;
         if (hover_scroll > hover_display.line_count - 1)
             hover_scroll = hover_display.line_count > 0 ? hover_display.line_count - 1 : 0;
         hover_open_time = glfwGetTime();
+        return true;
     } else if ((key == GLFW_KEY_U && (mods & GLFW_MOD_CONTROL)) || key == GLFW_KEY_PAGE_UP) {
         hover_scroll -= 6;
         if (hover_scroll < 0) hover_scroll = 0;
         hover_open_time = glfwGetTime();
+        return true;
     } else if (key == GLFW_KEY_ESCAPE || key == GLFW_KEY_ENTER) {
         panel_lsp_hover_close(app);
+        return true;
     }
+    return false;
 }
 
 void panel_lsp_hover_render(Gui *g, App *app) {

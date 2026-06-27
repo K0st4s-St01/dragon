@@ -31,9 +31,16 @@ void syntax_clear(SyntaxHighlighting *sh) {
 }
 
 void syntax_add_token(SyntaxHighlighting *sh, int sr, int sc, int er, int ec, SyntaxType type) {
+    if (!sh || type == SYNTAX_NORMAL) return;
+    if (sr < 0 || er < sr || sc < 0 || ec < 0) return;
+    if (sr == er && ec <= sc) return;
+
     if (sh->token_count >= sh->token_capacity) {
-        sh->token_capacity = (sh->token_capacity == 0) ? 256 : sh->token_capacity * 2;
-        sh->tokens = realloc(sh->tokens, sh->token_capacity * sizeof(SyntaxToken));
+        int new_capacity = (sh->token_capacity == 0) ? 256 : sh->token_capacity * 2;
+        SyntaxToken *new_tokens = realloc(sh->tokens, new_capacity * sizeof(SyntaxToken));
+        if (!new_tokens) return;
+        sh->tokens = new_tokens;
+        sh->token_capacity = new_capacity;
     }
     
     SyntaxToken *token = &sh->tokens[sh->token_count++];
@@ -45,37 +52,28 @@ void syntax_add_token(SyntaxHighlighting *sh, int sr, int sc, int er, int ec, Sy
 }
 
 SyntaxType syntax_get_type_at(SyntaxHighlighting *sh, int row, int col) {
-    /* Linear search with early termination */
+    if (!sh || row < 0 || col < 0) return SYNTAX_NORMAL;
+
+    SyntaxToken *best = NULL;
+    int best_span = 0;
+
     for (int i = 0; i < sh->token_count; i++) {
         SyntaxToken *token = &sh->tokens[i];
-        
-        /* Skip tokens that end before this position */
+
         if (token->end_row < row || (token->end_row == row && token->end_col <= col))
             continue;
-        
-        /* Skip tokens that start after this position */
         if (token->start_row > row || (token->start_row == row && token->start_col > col))
             continue;
-        
-        /* Token covers this position */
-        if (token->start_row == row && token->end_row == row) {
-            /* Single line token */
-            if (col >= token->start_col && col < token->end_col) {
-                return token->type;
-            }
-        } else if (token->start_row == row && col >= token->start_col) {
-            /* Start of multi-line token */
-            return token->type;
-        } else if (token->end_row == row && col < token->end_col) {
-            /* End of multi-line token */
-            return token->type;
-        } else if (token->start_row < row && token->end_row > row) {
-            /* Middle of multi-line token */
-            return token->type;
+
+        int span = (token->end_row - token->start_row) * 100000 +
+                   (token->end_col - token->start_col);
+        if (!best || span <= best_span) {
+            best = token;
+            best_span = span;
         }
     }
-    
-    return SYNTAX_NORMAL;
+
+    return best ? best->type : SYNTAX_NORMAL;
 }
 
 void syntax_update_from_lsp(SyntaxHighlighting *sh, const char *response) {

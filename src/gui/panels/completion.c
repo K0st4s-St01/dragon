@@ -36,7 +36,9 @@ static bool word_char(char c) {
 static int current_prefix(Document *doc, char *buf, int size) {
     Cursor *cur = &doc->cursors[0];
     const char *line = buffer_line_ptr(&doc->buffer, cur->row);
+    int line_len = (int)buffer_line_len(&doc->buffer, cur->row);
     int col = cur->col;
+    if (col > line_len) col = line_len;
     int start = col;
     while (start > 0 && word_char(line[start - 1])) start--;
     int len = col - start;

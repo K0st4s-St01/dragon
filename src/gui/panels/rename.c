@@ -66,7 +66,18 @@ void panel_rename_key(App *app, int key) {
                 if (client) {
                     lsp_client_send_rename_request(client, rename_file_uri, rename_line, rename_col, rename_buffer);
                     rename_pending_client = client;
-                    snprintf(rename_status, sizeof(rename_status), "Renaming to '%s'...", rename_buffer);
+                    char display_name[128];
+                    size_t display_len = strlen(rename_buffer);
+                    bool truncated = display_len >= sizeof(display_name);
+                    if (truncated)
+                        display_len = sizeof(display_name) - 4;
+                    memcpy(display_name, rename_buffer, display_len);
+                    if (truncated) {
+                        memcpy(display_name + display_len, "...", 4);
+                    } else {
+                        display_name[display_len] = '\0';
+                    }
+                    snprintf(rename_status, sizeof(rename_status), "Renaming to '%s'...", display_name);
                     rename_status_time = 0;  /* Will be set by render function */
                     /* Keep panel open while waiting for response */
                     return;

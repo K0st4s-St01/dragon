@@ -15,6 +15,16 @@ static bool language_is_c_family(const char *lang) {
                     strcmp(lang, "cuda") == 0 || strcmp(lang, "java") == 0);
 }
 
+static bool language_uses_slash_comments(const char *lang) {
+    return language_is_c_family(lang) ||
+           (lang && (strcmp(lang, "javascript") == 0 || strcmp(lang, "typescript") == 0 ||
+                     strcmp(lang, "rust") == 0 || strcmp(lang, "go") == 0));
+}
+
+static bool language_uses_hash_comments(const char *lang) {
+    return lang && strcmp(lang, "python") == 0;
+}
+
 static bool language_is_script(const char *lang) {
     return lang && (strcmp(lang, "python") == 0 || strcmp(lang, "javascript") == 0 ||
                     strcmp(lang, "typescript") == 0 || strcmp(lang, "go") == 0 ||
@@ -57,16 +67,16 @@ static bool fallback_keyword(const char *word, int len, const char *lang, Syntax
 }
 
 static void fallback_highlight_line(Document *doc, int row, const char *line, int len) {
-    bool c_family = language_is_c_family(doc->language_id);
-    bool script = language_is_script(doc->language_id);
+    bool slash_comments = language_uses_slash_comments(doc->language_id);
+    bool hash_comments = language_uses_hash_comments(doc->language_id);
     int i = 0;
     while (i < len) {
         char ch = line[i];
-        if (c_family && ch == '/' && i + 1 < len && line[i + 1] == '/') {
+        if (slash_comments && ch == '/' && i + 1 < len && line[i + 1] == '/') {
             syntax_add_token(&doc->syntax, row, i, row, len, SYNTAX_COMMENT);
             return;
         }
-        if (c_family && ch == '/' && i + 1 < len && line[i + 1] == '*') {
+        if (slash_comments && ch == '/' && i + 1 < len && line[i + 1] == '*') {
             int start = i;
             i += 2;
             while (i + 1 < len && !(line[i] == '*' && line[i + 1] == '/')) i++;
@@ -74,7 +84,7 @@ static void fallback_highlight_line(Document *doc, int row, const char *line, in
             syntax_add_token(&doc->syntax, row, start, row, i, SYNTAX_COMMENT);
             continue;
         }
-        if (script && ch == '#') {
+        if (hash_comments && ch == '#') {
             syntax_add_token(&doc->syntax, row, i, row, len, SYNTAX_COMMENT);
             return;
         }
@@ -2662,24 +2672,13 @@ void document_notify_lsp_open(Document *doc, void *lsp_manager) {
     LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
     if (!client) return;
     
-    size_t total_lines = buffer_line_count(&doc->buffer);
-    size_t total_len = 0;
-    for (size_t i = 0; i < total_lines; i++)
-        total_len += buffer_line_len(&doc->buffer, i);
-    
-    if (total_len == 0) return;
-    
-    char *text = malloc(total_len + 1);
+    if (doc->buffer.len == 0) return;
+
+    char *text = malloc(doc->buffer.len + 1);
     if (!text) return;
-    
-    size_t pos = 0;
-    for (size_t i = 0; i < total_lines; i++) {
-        const char *line = buffer_line_ptr(&doc->buffer, i);
-        size_t line_len = buffer_line_len(&doc->buffer, i);
-        memcpy(text + pos, line, line_len);
-        pos += line_len;
-    }
-    text[total_len] = '\0';
+
+    memcpy(text, doc->buffer.text, doc->buffer.len);
+    text[doc->buffer.len] = '\0';
     
     char *uri = filepath_to_uri(doc->filepath);
     if (uri) {
@@ -2696,22 +2695,11 @@ void document_notify_lsp_change(Document *doc, void *lsp_manager) {
     LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
     if (!client) return;
     
-    size_t total_lines = buffer_line_count(&doc->buffer);
-    size_t total_len = 0;
-    for (size_t i = 0; i < total_lines; i++)
-        total_len += buffer_line_len(&doc->buffer, i);
-    
-    char *text = malloc(total_len + 1);
+    char *text = malloc(doc->buffer.len + 1);
     if (!text) return;
-    
-    size_t pos = 0;
-    for (size_t i = 0; i < total_lines; i++) {
-        const char *line = buffer_line_ptr(&doc->buffer, i);
-        size_t line_len = buffer_line_len(&doc->buffer, i);
-        memcpy(text + pos, line, line_len);
-        pos += line_len;
-    }
-    text[total_len] = '\0';
+
+    memcpy(text, doc->buffer.text, doc->buffer.len);
+    text[doc->buffer.len] = '\0';
     
     char *uri = filepath_to_uri(doc->filepath);
     if (uri) {
@@ -3105,12 +3093,14 @@ void document_update_syntax_from_lsp(Document *doc, void *lsp_manager) {
     free(uri);
 }
 
-bool document_update_syntax_fallback(Document *doc) {
+static bool document_run_syntax_fallback(Document *doc, bool clear_existing) {
     if (!doc || !doc->language_id) return false;
     if (!language_is_c_family(doc->language_id) && !language_is_script(doc->language_id))
         return false;
 
-    syntax_clear(&doc->syntax);
+    if (clear_existing)
+        syntax_clear(&doc->syntax);
+    int token_count_before = doc->syntax.token_count;
     size_t lines = buffer_line_count(&doc->buffer);
     for (size_t row = 0; row < lines; row++) {
         const char *line = buffer_line_ptr(&doc->buffer, row);
@@ -3118,7 +3108,11 @@ bool document_update_syntax_fallback(Document *doc) {
         while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) len--;
         fallback_highlight_line(doc, (int)row, line, len);
     }
-    return doc->syntax.token_count > 0;
+    return doc->syntax.token_count > token_count_before;
+}
+
+bool document_update_syntax_fallback(Document *doc) {
+    return document_run_syntax_fallback(doc, true);
 }
 
 /* Update diagnostics from LSP */
@@ -3177,38 +3171,14 @@ bool document_parse_treesitter(Document *doc, void *ts_manager) {
     TreeSitterLanguage *lang = treesitter_get_language(manager, lang_name);
     if (!lang) return false;
     
-    /* Reconstruct buffer contents from lines for treesitter parsing */
-    size_t total_lines = buffer_line_count(&doc->buffer);
-    if (total_lines == 0) return false;
-    
-    /* Allocate buffer for entire document */
-    size_t total_len = 0;
-    for (size_t i = 0; i < total_lines; i++) {
-        total_len += buffer_line_len(&doc->buffer, i);
-    }
-    
-    if (total_len == 0) return false;
-    
-    char *buffer_text = (char *)malloc(total_len + 1);
-    if (!buffer_text) return false;
-    
-    /* Build document text */
-    size_t pos = 0;
-    for (size_t i = 0; i < total_lines; i++) {
-        const char *line = buffer_line_ptr(&doc->buffer, i);
-        size_t line_len = buffer_line_len(&doc->buffer, i);
-        memcpy(buffer_text + pos, line, line_len);
-        pos += line_len;
-    }
-    buffer_text[total_len] = '\0';
-    
     /* Parse with treesitter */
-    treesitter_parse(lang, buffer_text, (uint32_t)total_len);
+    if (doc->buffer.len == 0) return false;
+    treesitter_parse(lang, doc->buffer.text, (uint32_t)doc->buffer.len);
     
     /* Generate syntax tokens from tree-sitter parse */
     bool produced_tokens = treesitter_generate_syntax_tokens(lang, &doc->syntax);
-    
-    free(buffer_text);
+    if (produced_tokens)
+        document_run_syntax_fallback(doc, false);
     return produced_tokens;
 }
 

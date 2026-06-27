@@ -6,6 +6,7 @@
 #include "syntax.h"
 
 typedef struct {
+    char *name;
     TSLanguage *language;
     TSParser *parser;
     TSTree *tree;

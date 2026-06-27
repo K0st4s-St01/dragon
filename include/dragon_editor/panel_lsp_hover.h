@@ -7,7 +7,7 @@
 void panel_lsp_hover_open(App *app);
 void panel_lsp_hover_close(App *app);
 bool panel_lsp_hover_is_open(void);
-void panel_lsp_hover_key(App *app, int key, int mods);
+bool panel_lsp_hover_key(App *app, int key, int mods);
 void panel_lsp_hover_render(Gui *g, App *app);
 
 #endif

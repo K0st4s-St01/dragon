@@ -139,8 +139,8 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
     }
 
     if (panel_lsp_hover_is_open()) {
-        panel_lsp_hover_key(app, key, mods);
-        return;
+        if (panel_lsp_hover_key(app, key, mods))
+            return;
     }
 
     /* Route keys to LSP goto picker when open */

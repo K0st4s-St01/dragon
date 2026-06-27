@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 typedef enum {
     LSP_STATUS_DISCONNECTED,
@@ -101,6 +102,9 @@ typedef struct {
     LSPStatus status;
     LSPServerConfig config;
     bool   initialized;
+    char  *read_buffer;      /* Buffered stdout bytes for partial LSP frames */
+    size_t read_len;
+    size_t read_capacity;
 } LSPClient;
 
 typedef struct {

@@ -110,11 +110,21 @@ static int display_col(const char *line, int col, int tab_width) {
     return display;
 }
 
-/* Get display width of a character */
-static int char_display_width(char c, int display_col, int tab_width) {
-    if (c == '\t') {
-        return ((display_col / tab_width) + 1) * tab_width - display_col;
-    }
+static int utf8_char_len(const char *s, int remaining) {
+    if (!s || remaining <= 0) return 0;
+    unsigned char c = (unsigned char)s[0];
+    if (c < 0x80) return 1;
+    if ((c & 0xE0) == 0xC0)
+        return remaining >= 2 && ((unsigned char)s[1] & 0xC0) == 0x80 ? 2 : 1;
+    if ((c & 0xF0) == 0xE0)
+        return remaining >= 3 &&
+               ((unsigned char)s[1] & 0xC0) == 0x80 &&
+               ((unsigned char)s[2] & 0xC0) == 0x80 ? 3 : 1;
+    if ((c & 0xF8) == 0xF0)
+        return remaining >= 4 &&
+               ((unsigned char)s[1] & 0xC0) == 0x80 &&
+               ((unsigned char)s[2] & 0xC0) == 0x80 &&
+               ((unsigned char)s[3] & 0xC0) == 0x80 ? 4 : 1;
     return 1;
 }
 
@@ -230,12 +240,14 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
                 if (line[col] == '\t') {
                     /* Tab - skip to next tab stop (no visible rendering) */
                 } else {
-                    char ch[2] = {line[col], '\0'};
+                    int char_len = utf8_char_len(line + col, line_len - col);
+                    char ch[5] = {0};
+                    memcpy(ch, line + col, (size_t)char_len);
                     float x = text_x + dcol * g->font.glyph_w;
                     font_draw(&g->font, r, ch, x, y + 2, sr, sg, sb, sa);
                 }
                 
-                col++;
+                col += utf8_char_len(line + col, line_len - col);
             }
         }
 

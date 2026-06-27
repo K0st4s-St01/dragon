@@ -188,6 +188,12 @@ void panel_find_key(App *app, Document *doc, int key) {
         }
     } else if (key == GLFW_KEY_TAB) {
         fr_active_field = 1 - fr_active_field;
+    } else if (key == GLFW_KEY_BACKSPACE) {
+        if (fr_active_field == 0 && fr_query_len > 0) {
+            fr_query[--fr_query_len] = '\0';
+        } else if (fr_active_field == 1 && fr_replace_len > 0) {
+            fr_replace[--fr_replace_len] = '\0';
+        }
     } else if (key == GLFW_KEY_ESCAPE) {
         panel_find_close(app);
         return;
