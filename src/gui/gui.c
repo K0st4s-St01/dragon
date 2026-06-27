@@ -220,15 +220,9 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
                 get_syntax_color(t, syntax_type, &sr, &sg, &sb, &sa);
                 
                 int dcol = display_col(line, col, tab_width);
-                int cw = char_display_width(line[col], dcol, tab_width);
                 
                 if (line[col] == '\t') {
-                    /* Draw tab as whitespace spanning tab width */
-                    float x1 = text_x + dcol * g->font.glyph_w;
-                    float x2 = text_x + (dcol + cw) * g->font.glyph_w;
-                    renderer_draw_rect(r, x1, y + 2, x2 - x1, line_h - 4,
-                                      t->gutter_fg[0] * 0.3f, t->gutter_fg[1] * 0.3f,
-                                      t->gutter_fg[2] * 0.3f, 0.2f);
+                    /* Tab - skip to next tab stop (no visible rendering) */
                 } else {
                     char ch[2] = {line[col], '\0'};
                     float x = text_x + dcol * g->font.glyph_w;
