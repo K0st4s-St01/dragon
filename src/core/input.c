@@ -254,6 +254,35 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         document_select_treesitter_parent(doc, app_get_treesitter_manager(app));
         return;
     }
+    if ((mods & GLFW_MOD_ALT) && (mods & GLFW_MOD_SHIFT) &&
+        (key == GLFW_KEY_I || key == GLFW_KEY_DOWN)) {
+        document_select_treesitter_all_children(doc, app_get_treesitter_manager(app));
+        return;
+    }
+    if ((mods & GLFW_MOD_ALT) && (key == GLFW_KEY_I || key == GLFW_KEY_DOWN)) {
+        document_select_treesitter_child(doc, app_get_treesitter_manager(app));
+        return;
+    }
+    if ((mods & GLFW_MOD_ALT) && (key == GLFW_KEY_P || key == GLFW_KEY_LEFT)) {
+        document_select_treesitter_sibling(doc, app_get_treesitter_manager(app), -1);
+        return;
+    }
+    if ((mods & GLFW_MOD_ALT) && (key == GLFW_KEY_N || key == GLFW_KEY_RIGHT)) {
+        document_select_treesitter_sibling(doc, app_get_treesitter_manager(app), 1);
+        return;
+    }
+    if ((mods & GLFW_MOD_ALT) && key == GLFW_KEY_A) {
+        document_select_treesitter_all_siblings(doc, app_get_treesitter_manager(app));
+        return;
+    }
+    if ((mods & GLFW_MOD_ALT) && key == GLFW_KEY_E) {
+        document_move_to_treesitter_parent_edge(doc, app_get_treesitter_manager(app), true);
+        return;
+    }
+    if ((mods & GLFW_MOD_ALT) && key == GLFW_KEY_B) {
+        document_move_to_treesitter_parent_edge(doc, app_get_treesitter_manager(app), false);
+        return;
+    }
 
     /* Count accumulation for digit prefix */
     if (!(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT) && !(mods & GLFW_MOD_SHIFT)) {

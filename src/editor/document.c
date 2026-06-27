@@ -3212,33 +3212,125 @@ bool document_parse_treesitter(Document *doc, void *ts_manager) {
     return produced_tokens;
 }
 
-void document_select_treesitter_parent(Document *doc, void *ts_manager) {
-    if (!doc || !doc->filepath || !ts_manager) return;
+static TreeSitterLanguage *document_treesitter_language(Document *doc, void *ts_manager) {
+    if (!doc || !doc->filepath || !ts_manager) return NULL;
     const char *dot = strrchr(doc->filepath, '.');
-    if (!dot || dot == doc->filepath) return;
+    if (!dot || dot == doc->filepath) return NULL;
 
     TreeSitterManager *manager = (TreeSitterManager *)ts_manager;
     const char *ext = dot + 1;
     const char *lang_name = treesitter_language_name_for_extension(ext);
-    if (!lang_name) return;
-    if (!treesitter_load_language(manager, ext)) return;
+    if (!lang_name) return NULL;
+    if (!treesitter_load_language(manager, ext)) return NULL;
 
     TreeSitterLanguage *lang = treesitter_get_language(manager, lang_name);
     if (!lang || !lang->tree) {
-        if (!document_parse_treesitter(doc, ts_manager)) return;
+        document_parse_treesitter(doc, ts_manager);
         lang = treesitter_get_language(manager, lang_name);
     }
-    if (!lang) return;
+    if (!lang || !lang->tree) return NULL;
+    return lang;
+}
 
+static void document_select_range(Document *doc, uint32_t sr, uint32_t sc, uint32_t er, uint32_t ec) {
     Cursor *cur = &doc->cursors[0];
-    uint32_t sr = 0, sc = 0, er = 0, ec = 0;
-    if (!treesitter_parent_range_at(lang, (uint32_t)cur->row, (uint32_t)cur->col, &sr, &sc, &er, &ec))
-        return;
-
     cursor_move_to(cur, (int)sr, (int)sc);
     cur->anchor_row = (int)er;
     cur->anchor_col = (int)ec;
     cur->has_selection = true;
+    document_sync_viewport_to_cursor(doc);
+}
+
+static void document_current_range(Document *doc, uint32_t *sr, uint32_t *sc, uint32_t *er, uint32_t *ec) {
+    Cursor *cur = &doc->cursors[0];
+    if (cur->has_selection) {
+        int isr, isc, ier, iec;
+        cursor_normalize(cur, &isr, &isc, &ier, &iec);
+        *sr = (uint32_t)isr;
+        *sc = (uint32_t)isc;
+        *er = (uint32_t)ier;
+        *ec = (uint32_t)iec;
+    } else {
+        *sr = (uint32_t)cur->row;
+        *sc = (uint32_t)cur->col;
+        *er = (uint32_t)cur->row;
+        *ec = (uint32_t)cur->col;
+    }
+}
+
+void document_select_treesitter_parent(Document *doc, void *ts_manager) {
+    TreeSitterLanguage *lang = document_treesitter_language(doc, ts_manager);
+    if (!lang) return;
+    Cursor *cur = &doc->cursors[0];
+    uint32_t sr = 0, sc = 0, er = 0, ec = 0;
+    if (treesitter_parent_range_at(lang, (uint32_t)cur->row, (uint32_t)cur->col, &sr, &sc, &er, &ec))
+        document_select_range(doc, sr, sc, er, ec);
+}
+
+void document_select_treesitter_child(Document *doc, void *ts_manager) {
+    TreeSitterLanguage *lang = document_treesitter_language(doc, ts_manager);
+    if (!lang) return;
+    uint32_t csr = 0, csc = 0, cer = 0, cec = 0;
+    uint32_t sr = 0, sc = 0, er = 0, ec = 0;
+    document_current_range(doc, &csr, &csc, &cer, &cec);
+    if (treesitter_child_range_for_range(lang, csr, csc, cer, cec, &sr, &sc, &er, &ec))
+        document_select_range(doc, sr, sc, er, ec);
+}
+
+void document_select_treesitter_sibling(Document *doc, void *ts_manager, int direction) {
+    TreeSitterLanguage *lang = document_treesitter_language(doc, ts_manager);
+    if (!lang) return;
+    uint32_t csr = 0, csc = 0, cer = 0, cec = 0;
+    uint32_t sr = 0, sc = 0, er = 0, ec = 0;
+    document_current_range(doc, &csr, &csc, &cer, &cec);
+    if (treesitter_sibling_range_for_range(lang, csr, csc, cer, cec, direction, &sr, &sc, &er, &ec))
+        document_select_range(doc, sr, sc, er, ec);
+}
+
+static void document_select_treesitter_ranges(Document *doc, TreeSitterRange *ranges, int count) {
+    if (!doc || !ranges || count <= 0) return;
+    if (count > MAX_CURSORS) count = MAX_CURSORS;
+    doc->cursor_count = count;
+    for (int i = 0; i < count; i++) {
+        Cursor *cur = &doc->cursors[i];
+        cursor_init(cur);
+        cursor_move_to(cur, (int)ranges[i].start_row, (int)ranges[i].start_col);
+        cur->anchor_row = (int)ranges[i].end_row;
+        cur->anchor_col = (int)ranges[i].end_col;
+        cur->has_selection = true;
+    }
+    document_sync_viewport_to_cursor(doc);
+}
+
+void document_select_treesitter_all_siblings(Document *doc, void *ts_manager) {
+    TreeSitterLanguage *lang = document_treesitter_language(doc, ts_manager);
+    if (!lang) return;
+    uint32_t csr = 0, csc = 0, cer = 0, cec = 0;
+    TreeSitterRange ranges[MAX_CURSORS];
+    document_current_range(doc, &csr, &csc, &cer, &cec);
+    int count = treesitter_sibling_ranges_for_range(lang, csr, csc, cer, cec, ranges, MAX_CURSORS);
+    document_select_treesitter_ranges(doc, ranges, count);
+}
+
+void document_select_treesitter_all_children(Document *doc, void *ts_manager) {
+    TreeSitterLanguage *lang = document_treesitter_language(doc, ts_manager);
+    if (!lang) return;
+    uint32_t csr = 0, csc = 0, cer = 0, cec = 0;
+    TreeSitterRange ranges[MAX_CURSORS];
+    document_current_range(doc, &csr, &csc, &cer, &cec);
+    int count = treesitter_child_ranges_for_range(lang, csr, csc, cer, cec, ranges, MAX_CURSORS);
+    document_select_treesitter_ranges(doc, ranges, count);
+}
+
+void document_move_to_treesitter_parent_edge(Document *doc, void *ts_manager, bool end_edge) {
+    TreeSitterLanguage *lang = document_treesitter_language(doc, ts_manager);
+    if (!lang) return;
+    Cursor *cur = &doc->cursors[0];
+    uint32_t sr = 0, sc = 0, er = 0, ec = 0;
+    if (!treesitter_parent_range_at(lang, (uint32_t)cur->row, (uint32_t)cur->col, &sr, &sc, &er, &ec))
+        return;
+    cursor_move_to(cur, end_edge ? (int)er : (int)sr, end_edge ? (int)ec : (int)sc);
+    cursor_clear_selection(cur);
     document_sync_viewport_to_cursor(doc);
 }
 

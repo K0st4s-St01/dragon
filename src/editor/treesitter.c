@@ -274,6 +274,111 @@ bool treesitter_parent_range_at(TreeSitterLanguage *lang, uint32_t row, uint32_t
     return true;
 }
 
+static bool node_range(TSNode node, uint32_t *start_row, uint32_t *start_col,
+                       uint32_t *end_row, uint32_t *end_col) {
+    if (ts_node_is_null(node)) return false;
+    TSPoint start = ts_node_start_point(node);
+    TSPoint end = ts_node_end_point(node);
+    if (start_row) *start_row = start.row;
+    if (start_col) *start_col = start.column;
+    if (end_row) *end_row = end.row;
+    if (end_col) *end_col = end.column;
+    return true;
+}
+
+static TSNode node_for_range(TreeSitterLanguage *lang,
+                             uint32_t range_start_row, uint32_t range_start_col,
+                             uint32_t range_end_row, uint32_t range_end_col) {
+    if (!lang || !lang->tree) return (TSNode){0};
+    TSNode root = ts_tree_root_node(lang->tree);
+    TSPoint start = {range_start_row, range_start_col};
+    TSPoint end = {range_end_row, range_end_col};
+    if (range_end_row < range_start_row ||
+        (range_end_row == range_start_row && range_end_col < range_start_col))
+        end = start;
+    return ts_node_named_descendant_for_point_range(root, start, end);
+}
+
+bool treesitter_child_range_for_range(TreeSitterLanguage *lang,
+                                      uint32_t range_start_row, uint32_t range_start_col,
+                                      uint32_t range_end_row, uint32_t range_end_col,
+                                      uint32_t *start_row, uint32_t *start_col,
+                                      uint32_t *end_row, uint32_t *end_col) {
+    TSNode node = node_for_range(lang, range_start_row, range_start_col,
+                                 range_end_row, range_end_col);
+    if (ts_node_is_null(node)) return false;
+
+    uint32_t child_count = ts_node_named_child_count(node);
+    if (child_count == 0) return false;
+    TSNode child = ts_node_named_child(node, 0);
+    return node_range(child, start_row, start_col, end_row, end_col);
+}
+
+bool treesitter_sibling_range_for_range(TreeSitterLanguage *lang,
+                                        uint32_t range_start_row, uint32_t range_start_col,
+                                        uint32_t range_end_row, uint32_t range_end_col,
+                                        int direction,
+                                        uint32_t *start_row, uint32_t *start_col,
+                                        uint32_t *end_row, uint32_t *end_col) {
+    TSNode node = node_for_range(lang, range_start_row, range_start_col,
+                                 range_end_row, range_end_col);
+    if (ts_node_is_null(node)) return false;
+
+    TSNode sibling = direction < 0 ? ts_node_prev_named_sibling(node)
+                                   : ts_node_next_named_sibling(node);
+    return node_range(sibling, start_row, start_col, end_row, end_col);
+}
+
+static void fill_range(TreeSitterRange *range, TSNode node) {
+    TSPoint start = ts_node_start_point(node);
+    TSPoint end = ts_node_end_point(node);
+    range->start_row = start.row;
+    range->start_col = start.column;
+    range->end_row = end.row;
+    range->end_col = end.column;
+}
+
+int treesitter_child_ranges_for_range(TreeSitterLanguage *lang,
+                                      uint32_t range_start_row, uint32_t range_start_col,
+                                      uint32_t range_end_row, uint32_t range_end_col,
+                                      TreeSitterRange *ranges, int max_ranges) {
+    if (!ranges || max_ranges <= 0) return 0;
+    TSNode node = node_for_range(lang, range_start_row, range_start_col,
+                                 range_end_row, range_end_col);
+    if (ts_node_is_null(node)) return 0;
+
+    int count = 0;
+    uint32_t child_count = ts_node_named_child_count(node);
+    for (uint32_t i = 0; i < child_count && count < max_ranges; i++) {
+        TSNode child = ts_node_named_child(node, i);
+        if (ts_node_is_null(child)) continue;
+        fill_range(&ranges[count++], child);
+    }
+    return count;
+}
+
+int treesitter_sibling_ranges_for_range(TreeSitterLanguage *lang,
+                                        uint32_t range_start_row, uint32_t range_start_col,
+                                        uint32_t range_end_row, uint32_t range_end_col,
+                                        TreeSitterRange *ranges, int max_ranges) {
+    if (!ranges || max_ranges <= 0) return 0;
+    TSNode node = node_for_range(lang, range_start_row, range_start_col,
+                                 range_end_row, range_end_col);
+    if (ts_node_is_null(node)) return 0;
+
+    TSNode parent = ts_node_parent(node);
+    if (ts_node_is_null(parent)) return 0;
+
+    int count = 0;
+    uint32_t child_count = ts_node_named_child_count(parent);
+    for (uint32_t i = 0; i < child_count && count < max_ranges; i++) {
+        TSNode child = ts_node_named_child(parent, i);
+        if (ts_node_is_null(child)) continue;
+        fill_range(&ranges[count++], child);
+    }
+    return count;
+}
+
 TreeSitterSymbols treesitter_extract_symbols(TreeSitterLanguage *lang) {
     TreeSitterSymbols result = {0};
     

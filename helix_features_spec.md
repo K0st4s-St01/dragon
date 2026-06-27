@@ -155,13 +155,13 @@ Removed Vim-style items:
 - [x] `Alt-K` — remove selections matching pattern.
 - [x] `Ctrl-c` — comment/uncomment selections.
 - [x] ~~`Alt-o` / `Alt-Up` — expand selection to parent syntax node.~~
-- [ ] `Alt-i` / `Alt-Down` — shrink syntax-tree selection.
-- [ ] `Alt-p` / `Alt-Left` — select previous syntax sibling.
-- [ ] `Alt-n` / `Alt-Right` — select next syntax sibling.
-- [ ] `Alt-a` — select all sibling syntax nodes.
-- [ ] `Alt-I` / `Alt-Shift-Down` — select all child syntax nodes.
-- [ ] `Alt-e` — move to end of parent syntax node.
-- [ ] `Alt-b` — move to start of parent syntax node.
+- [x] ~~`Alt-i` / `Alt-Down` — shrink syntax-tree selection.~~
+- [x] ~~`Alt-p` / `Alt-Left` — select previous syntax sibling.~~
+- [x] ~~`Alt-n` / `Alt-Right` — select next syntax sibling.~~
+- [x] ~~`Alt-a` — select all sibling syntax nodes.~~
+- [x] ~~`Alt-I` / `Alt-Shift-Down` — select all child syntax nodes.~~
+- [x] ~~`Alt-e` — move to end of parent syntax node.~~
+- [x] ~~`Alt-b` — move to start of parent syntax node.~~
 
 Corrected meanings:
 - `;` is not repeat find; it collapses the selection.
@@ -550,10 +550,10 @@ Corrected:
   - [ ] `mi<object>` — select inside object.
 - [ ] Tree-sitter navigation:
   - [x] ~~`Alt-o` — expand to parent node.~~
-  - [ ] `Alt-i` — shrink selection.
-  - [ ] `Alt-p` / `Alt-n` — previous/next sibling.
-  - [ ] `Alt-a` — all siblings.
-  - [ ] `Alt-I` — all children.
+  - [x] ~~`Alt-i` — shrink selection.~~
+  - [x] ~~`Alt-p` / `Alt-n` — previous/next sibling.~~
+  - [x] ~~`Alt-a` — all siblings.~~
+  - [x] ~~`Alt-I` — all children.~~
 - [ ] Tree-sitter movement:
   - [ ] `]f` / `[f` — next/previous function.
   - [ ] `]t` / `[t` — next/previous type/class.

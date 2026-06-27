@@ -216,6 +216,11 @@ void document_goto_last_diagnostic(Document *doc);
 /* Treesitter integration */
 bool document_parse_treesitter(Document *doc, void *ts_manager);
 void document_select_treesitter_parent(Document *doc, void *ts_manager);
+void document_select_treesitter_child(Document *doc, void *ts_manager);
+void document_select_treesitter_sibling(Document *doc, void *ts_manager, int direction);
+void document_select_treesitter_all_siblings(Document *doc, void *ts_manager);
+void document_select_treesitter_all_children(Document *doc, void *ts_manager);
+void document_move_to_treesitter_parent_edge(Document *doc, void *ts_manager, bool end_edge);
 
 /* LSP text editing */
 void document_apply_text_edit(Document *doc, const LSPTextEdit *edit);

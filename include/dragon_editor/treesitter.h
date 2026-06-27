@@ -43,6 +43,13 @@ typedef struct {
     const char *capture_name;
 } TreeSitterHighlight;
 
+typedef struct {
+    uint32_t start_row;
+    uint32_t start_col;
+    uint32_t end_row;
+    uint32_t end_col;
+} TreeSitterRange;
+
 TreeSitterHighlight treesitter_get_highlight_at(TreeSitterLanguage *lang, 
                                                   uint32_t row, uint32_t col);
 bool treesitter_describe_node_at(TreeSitterLanguage *lang, uint32_t row, uint32_t col,
@@ -50,6 +57,25 @@ bool treesitter_describe_node_at(TreeSitterLanguage *lang, uint32_t row, uint32_
 bool treesitter_parent_range_at(TreeSitterLanguage *lang, uint32_t row, uint32_t col,
                                 uint32_t *start_row, uint32_t *start_col,
                                 uint32_t *end_row, uint32_t *end_col);
+bool treesitter_child_range_for_range(TreeSitterLanguage *lang,
+                                      uint32_t range_start_row, uint32_t range_start_col,
+                                      uint32_t range_end_row, uint32_t range_end_col,
+                                      uint32_t *start_row, uint32_t *start_col,
+                                      uint32_t *end_row, uint32_t *end_col);
+bool treesitter_sibling_range_for_range(TreeSitterLanguage *lang,
+                                        uint32_t range_start_row, uint32_t range_start_col,
+                                        uint32_t range_end_row, uint32_t range_end_col,
+                                        int direction,
+                                        uint32_t *start_row, uint32_t *start_col,
+                                        uint32_t *end_row, uint32_t *end_col);
+int treesitter_child_ranges_for_range(TreeSitterLanguage *lang,
+                                      uint32_t range_start_row, uint32_t range_start_col,
+                                      uint32_t range_end_row, uint32_t range_end_col,
+                                      TreeSitterRange *ranges, int max_ranges);
+int treesitter_sibling_ranges_for_range(TreeSitterLanguage *lang,
+                                        uint32_t range_start_row, uint32_t range_start_col,
+                                        uint32_t range_end_row, uint32_t range_end_col,
+                                        TreeSitterRange *ranges, int max_ranges);
 
 /* Query-based symbol extraction */
 typedef struct {
