@@ -26,6 +26,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/xator/dragon/src/gui/panels/about.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o.d"
   "/home/xator/dragon/src/gui/panels/buffer_picker.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o.d"
   "/home/xator/dragon/src/gui/panels/code_actions.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o.d"
+  "/home/xator/dragon/src/gui/panels/completion.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o.d"
   "/home/xator/dragon/src/gui/panels/file_browser.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o.d"
   "/home/xator/dragon/src/gui/panels/find_replace.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/find_replace.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/find_replace.c.o.d"
   "/home/xator/dragon/src/gui/panels/goto_line.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o.d"

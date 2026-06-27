@@ -9,10 +9,120 @@
 
 #define MAX_CURSORS 64
 
-static void document_mark_dirty(Document *doc) {
+static bool language_is_c_family(const char *lang) {
+    return lang && (strcmp(lang, "c") == 0 || strcmp(lang, "cpp") == 0 ||
+                    strcmp(lang, "objc") == 0 || strcmp(lang, "objcpp") == 0 ||
+                    strcmp(lang, "cuda") == 0 || strcmp(lang, "java") == 0);
+}
+
+static bool language_is_script(const char *lang) {
+    return lang && (strcmp(lang, "python") == 0 || strcmp(lang, "javascript") == 0 ||
+                    strcmp(lang, "typescript") == 0 || strcmp(lang, "go") == 0 ||
+                    strcmp(lang, "rust") == 0);
+}
+
+static bool fallback_keyword(const char *word, int len, const char *lang, SyntaxType *type) {
+    static const char *keywords[] = {
+        "if", "else", "for", "while", "do", "switch", "case", "default",
+        "break", "continue", "return", "goto", "struct", "union", "enum",
+        "class", "interface", "typedef", "sizeof", "extern", "static",
+        "const", "volatile", "auto", "register", "void", "int", "float",
+        "double", "char", "short", "long", "unsigned", "signed", "bool",
+        "true", "false", "null", "nil", "def", "fn", "func", "var", "let",
+        "new", "delete", "try", "catch", "finally", "throw", "throws",
+        "import", "include", "require", "module", "package", "namespace",
+        "public", "private", "protected", "async", "await", "yield", "self",
+        "Self", "impl", "trait", "in", "not", "and", "or", "is", "as",
+        "with", "from", "lambda", "pass", "elif", "except", "assert",
+        "raise", "local", "global", "type", "ref", "defer", "go", "chan",
+        "select", "make", "len", "append", "panic", "recover", NULL
+    };
+    static const char *macros[] = {
+        "define", "ifdef", "ifndef", "endif", "elif", "pragma", "undef", NULL
+    };
+    (void)lang;
+    for (int i = 0; macros[i]; i++) {
+        if ((int)strlen(macros[i]) == len && strncmp(word, macros[i], len) == 0) {
+            *type = SYNTAX_MACRO;
+            return true;
+        }
+    }
+    for (int i = 0; keywords[i]; i++) {
+        if ((int)strlen(keywords[i]) == len && strncmp(word, keywords[i], len) == 0) {
+            *type = SYNTAX_KEYWORD;
+            return true;
+        }
+    }
+    return false;
+}
+
+static void fallback_highlight_line(Document *doc, int row, const char *line, int len) {
+    bool c_family = language_is_c_family(doc->language_id);
+    bool script = language_is_script(doc->language_id);
+    int i = 0;
+    while (i < len) {
+        char ch = line[i];
+        if (c_family && ch == '/' && i + 1 < len && line[i + 1] == '/') {
+            syntax_add_token(&doc->syntax, row, i, row, len, SYNTAX_COMMENT);
+            return;
+        }
+        if (c_family && ch == '/' && i + 1 < len && line[i + 1] == '*') {
+            int start = i;
+            i += 2;
+            while (i + 1 < len && !(line[i] == '*' && line[i + 1] == '/')) i++;
+            i = (i + 1 < len) ? i + 2 : len;
+            syntax_add_token(&doc->syntax, row, start, row, i, SYNTAX_COMMENT);
+            continue;
+        }
+        if (script && ch == '#') {
+            syntax_add_token(&doc->syntax, row, i, row, len, SYNTAX_COMMENT);
+            return;
+        }
+        if (ch == '"' || ch == '\'' || ch == '`') {
+            char quote = ch;
+            int start = i++;
+            while (i < len) {
+                if (line[i] == '\\' && i + 1 < len) {
+                    i += 2;
+                    continue;
+                }
+                if (line[i++] == quote) break;
+            }
+            syntax_add_token(&doc->syntax, row, start, row, i, SYNTAX_STRING);
+            continue;
+        }
+        if (isdigit((unsigned char)ch)) {
+            int start = i++;
+            while (i < len && (isalnum((unsigned char)line[i]) || line[i] == '.' || line[i] == '_')) i++;
+            syntax_add_token(&doc->syntax, row, start, row, i, SYNTAX_NUMBER);
+            continue;
+        }
+        if (isalpha((unsigned char)ch) || ch == '_') {
+            int start = i++;
+            while (i < len && (isalnum((unsigned char)line[i]) || line[i] == '_')) i++;
+            SyntaxType type = SYNTAX_NORMAL;
+            if (fallback_keyword(line + start, i - start, doc->language_id, &type)) {
+                syntax_add_token(&doc->syntax, row, start, row, i, type);
+            } else {
+                int j = i;
+                while (j < len && isspace((unsigned char)line[j])) j++;
+                if (j < len && line[j] == '(')
+                    syntax_add_token(&doc->syntax, row, start, row, i, SYNTAX_FUNCTION);
+            }
+            continue;
+        }
+        if (strchr("+-*/%=!<>&|^~.?:", ch)) {
+            syntax_add_token(&doc->syntax, row, i, row, i + 1, SYNTAX_OPERATOR);
+        }
+        i++;
+    }
+}
+
+void document_mark_dirty(Document *doc) {
     doc->dirty = true;
     doc->syntax_dirty = true;
     doc->ts_parsed = false;
+    doc->ts_attempted = false;
 }
 
 void document_init(Document *doc) {
@@ -29,6 +139,7 @@ void document_init(Document *doc) {
     doc->hover_result = NULL;
     doc->diagnostics = NULL;
     doc->syntax_dirty = true;
+    doc->ts_attempted = false;
 }
 
 void document_free(Document *doc) {
@@ -60,6 +171,7 @@ void document_open(Document *doc, const char *path) {
     doc->dirty = false;
     doc->syntax_dirty = true;
     doc->ts_parsed = false;
+    doc->ts_attempted = false;
     doc->cursors[0] = (Cursor){0};
     doc->scroll_y = 0;
     history_clear(&doc->history);
@@ -83,6 +195,7 @@ void document_save_as(Document *doc, const char *path) {
     doc->dirty = false;
     doc->syntax_dirty = true;
     doc->ts_parsed = false;
+    doc->ts_attempted = false;
 }
 
 void document_insert_char(Document *doc, char c) {
@@ -1711,6 +1824,7 @@ void document_new(Document *doc) {
     doc->dirty = false;
     doc->syntax_dirty = true;
     doc->ts_parsed = false;
+    doc->ts_attempted = false;
 }
 
 void document_sort_selection(Document *doc) {
@@ -2294,6 +2408,7 @@ void document_move_file(Document *doc, const char *path) {
     doc->dirty = false;
     doc->syntax_dirty = true;
     doc->ts_parsed = false;
+    doc->ts_attempted = false;
 }
 
 /* Shell command helpers */
@@ -2990,6 +3105,22 @@ void document_update_syntax_from_lsp(Document *doc, void *lsp_manager) {
     free(uri);
 }
 
+bool document_update_syntax_fallback(Document *doc) {
+    if (!doc || !doc->language_id) return false;
+    if (!language_is_c_family(doc->language_id) && !language_is_script(doc->language_id))
+        return false;
+
+    syntax_clear(&doc->syntax);
+    size_t lines = buffer_line_count(&doc->buffer);
+    for (size_t row = 0; row < lines; row++) {
+        const char *line = buffer_line_ptr(&doc->buffer, row);
+        int len = (int)buffer_line_len(&doc->buffer, row);
+        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) len--;
+        fallback_highlight_line(doc, (int)row, line, len);
+    }
+    return doc->syntax.token_count > 0;
+}
+
 /* Update diagnostics from LSP */
 void document_update_diagnostics_from_lsp(Document *doc, void *lsp_manager) {
     if (!doc || !doc->language_id || !lsp_manager) return;
@@ -3021,34 +3152,34 @@ void document_update_diagnostics_from_lsp(Document *doc, void *lsp_manager) {
 }
 
 /* Treesitter integration - parse document with treesitter */
-void document_parse_treesitter(Document *doc, void *ts_manager) {
-    if (!doc || !doc->filepath || !ts_manager) return;
+bool document_parse_treesitter(Document *doc, void *ts_manager) {
+    if (!doc || !doc->filepath || !ts_manager) return false;
     
     TreeSitterManager *manager = (TreeSitterManager *)ts_manager;
     
     /* Get file extension to determine language */
     const char *dot = strrchr(doc->filepath, '.');
-    if (!dot || dot == doc->filepath) return;
+    if (!dot || dot == doc->filepath) return false;
     
     const char *ext = dot + 1;
     
     /* Load language parser if not already loaded */
     if (!treesitter_load_language(manager, ext)) {
-        return;
+        return false;
     }
     
     /* Get the correct language based on file extension */
     const char *lang_name = NULL;
     lang_name = treesitter_language_name_for_extension(ext);
     
-    if (!lang_name) return;
+    if (!lang_name) return false;
     
     TreeSitterLanguage *lang = treesitter_get_language(manager, lang_name);
-    if (!lang) return;
+    if (!lang) return false;
     
     /* Reconstruct buffer contents from lines for treesitter parsing */
     size_t total_lines = buffer_line_count(&doc->buffer);
-    if (total_lines == 0) return;
+    if (total_lines == 0) return false;
     
     /* Allocate buffer for entire document */
     size_t total_len = 0;
@@ -3056,10 +3187,10 @@ void document_parse_treesitter(Document *doc, void *ts_manager) {
         total_len += buffer_line_len(&doc->buffer, i);
     }
     
-    if (total_len == 0) return;
+    if (total_len == 0) return false;
     
     char *buffer_text = (char *)malloc(total_len + 1);
-    if (!buffer_text) return;
+    if (!buffer_text) return false;
     
     /* Build document text */
     size_t pos = 0;
@@ -3075,9 +3206,40 @@ void document_parse_treesitter(Document *doc, void *ts_manager) {
     treesitter_parse(lang, buffer_text, (uint32_t)total_len);
     
     /* Generate syntax tokens from tree-sitter parse */
-    treesitter_generate_syntax_tokens(lang, &doc->syntax);
+    bool produced_tokens = treesitter_generate_syntax_tokens(lang, &doc->syntax);
     
     free(buffer_text);
+    return produced_tokens;
+}
+
+void document_select_treesitter_parent(Document *doc, void *ts_manager) {
+    if (!doc || !doc->filepath || !ts_manager) return;
+    const char *dot = strrchr(doc->filepath, '.');
+    if (!dot || dot == doc->filepath) return;
+
+    TreeSitterManager *manager = (TreeSitterManager *)ts_manager;
+    const char *ext = dot + 1;
+    const char *lang_name = treesitter_language_name_for_extension(ext);
+    if (!lang_name) return;
+    if (!treesitter_load_language(manager, ext)) return;
+
+    TreeSitterLanguage *lang = treesitter_get_language(manager, lang_name);
+    if (!lang || !lang->tree) {
+        if (!document_parse_treesitter(doc, ts_manager)) return;
+        lang = treesitter_get_language(manager, lang_name);
+    }
+    if (!lang) return;
+
+    Cursor *cur = &doc->cursors[0];
+    uint32_t sr = 0, sc = 0, er = 0, ec = 0;
+    if (!treesitter_parent_range_at(lang, (uint32_t)cur->row, (uint32_t)cur->col, &sr, &sc, &er, &ec))
+        return;
+
+    cursor_move_to(cur, (int)sr, (int)sc);
+    cur->anchor_row = (int)er;
+    cur->anchor_col = (int)ec;
+    cur->has_selection = true;
+    document_sync_viewport_to_cursor(doc);
 }
 
 /* Diagnostic navigation functions */

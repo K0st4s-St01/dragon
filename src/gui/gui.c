@@ -28,6 +28,7 @@
 #include "panel_treesitter_inspector.h"
 #include "panel_workspace_symbols.h"
 #include "panel_workspace_diagnostics.h"
+#include "panel_completion.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -310,4 +311,5 @@ void gui_render(Gui *g, App *app, Document *doc, ModeState *mode) {
       panel_treesitter_inspector_render(g, app);
       panel_workspace_symbols_render(g, app);
       panel_workspace_diagnostics_render(g, app);
+      panel_completion_render(g, app);
 }

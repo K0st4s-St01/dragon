@@ -587,6 +587,30 @@ src/gui/panels/code_actions.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.s
 .PHONY : src/gui/panels/code_actions.c.s
 
+src/gui/panels/completion.o: src/gui/panels/completion.c.o
+.PHONY : src/gui/panels/completion.o
+
+# target to build an object file
+src/gui/panels/completion.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o
+.PHONY : src/gui/panels/completion.c.o
+
+src/gui/panels/completion.i: src/gui/panels/completion.c.i
+.PHONY : src/gui/panels/completion.i
+
+# target to preprocess a source file
+src/gui/panels/completion.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.i
+.PHONY : src/gui/panels/completion.c.i
+
+src/gui/panels/completion.s: src/gui/panels/completion.c.s
+.PHONY : src/gui/panels/completion.s
+
+# target to generate assembly for a file
+src/gui/panels/completion.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.s
+.PHONY : src/gui/panels/completion.c.s
+
 src/gui/panels/file_browser.o: src/gui/panels/file_browser.c.o
 .PHONY : src/gui/panels/file_browser.o
 
@@ -1156,6 +1180,9 @@ help:
 	@echo "... src/gui/panels/code_actions.o"
 	@echo "... src/gui/panels/code_actions.i"
 	@echo "... src/gui/panels/code_actions.s"
+	@echo "... src/gui/panels/completion.o"
+	@echo "... src/gui/panels/completion.i"
+	@echo "... src/gui/panels/completion.s"
 	@echo "... src/gui/panels/file_browser.o"
 	@echo "... src/gui/panels/file_browser.i"
 	@echo "... src/gui/panels/file_browser.s"

@@ -21,6 +21,7 @@ typedef struct {
 } HoverDisplay;
 
 static bool hover_open = false;
+static int hover_scroll = 0;
 static HoverDisplay hover_display = {0};
 static double hover_open_time = 0;
 static const double HOVER_TIMEOUT = 10.0;  /* 10 seconds */
@@ -83,6 +84,7 @@ void panel_lsp_hover_open(App *app) {
     free(copy);
     
     hover_open = true;
+    hover_scroll = 0;
     hover_open_time = glfwGetTime();
 }
 
@@ -93,6 +95,22 @@ void panel_lsp_hover_close(App *app) {
 
 bool panel_lsp_hover_is_open(void) {
     return hover_open;
+}
+
+void panel_lsp_hover_key(App *app, int key, int mods) {
+    if (!hover_open) return;
+    if ((key == GLFW_KEY_D && (mods & GLFW_MOD_CONTROL)) || key == GLFW_KEY_PAGE_DOWN) {
+        hover_scroll += 6;
+        if (hover_scroll > hover_display.line_count - 1)
+            hover_scroll = hover_display.line_count > 0 ? hover_display.line_count - 1 : 0;
+        hover_open_time = glfwGetTime();
+    } else if ((key == GLFW_KEY_U && (mods & GLFW_MOD_CONTROL)) || key == GLFW_KEY_PAGE_UP) {
+        hover_scroll -= 6;
+        if (hover_scroll < 0) hover_scroll = 0;
+        hover_open_time = glfwGetTime();
+    } else if (key == GLFW_KEY_ESCAPE || key == GLFW_KEY_ENTER) {
+        panel_lsp_hover_close(app);
+    }
 }
 
 void panel_lsp_hover_render(Gui *g, App *app) {
@@ -135,7 +153,8 @@ void panel_lsp_hover_render(Gui *g, App *app) {
     }
     
     float tw = content_w + padding * 2;
-    float th = hover_display.line_count * line_h + padding * 2;
+    int max_lines = hover_display.line_count < 20 ? hover_display.line_count : 20;
+    float th = max_lines * line_h + padding * 2;
     
     /* Cap size */
     if (tw > 600) tw = 600;
@@ -157,12 +176,21 @@ void panel_lsp_hover_render(Gui *g, App *app) {
     
     /* Draw content */
     float text_y = tooltip_y + padding;
-    for (int i = 0; i < hover_display.line_count && i < 20; i++) {
+    for (int i = hover_scroll; i < hover_display.line_count && (i - hover_scroll) < max_lines; i++) {
         if (hover_display.lines[i]) {
             font_draw(&g->font, r, hover_display.lines[i], 
                       tooltip_x + padding, text_y,
                       t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
         }
         text_y += line_h;
+    }
+
+    if (hover_display.line_count > max_lines) {
+        char scroll_info[48];
+        snprintf(scroll_info, sizeof(scroll_info), "%d/%d", hover_scroll + 1, hover_display.line_count);
+        font_draw(&g->font, r, scroll_info,
+                  tooltip_x + tw - padding - font_text_width(&g->font, scroll_info),
+                  tooltip_y + th - line_h,
+                  t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
     }
 }

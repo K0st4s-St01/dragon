@@ -154,7 +154,7 @@ Removed Vim-style items:
 - [x] `K` — keep selections matching pattern.
 - [x] `Alt-K` — remove selections matching pattern.
 - [x] `Ctrl-c` — comment/uncomment selections.
-- [ ] `Alt-o` / `Alt-Up` — expand selection to parent syntax node.
+- [x] ~~`Alt-o` / `Alt-Up` — expand selection to parent syntax node.~~
 - [ ] `Alt-i` / `Alt-Down` — shrink syntax-tree selection.
 - [ ] `Alt-p` / `Alt-Left` — select previous syntax sibling.
 - [ ] `Alt-n` / `Alt-Right` — select next syntax sibling.
@@ -236,7 +236,7 @@ Required select-mode equivalents:
 
 - [x] `Escape` — return to normal mode.
 - [x] `Ctrl-s` — commit undo checkpoint.
-- [ ] `Ctrl-x` — trigger completion.
+- [x] ~~`Ctrl-x` — trigger completion.~~
 - [x] `Ctrl-r` — insert register content.
 - [x] `Ctrl-w` / `Alt-Backspace` — delete previous word.
 - [x] `Alt-d` / `Alt-Delete` — delete next word.
@@ -549,7 +549,7 @@ Corrected:
   - [ ] `ma<object>` — select around object.
   - [ ] `mi<object>` — select inside object.
 - [ ] Tree-sitter navigation:
-  - [ ] `Alt-o` — expand to parent node.
+  - [x] ~~`Alt-o` — expand to parent node.~~
   - [ ] `Alt-i` — shrink selection.
   - [ ] `Alt-p` / `Alt-n` — previous/next sibling.
   - [ ] `Alt-a` — all siblings.
@@ -580,7 +580,7 @@ Corrected:
 - [x] ~~`Space-d` — document diagnostics picker.~~
 - [x] ~~`Space-D` — workspace diagnostics picker.~~
 - [x] ~~`Space-h` — select references to symbol under cursor.~~
-- [ ] `Ctrl-x` in insert mode — completion menu.
+- [x] ~~`Ctrl-x` in insert mode — completion menu.~~
 - [x] ~~`=` — format selection.~~
 - [x] ~~`:format` / `:fmt` — format file.~~
 - [x] ~~`:lsp-restart` — restart servers.~~
@@ -600,17 +600,17 @@ Corrected:
 
 ### Completion menu
 
-- [ ] `Ctrl-x` opens completion in insert mode.
-- [ ] `Tab` / `Ctrl-n` / `Down` — next completion item.
-- [ ] `Shift-Tab` / `Ctrl-p` / `Up` — previous completion item.
-- [ ] `Enter` — accept completion.
-- [ ] `Ctrl-c` — reject completion.
-- [ ] Show documentation for selected completion item.
+- [x] ~~`Ctrl-x` opens completion in insert mode.~~
+- [x] ~~`Tab` / `Ctrl-n` / `Down` — next completion item.~~
+- [x] ~~`Shift-Tab` / `Ctrl-p` / `Up` — previous completion item.~~
+- [x] ~~`Enter` — accept completion.~~
+- [x] ~~`Ctrl-c` — reject completion.~~
+- [x] ~~Show documentation for selected completion item.~~
 
 ### Hover/signature popup
 
 - [x] ~~`Space-k` opens hover popup.~~
-- [ ] `Ctrl-u` / `Ctrl-d` scroll popup.
+- [x] ~~`Ctrl-u` / `Ctrl-d` scroll popup.~~
 - [ ] Signature help popup supports:
   - [ ] `Alt-p` — previous signature.
   - [ ] `Alt-n` — next signature.

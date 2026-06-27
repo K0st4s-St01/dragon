@@ -52,6 +52,17 @@ typedef struct {
     char *language;  /* Optional: language hint for code blocks */
 } LSPHover;
 
+typedef struct {
+    char *label;
+    char *detail;
+    char *documentation;
+} LSPCompletionItem;
+
+typedef struct {
+    LSPCompletionItem *items;
+    int count;
+} LSPCompletionItems;
+
 typedef enum {
     LSP_DIAG_ERROR = 1,
     LSP_DIAG_WARNING = 2,
@@ -120,6 +131,7 @@ void lsp_client_send_type_definition_request(LSPClient *client, const char *file
 void lsp_client_send_references_request(LSPClient *client, const char *file_uri, int line, int character);
 void lsp_client_send_implementation_request(LSPClient *client, const char *file_uri, int line, int character);
 void lsp_client_send_hover_request(LSPClient *client, const char *file_uri, int line, int character);
+void lsp_client_send_completion_request(LSPClient *client, const char *file_uri, int line, int character);
 void lsp_client_send_rename_request(LSPClient *client, const char *file_uri, int line, int character, const char *new_name);
 void lsp_client_send_code_action_request(LSPClient *client, const char *file_uri, int start_line, int start_character, int end_line, int end_character);
 void lsp_client_send_semantic_tokens_request(LSPClient *client, const char *file_uri);
@@ -130,12 +142,14 @@ void lsp_client_send_didChange(LSPClient *client, const char *file_uri, const ch
 char *lsp_client_read_response(LSPClient *client);
 LSPLocation *lsp_parse_definition_response(const char *response, int *count);
 LSPHover *lsp_parse_hover_response(const char *response);
+LSPCompletionItems *lsp_parse_completion_response(const char *response);
 LSPDiagnostics *lsp_parse_diagnostics_response(const char *response);
 LSPDiagnostics *lsp_parse_publish_diagnostics_notification(const char *response);
 LSPWorkspaceEdit *lsp_parse_rename_response(const char *response);
 LSPCodeActions *lsp_parse_code_actions_response(const char *response);
 void lsp_free_locations(LSPLocation *locations, int count);
 void lsp_free_hover(LSPHover *hover);
+void lsp_free_completion_items(LSPCompletionItems *items);
 void lsp_free_diagnostics(LSPDiagnostics *diag);
 void lsp_free_workspace_edit(LSPWorkspaceEdit *edit);
 void lsp_free_code_actions(LSPCodeActions *actions);

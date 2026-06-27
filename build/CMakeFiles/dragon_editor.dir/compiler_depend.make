@@ -153,6 +153,7 @@ CMakeFiles/dragon_editor.dir/src/core/input.c.o: /home/xator/dragon/src/core/inp
   /home/xator/dragon/include/dragon_editor/panel_about.h \
   /home/xator/dragon/include/dragon_editor/panel_buffer_picker.h \
   /home/xator/dragon/include/dragon_editor/panel_code_actions.h \
+  /home/xator/dragon/include/dragon_editor/panel_completion.h \
   /home/xator/dragon/include/dragon_editor/panel_file_browser.h \
   /home/xator/dragon/include/dragon_editor/panel_find_replace.h \
   /home/xator/dragon/include/dragon_editor/panel_goto.h \
@@ -950,6 +951,7 @@ CMakeFiles/dragon_editor.dir/src/gui/gui.c.o: /home/xator/dragon/src/gui/gui.c \
   /home/xator/dragon/include/dragon_editor/panel_about.h \
   /home/xator/dragon/include/dragon_editor/panel_buffer_picker.h \
   /home/xator/dragon/include/dragon_editor/panel_code_actions.h \
+  /home/xator/dragon/include/dragon_editor/panel_completion.h \
   /home/xator/dragon/include/dragon_editor/panel_file_browser.h \
   /home/xator/dragon/include/dragon_editor/panel_find_replace.h \
   /home/xator/dragon/include/dragon_editor/panel_goto.h \
@@ -1205,6 +1207,100 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o: /home/xator/dragon
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o: /home/xator/dragon/src/gui/panels/completion.c \
+  /home/xator/dragon/include/dragon_editor/app.h \
+  /home/xator/dragon/include/dragon_editor/buffer.h \
+  /home/xator/dragon/include/dragon_editor/config.h \
+  /home/xator/dragon/include/dragon_editor/cursor.h \
+  /home/xator/dragon/include/dragon_editor/document.h \
+  /home/xator/dragon/include/dragon_editor/gui.h \
+  /home/xator/dragon/include/dragon_editor/history.h \
+  /home/xator/dragon/include/dragon_editor/lsp.h \
+  /home/xator/dragon/include/dragon_editor/mode.h \
+  /home/xator/dragon/include/dragon_editor/renderer.h \
+  /home/xator/dragon/include/dragon_editor/syntax.h \
+  /home/xator/dragon/include/dragon_editor/text.h \
+  /home/xator/dragon/include/dragon_editor/theme.h \
+  /home/xator/dragon/src/gui/panels/panel_completion.h \
+  /home/xator/dragon/vendor/glad/include/KHR/khrplatform.h \
+  /home/xator/dragon/vendor/glad/include/glad/gl.h \
+  /home/xator/dragon/vendor/glad/include/glad/glad.h \
+  /usr/include/GLFW/glfw3.h \
+  /usr/include/alloca.h \
+  /usr/include/bits/atomic_wide_counter.h \
+  /usr/include/bits/byteswap.h \
+  /usr/include/bits/confname.h \
+  /usr/include/bits/endian.h \
+  /usr/include/bits/endianness.h \
+  /usr/include/bits/environments.h \
+  /usr/include/bits/floatn-common.h \
+  /usr/include/bits/floatn.h \
+  /usr/include/bits/getopt_core.h \
+  /usr/include/bits/getopt_posix.h \
+  /usr/include/bits/libc-header-start.h \
+  /usr/include/bits/long-double.h \
+  /usr/include/bits/posix_opt.h \
+  /usr/include/bits/pthreadtypes-arch.h \
+  /usr/include/bits/pthreadtypes.h \
+  /usr/include/bits/select.h \
+  /usr/include/bits/stdint-intn.h \
+  /usr/include/bits/stdint-least.h \
+  /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
+  /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
+  /usr/include/bits/stdlib-float.h \
+  /usr/include/bits/struct_mutex.h \
+  /usr/include/bits/struct_rwlock.h \
+  /usr/include/bits/thread-shared-types.h \
+  /usr/include/bits/time64.h \
+  /usr/include/bits/timesize.h \
+  /usr/include/bits/types.h \
+  /usr/include/bits/types/FILE.h \
+  /usr/include/bits/types/__FILE.h \
+  /usr/include/bits/types/__fpos64_t.h \
+  /usr/include/bits/types/__fpos_t.h \
+  /usr/include/bits/types/__locale_t.h \
+  /usr/include/bits/types/__mbstate_t.h \
+  /usr/include/bits/types/__sigset_t.h \
+  /usr/include/bits/types/clock_t.h \
+  /usr/include/bits/types/clockid_t.h \
+  /usr/include/bits/types/cookie_io_functions_t.h \
+  /usr/include/bits/types/locale_t.h \
+  /usr/include/bits/types/sigset_t.h \
+  /usr/include/bits/types/struct_FILE.h \
+  /usr/include/bits/types/struct_timespec.h \
+  /usr/include/bits/types/struct_timeval.h \
+  /usr/include/bits/types/time_t.h \
+  /usr/include/bits/types/timer_t.h \
+  /usr/include/bits/typesizes.h \
+  /usr/include/bits/uintn-identity.h \
+  /usr/include/bits/unistd_ext.h \
+  /usr/include/bits/waitflags.h \
+  /usr/include/bits/waitstatus.h \
+  /usr/include/bits/wchar.h \
+  /usr/include/bits/wordsize.h \
+  /usr/include/ctype.h \
+  /usr/include/endian.h \
+  /usr/include/features-time64.h \
+  /usr/include/features.h \
+  /usr/include/gnu/stubs-64.h \
+  /usr/include/gnu/stubs.h \
+  /usr/include/stdc-predef.h \
+  /usr/include/stdint.h \
+  /usr/include/stdio.h \
+  /usr/include/stdlib.h \
+  /usr/include/string.h \
+  /usr/include/strings.h \
+  /usr/include/sys/cdefs.h \
+  /usr/include/sys/select.h \
+  /usr/include/sys/types.h \
+  /usr/include/unistd.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
@@ -2627,6 +2723,7 @@ dragon_editor: /usr/lib/Scrt1.o \
   CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o \
   CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o \
   CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o \
+  CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o \
   CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o \
   CMakeFiles/dragon_editor.dir/src/gui/panels/find_replace.c.o \
   CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o \
@@ -2654,8 +2751,6 @@ libtomlc99.a:
 
 libglad.a:
 
-CMakeFiles/dragon_editor.dir/src/gui/text.c.o:
-
 CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o:
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o:
@@ -2670,6 +2765,8 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o:
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_diagnostics_picker.c.o:
 
+CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o:
+
 CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o:
 
 CMakeFiles/dragon_editor.dir/src/editor/syntax.c.o:
@@ -2682,10 +2779,6 @@ CMakeFiles/dragon_editor.dir/src/editor/cursor.c.o:
 
 CMakeFiles/dragon_editor.dir/src/editor/config.c.o:
 
-/home/xator/dragon/src/editor/lsp.c:
-
-/home/xator/dragon/src/gui/panels/symbols_picker.c:
-
 /usr/include/ctype.h:
 
 /usr/include/bits/waitflags.h:
@@ -2697,6 +2790,10 @@ CMakeFiles/dragon_editor.dir/src/editor/config.c.o:
 /home/xator/dragon/src/gui/panels/code_actions.c:
 
 /home/xator/dragon/include/dragon_editor/panel_settings.h:
+
+CMakeFiles/dragon_editor.dir/src/core/mode.c.o:
+
+/usr/include/bits/dirent_ext.h:
 
 /usr/lib32/libX11.so.6:
 
@@ -2725,6 +2822,8 @@ CMakeFiles/dragon_editor.dir/src/editor/config.c.o:
 /usr/include/stdlib.h:
 
 /home/xator/dragon/src/gui/gui.c:
+
+/home/xator/dragon/include/dragon_editor/panel_completion.h:
 
 /home/xator/dragon/include/dragon_editor/panel_buffer_picker.h:
 
@@ -2792,6 +2891,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o:
 
 /home/xator/dragon/include/dragon_editor/document.h:
 
+CMakeFiles/dragon_editor.dir/src/core/renderer.c.o:
+
+/usr/include/bits/types/clock_t.h:
+
 /usr/include/bits/mathcalls.h:
 
 /home/xator/dragon/vendor/glad/include/glad/gl.h:
@@ -2851,6 +2954,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o:
 CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o:
 
 /home/xator/dragon/src/gui/panels/lsp_diagnostics_picker.c:
+
+CMakeFiles/dragon_editor.dir/src/gui/text.c.o:
+
+/home/xator/dragon/src/gui/panels/panel_completion.h:
 
 /usr/include/bits/waitstatus.h:
 
@@ -3026,11 +3133,21 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o:
 
 /usr/include/bits/types/struct_itimerspec.h:
 
+/home/xator/dragon/src/editor/lsp.c:
+
+/home/xator/dragon/src/gui/panels/symbols_picker.c:
+
 /usr/include/bits/fcntl.h:
 
 /home/xator/dragon/include/dragon_editor/panel_workspace_diagnostics.h:
 
 /usr/include/bits/sigaction.h:
+
+CMakeFiles/dragon_editor.dir/src/core/input.c.o:
+
+/usr/lib/libGLdispatch.so.0:
+
+/usr/include/bits/sigcontext.h:
 
 /usr/include/bits/sigevent-consts.h:
 
@@ -3206,6 +3323,8 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.o:
 
 /usr/lib/libXdmcp.so.6:
 
+/home/xator/dragon/src/gui/panels/completion.c:
+
 /usr/lib/libc.so.6:
 
 /usr/lib/libc_nonshared.a:
@@ -3217,17 +3336,3 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.o:
 /usr/lib32/libXau.so.6:
 
 CMakeFiles/dragon_editor.dir/src/core/app.c.o:
-
-/usr/lib/libGLdispatch.so.0:
-
-/usr/include/bits/sigcontext.h:
-
-CMakeFiles/dragon_editor.dir/src/core/input.c.o:
-
-/usr/include/bits/dirent_ext.h:
-
-CMakeFiles/dragon_editor.dir/src/core/mode.c.o:
-
-/usr/include/bits/types/clock_t.h:
-
-CMakeFiles/dragon_editor.dir/src/core/renderer.c.o:

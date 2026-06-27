@@ -21,6 +21,7 @@
 #include "panel_treesitter_inspector.h"
 #include "panel_workspace_symbols.h"
 #include "panel_workspace_diagnostics.h"
+#include "panel_completion.h"
 #include <GLFW/glfw3.h>
 #include <string.h>
 #include <stdlib.h>
@@ -68,6 +69,7 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
         if (panel_treesitter_inspector_is_open()) { panel_treesitter_inspector_close(app); return; }
         if (panel_workspace_symbols_is_open()) { panel_workspace_symbols_close(app); return; }
         if (panel_workspace_diagnostics_is_open()) { panel_workspace_diagnostics_close(app); return; }
+        if (panel_completion_is_open()) { panel_completion_close(app); return; }
         if (!mode_is(mode, MODE_NORMAL)) {
             if (mode_is(mode, MODE_INSERT)) {
                 Document *doc = (Document *)app_get_doc(app);
@@ -119,6 +121,11 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
         return;
     }
 
+    if (panel_completion_is_open()) {
+        panel_completion_key(app, key, mods);
+        return;
+    }
+
     /* Route keys to buffer picker when open */
     if (panel_buffer_picker_is_open()) {
         panel_buffer_picker_key(app, key);
@@ -128,6 +135,11 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
     /* Route keys to jumplist picker when open */
     if (panel_jumplist_picker_is_open()) {
         panel_jumplist_picker_key(app, key);
+        return;
+    }
+
+    if (panel_lsp_hover_is_open()) {
+        panel_lsp_hover_key(app, key, mods);
         return;
     }
 
@@ -185,6 +197,9 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
 void input_handle_char(App *app, unsigned int c) {
     ModeState *mode = (ModeState *)app_get_mode(app);
     
+    if (panel_completion_is_open()) {
+        panel_completion_close(app);
+    }
     if (panel_find_is_open()) {
         Document *doc = (Document *)app_get_doc(app);
         panel_find_input(app, doc, c);
@@ -235,6 +250,11 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
     Document *doc = (Document *)app_get_doc(app);
     ModeState *mode = (ModeState *)app_get_mode(app);
 
+    if ((mods & GLFW_MOD_ALT) && (key == GLFW_KEY_O || key == GLFW_KEY_UP)) {
+        document_select_treesitter_parent(doc, app_get_treesitter_manager(app));
+        return;
+    }
+
     /* Count accumulation for digit prefix */
     if (!(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT) && !(mods & GLFW_MOD_SHIFT)) {
         if (key >= GLFW_KEY_1 && key <= GLFW_KEY_9) {
@@ -256,7 +276,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             history_push_insert(&doc->history, pos, mode->last_insert_text, mode->last_insert_len,
                                 cur->row, cur->col);
             cur->col += mode->last_insert_cursor_delta;
-            doc->dirty = true;
+            document_mark_dirty(doc);
         }
         mode->count = 0;
         return;
@@ -1192,6 +1212,12 @@ static void handle_insert_key(App *app, int key, int action, int mods) {
     ModeState *mode = (ModeState *)app_get_mode(app);
 
     /* Ctrl-w / Alt-Backspace - delete previous word */
+    if (key == GLFW_KEY_X && (mods & GLFW_MOD_CONTROL)) {
+        panel_completion_open(app);
+        return;
+    }
+
+    /* Ctrl-w / Alt-Backspace - delete previous word */
     if (key == GLFW_KEY_W && (mods & GLFW_MOD_CONTROL)) {
         Cursor *cur = &doc->cursors[0];
         const char *line = buffer_line_ptr(&doc->buffer, cur->row);
@@ -1207,7 +1233,7 @@ static void handle_insert_key(App *app, int key, int action, int mods) {
             size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, start);
             buffer_delete(&doc->buffer, pos, del);
             cur->col = start;
-            doc->dirty = true;
+            document_mark_dirty(doc);
         }
         return;
     }
@@ -1226,7 +1252,7 @@ static void handle_insert_key(App *app, int key, int action, int mods) {
             size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, start);
             buffer_delete(&doc->buffer, pos, del);
             cur->col = start;
-            doc->dirty = true;
+            document_mark_dirty(doc);
         }
         return;
     }
@@ -1259,7 +1285,7 @@ static void handle_insert_key(App *app, int key, int action, int mods) {
             size_t end = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
             buffer_delete(&doc->buffer, start, end - start);
             cur->col = 0;
-            doc->dirty = true;
+            document_mark_dirty(doc);
         }
         return;
     }
@@ -1272,7 +1298,7 @@ static void handle_insert_key(App *app, int key, int action, int mods) {
             size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
             size_t line_end = buffer_pos_from_row_col(&doc->buffer, cur->row, len);
             buffer_delete(&doc->buffer, pos, line_end - pos);
-            doc->dirty = true;
+            document_mark_dirty(doc);
         }
         return;
     }

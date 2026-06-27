@@ -113,9 +113,7 @@ static bool replace_next(Document *doc) {
     buffer_insert(&doc->buffer, start, fr_replace, (size_t)fr_replace_len);
     buffer_row_col_from_pos(&doc->buffer, start + (size_t)fr_replace_len, &cur->row, &cur->col);
     cursor_clear_selection(cur);
-    doc->dirty = true;
-    doc->syntax_dirty = true;
-    doc->ts_parsed = false;
+    document_mark_dirty(doc);
     return true;
 }
 

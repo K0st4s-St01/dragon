@@ -251,6 +251,29 @@ bool treesitter_describe_node_at(TreeSitterLanguage *lang, uint32_t row, uint32_
     return true;
 }
 
+bool treesitter_parent_range_at(TreeSitterLanguage *lang, uint32_t row, uint32_t col,
+                                uint32_t *start_row, uint32_t *start_col,
+                                uint32_t *end_row, uint32_t *end_col) {
+    if (!lang || !lang->tree) return false;
+    TSNode root = ts_tree_root_node(lang->tree);
+    TSPoint point = {row, col};
+    TSNode node = ts_node_named_descendant_for_point_range(root, point, point);
+    if (ts_node_is_null(node)) return false;
+
+    TSNode parent = ts_node_parent(node);
+    while (!ts_node_is_null(parent) && !ts_node_is_named(parent))
+        parent = ts_node_parent(parent);
+    if (ts_node_is_null(parent)) return false;
+
+    TSPoint start = ts_node_start_point(parent);
+    TSPoint end = ts_node_end_point(parent);
+    if (start_row) *start_row = start.row;
+    if (start_col) *start_col = start.column;
+    if (end_row) *end_row = end.row;
+    if (end_col) *end_col = end.column;
+    return true;
+}
+
 TreeSitterSymbols treesitter_extract_symbols(TreeSitterLanguage *lang) {
     TreeSitterSymbols result = {0};
     
@@ -500,8 +523,8 @@ static void treesitter_walk_node(TSNode node, SyntaxHighlighting *sh) {
 }
 
 /* Generate syntax tokens from tree-sitter parse tree */
-void treesitter_generate_syntax_tokens(TreeSitterLanguage *lang, SyntaxHighlighting *sh) {
-    if (!lang || !lang->tree || !sh) return;
+bool treesitter_generate_syntax_tokens(TreeSitterLanguage *lang, SyntaxHighlighting *sh) {
+    if (!lang || !lang->tree || !sh) return false;
     
     /* Save existing tokens in case tree-sitter produces nothing */
     int saved_count = sh->token_count;
@@ -516,8 +539,10 @@ void treesitter_generate_syntax_tokens(TreeSitterLanguage *lang, SyntaxHighlight
         memmove(sh->tokens, sh->tokens + saved_count,
                 (sh->token_count - saved_count) * sizeof(SyntaxToken));
         sh->token_count = sh->token_count - saved_count;
+        return true;
     } else {
         /* Tree-sitter produced nothing — keep existing tokens */
         sh->token_count = saved_count;
+        return false;
     }
 }

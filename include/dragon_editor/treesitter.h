@@ -47,6 +47,9 @@ TreeSitterHighlight treesitter_get_highlight_at(TreeSitterLanguage *lang,
                                                   uint32_t row, uint32_t col);
 bool treesitter_describe_node_at(TreeSitterLanguage *lang, uint32_t row, uint32_t col,
                                  char *buf, size_t buf_size);
+bool treesitter_parent_range_at(TreeSitterLanguage *lang, uint32_t row, uint32_t col,
+                                uint32_t *start_row, uint32_t *start_col,
+                                uint32_t *end_row, uint32_t *end_col);
 
 /* Query-based symbol extraction */
 typedef struct {
@@ -68,6 +71,6 @@ TreeSitterSymbols treesitter_extract_symbols(TreeSitterLanguage *lang);
 void treesitter_symbols_free(TreeSitterSymbols *symbols);
 
 /* Generate syntax tokens from tree-sitter parse tree */
-void treesitter_generate_syntax_tokens(TreeSitterLanguage *lang, SyntaxHighlighting *sh);
+bool treesitter_generate_syntax_tokens(TreeSitterLanguage *lang, SyntaxHighlighting *sh);
 
 #endif /* TREESITTER_H */

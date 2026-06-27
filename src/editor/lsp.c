@@ -318,6 +318,29 @@ void lsp_client_send_hover_request(LSPClient *client, const char *file_uri, int 
     write(client->stdin_fd, buffer, content_len);
 }
 
+void lsp_client_send_completion_request(LSPClient *client, const char *file_uri, int line, int character) {
+    if (client->status != LSP_STATUS_INITIALIZED) {
+        return;
+    }
+
+    char params[640];
+    snprintf(params, sizeof(params),
+             "{\"textDocument\":{\"uri\":\"%s\"},\"position\":{\"line\":%d,\"character\":%d},\"context\":{\"triggerKind\":1}}",
+             file_uri, line, character);
+
+    char buffer[1200];
+    snprintf(buffer, sizeof(buffer),
+             "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/completion\",\"params\":%s}",
+             client->id++, params);
+
+    char header[256];
+    int content_len = strlen(buffer);
+    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
+
+    write(client->stdin_fd, header, strlen(header));
+    write(client->stdin_fd, buffer, content_len);
+}
+
 void lsp_client_send_semantic_tokens_request(LSPClient *client, const char *file_uri) {
     if (client->status != LSP_STATUS_INITIALIZED) {
         return;
@@ -706,6 +729,47 @@ void lsp_free_hover(LSPHover *hover) {
     free(hover->contents);
     free(hover->language);
     free(hover);
+}
+
+LSPCompletionItems *lsp_parse_completion_response(const char *response) {
+    if (!response) return NULL;
+    const char *result = strstr(response, "\"result\"");
+    if (!result || strstr(result, "\"result\":null") || strstr(result, "\"result\": null")) return NULL;
+
+    LSPCompletionItems *items = calloc(1, sizeof(LSPCompletionItems));
+    items->items = calloc(128, sizeof(LSPCompletionItem));
+
+    const char *p = result;
+    while ((p = strstr(p, "\"label\"")) && items->count < 128) {
+        char *label = json_extract_string(p, "label");
+        if (label && label[0]) {
+            LSPCompletionItem *it = &items->items[items->count++];
+            it->label = label;
+            it->detail = json_extract_string(p, "detail");
+            it->documentation = json_extract_string(p, "documentation");
+        } else {
+            free(label);
+        }
+        p += 7;
+    }
+
+    if (items->count == 0) {
+        free(items->items);
+        free(items);
+        return NULL;
+    }
+    return items;
+}
+
+void lsp_free_completion_items(LSPCompletionItems *items) {
+    if (!items) return;
+    for (int i = 0; i < items->count; i++) {
+        free(items->items[i].label);
+        free(items->items[i].detail);
+        free(items->items[i].documentation);
+    }
+    free(items->items);
+    free(items);
 }
 
 void lsp_free_workspace_edit(LSPWorkspaceEdit *edit) {

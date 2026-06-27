@@ -39,10 +39,12 @@ typedef struct {
     void *hover_result;  /* LSPHover* from LSP hover request */
     void *diagnostics;  /* LSPDiagnostics* from LSP publish diagnostics */
     bool  ts_parsed;    /* True if tree-sitter has parsed this document */
+    bool  ts_attempted; /* True if tree-sitter was tried for current content */
 } Document;
 
 void document_init(Document *doc);
 void document_free(Document *doc);
+void document_mark_dirty(Document *doc);
 void document_open(Document *doc, const char *path);
 void document_save(Document *doc);
 void document_save_as(Document *doc, const char *path);
@@ -202,6 +204,7 @@ void document_lsp_goto_implementation(Document *doc, void *lsp_manager);
 void document_lsp_hover(Document *doc, void *lsp_manager);
 void document_lsp_select_references(Document *doc, void *lsp_manager);
 void document_update_syntax_from_lsp(Document *doc, void *lsp_manager);
+bool document_update_syntax_fallback(Document *doc);
 void document_update_diagnostics_from_lsp(Document *doc, void *lsp_manager);
 
 /* Diagnostic navigation */
@@ -211,7 +214,8 @@ void document_goto_first_diagnostic(Document *doc);
 void document_goto_last_diagnostic(Document *doc);
 
 /* Treesitter integration */
-void document_parse_treesitter(Document *doc, void *ts_manager);
+bool document_parse_treesitter(Document *doc, void *ts_manager);
+void document_select_treesitter_parent(Document *doc, void *ts_manager);
 
 /* LSP text editing */
 void document_apply_text_edit(Document *doc, const LSPTextEdit *edit);
