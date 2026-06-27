@@ -1,4 +1,5 @@
 #include "dragon_editor/treesitter.h"
+#include "dragon_editor/syntax.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -263,4 +264,103 @@ void treesitter_symbols_free(TreeSitterSymbols *symbols) {
     if (!symbols) return;
     free(symbols->symbols);
     symbols->count = 0;
+}
+
+/* Map tree-sitter node type to SyntaxType */
+static SyntaxType treesitter_node_type_to_syntax(const char *node_type) {
+    /* Keywords */
+    if (strcmp(node_type, "keyword") == 0) return SYNTAX_KEYWORD;
+    if (strcmp(node_type, "type") == 0) return SYNTAX_TYPE;
+    if (strcmp(node_type, "class") == 0) return SYNTAX_TYPE;
+    if (strcmp(node_type, "struct") == 0) return SYNTAX_TYPE;
+    if (strcmp(node_type, "enum") == 0) return SYNTAX_TYPE;
+    if (strcmp(node_type, "union") == 0) return SYNTAX_TYPE;
+    
+    /* Strings */
+    if (strcmp(node_type, "string") == 0) return SYNTAX_STRING;
+    if (strcmp(node_type, "string_literal") == 0) return SYNTAX_STRING;
+    if (strcmp(node_type, "character_literal") == 0) return SYNTAX_STRING;
+    if (strcmp(node_type, "escape_sequence") == 0) return SYNTAX_STRING;
+    
+    /* Numbers */
+    if (strcmp(node_type, "number") == 0) return SYNTAX_NUMBER;
+    if (strcmp(node_type, "integer_literal") == 0) return SYNTAX_NUMBER;
+    if (strcmp(node_type, "float_literal") == 0) return SYNTAX_NUMBER;
+    if (strcmp(node_type, "hex_literal") == 0) return SYNTAX_NUMBER;
+    if (strcmp(node_type, "octal_literal") == 0) return SYNTAX_NUMBER;
+    if (strcmp(node_type, "binary_literal") == 0) return SYNTAX_NUMBER;
+    
+    /* Comments */
+    if (strcmp(node_type, "comment") == 0) return SYNTAX_COMMENT;
+    if (strcmp(node_type, "line_comment") == 0) return SYNTAX_COMMENT;
+    if (strcmp(node_type, "block_comment") == 0) return SYNTAX_COMMENT;
+    
+    /* Functions */
+    if (strcmp(node_type, "function") == 0) return SYNTAX_FUNCTION;
+    if (strcmp(node_type, "function_definition") == 0) return SYNTAX_FUNCTION;
+    if (strcmp(node_type, "call_expression") == 0) return SYNTAX_FUNCTION;
+    if (strcmp(node_type, "method_definition") == 0) return SYNTAX_FUNCTION;
+    if (strcmp(node_type, "function_declarator") == 0) return SYNTAX_FUNCTION;
+    
+    /* Variables */
+    if (strcmp(node_type, "variable") == 0) return SYNTAX_VARIABLE;
+    if (strcmp(node_type, "identifier") == 0) return SYNTAX_VARIABLE;
+    if (strcmp(node_type, "parameter") == 0) return SYNTAX_VARIABLE;
+    if (strcmp(node_type, "field_identifier") == 0) return SYNTAX_VARIABLE;
+    
+    /* Macros */
+    if (strcmp(node_type, "macro_definition") == 0) return SYNTAX_MACRO;
+    if (strcmp(node_type, "preproc_def") == 0) return SYNTAX_MACRO;
+    if (strcmp(node_type, "preproc_function_def") == 0) return SYNTAX_MACRO;
+    
+    /* Operators */
+    if (strcmp(node_type, "operator") == 0) return SYNTAX_OPERATOR;
+    if (strcmp(node_type, "binary_expression") == 0) return SYNTAX_OPERATOR;
+    if (strcmp(node_type, "unary_expression") == 0) return SYNTAX_OPERATOR;
+    
+    /* Namespace */
+    if (strcmp(node_type, "namespace") == 0) return SYNTAX_NAMESPACE;
+    if (strcmp(node_type, "namespace_definition") == 0) return SYNTAX_NAMESPACE;
+    if (strcmp(node_type, "module") == 0) return SYNTAX_NAMESPACE;
+    
+    return SYNTAX_NORMAL;
+}
+
+/* Recursively walk tree and generate syntax tokens */
+static void treesitter_walk_node(TSNode node, SyntaxHighlighting *sh) {
+    if (ts_node_is_null(node)) return;
+    
+    /* Get node type and map to syntax type */
+    const char *node_type = ts_node_type(node);
+    SyntaxType syntax_type = treesitter_node_type_to_syntax(node_type);
+    
+    /* Only add token if it's not NORMAL (to avoid flooding with useless tokens) */
+    if (syntax_type != SYNTAX_NORMAL) {
+        TSPoint start = ts_node_start_point(node);
+        TSPoint end = ts_node_end_point(node);
+        
+        syntax_add_token(sh, 
+                        (int)start.row, (int)start.column,
+                        (int)end.row, (int)end.column,
+                        syntax_type);
+    }
+    
+    /* Recurse into children */
+    uint32_t child_count = ts_node_child_count(node);
+    for (uint32_t i = 0; i < child_count; i++) {
+        TSNode child = ts_node_child(node, i);
+        treesitter_walk_node(child, sh);
+    }
+}
+
+/* Generate syntax tokens from tree-sitter parse tree */
+void treesitter_generate_syntax_tokens(TreeSitterLanguage *lang, SyntaxHighlighting *sh) {
+    if (!lang || !lang->tree || !sh) return;
+    
+    /* Clear existing tokens */
+    syntax_clear(sh);
+    
+    /* Walk the tree and generate tokens */
+    TSNode root = ts_tree_root_node(lang->tree);
+    treesitter_walk_node(root, sh);
 }

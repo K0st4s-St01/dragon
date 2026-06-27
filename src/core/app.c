@@ -175,10 +175,11 @@ void app_run(App *app) {
             document_update_diagnostics_from_lsp(doc, &app->lsp_manager);
         }
         
-        /* Parse document with treesitter for better syntax highlighting */
-        if (doc && app->ts_manager) {
+        /* Parse document with treesitter for better syntax highlighting (only when dirty) */
+        if (doc && app->ts_manager && doc->dirty) {
             extern void document_parse_treesitter(Document *, void *);
             document_parse_treesitter(doc, app->ts_manager);
+            doc->dirty = false;
         }
 
         renderer_clear(&app->renderer);

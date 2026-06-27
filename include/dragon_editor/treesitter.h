@@ -3,6 +3,7 @@
 
 #include <tree_sitter/api.h>
 #include <stdbool.h>
+#include "syntax.h"
 
 typedef struct {
     TSLanguage *language;
@@ -60,5 +61,8 @@ typedef struct {
 /* Extract symbols from tree using queries */
 TreeSitterSymbols treesitter_extract_symbols(TreeSitterLanguage *lang);
 void treesitter_symbols_free(TreeSitterSymbols *symbols);
+
+/* Generate syntax tokens from tree-sitter parse tree */
+void treesitter_generate_syntax_tokens(TreeSitterLanguage *lang, SyntaxHighlighting *sh);
 
 #endif /* TREESITTER_H */

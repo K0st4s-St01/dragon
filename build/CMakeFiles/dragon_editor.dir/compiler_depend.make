@@ -842,6 +842,7 @@ CMakeFiles/dragon_editor.dir/src/editor/syntax.c.o: /home/xator/Projects/dragon/
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.o: /home/xator/Projects/dragon/src/editor/treesitter.c \
+  /home/xator/Projects/dragon/include/dragon_editor/syntax.h \
   /home/xator/Projects/dragon/include/dragon_editor/treesitter.h \
   /usr/include/alloca.h \
   /usr/include/bits/atomic_wide_counter.h \

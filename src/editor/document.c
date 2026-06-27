@@ -2896,14 +2896,32 @@ void document_parse_treesitter(Document *doc, void *ts_manager) {
         return;
     }
     
-    /* Get the language parser */
-    TreeSitterLanguage *lang = NULL;
-    const char *lang_names[] = {"c", "python", "javascript", "typescript", "bash", "lua", "markdown"};
-    for (int i = 0; i < 7; i++) {
-        lang = treesitter_get_language(manager, lang_names[i]);
-        if (lang) break;
+    /* Get the correct language based on file extension */
+    const char *lang_name = NULL;
+    if (strcmp(ext, "c") == 0 || strcmp(ext, "h") == 0 || 
+        strcmp(ext, "cpp") == 0 || strcmp(ext, "cc") == 0 || 
+        strcmp(ext, "cxx") == 0 || strcmp(ext, "hpp") == 0 || 
+        strcmp(ext, "hh") == 0 || strcmp(ext, "hxx") == 0 ||
+        strcmp(ext, "m") == 0 || strcmp(ext, "mm") == 0 || 
+        strcmp(ext, "cu") == 0) {
+        lang_name = "c";
+    } else if (strcmp(ext, "py") == 0) {
+        lang_name = "python";
+    } else if (strcmp(ext, "js") == 0 || strcmp(ext, "mjs") == 0) {
+        lang_name = "javascript";
+    } else if (strcmp(ext, "ts") == 0) {
+        lang_name = "typescript";
+    } else if (strcmp(ext, "sh") == 0) {
+        lang_name = "bash";
+    } else if (strcmp(ext, "lua") == 0) {
+        lang_name = "lua";
+    } else if (strcmp(ext, "md") == 0) {
+        lang_name = "markdown";
     }
     
+    if (!lang_name) return;
+    
+    TreeSitterLanguage *lang = treesitter_get_language(manager, lang_name);
     if (!lang) return;
     
     /* Reconstruct buffer contents from lines for treesitter parsing */
@@ -2933,6 +2951,10 @@ void document_parse_treesitter(Document *doc, void *ts_manager) {
     
     /* Parse with treesitter */
     treesitter_parse(lang, buffer_text, (uint32_t)total_len);
+    
+    /* Generate syntax tokens from tree-sitter parse */
+    extern void treesitter_generate_syntax_tokens(TreeSitterLanguage *, SyntaxHighlighting *);
+    treesitter_generate_syntax_tokens(lang, &doc->syntax);
     
     free(buffer_text);
 }
