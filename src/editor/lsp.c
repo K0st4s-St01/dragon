@@ -365,12 +365,8 @@ void lsp_client_send_definition_request(LSPClient *client, const char *file_uri,
              "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/definition\",\"params\":%s}",
              client->id++, params);
     
-    char header[256];
     int content_len = strlen(buffer);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-    
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, buffer, content_len);
+    lsp_client_write_message(client, buffer, content_len);
 }
 
 void lsp_client_send_hover_request(LSPClient *client, const char *file_uri, int line, int character) {
@@ -388,12 +384,8 @@ void lsp_client_send_hover_request(LSPClient *client, const char *file_uri, int 
              "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/hover\",\"params\":%s}",
              client->id++, params);
     
-    char header[256];
     int content_len = strlen(buffer);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-    
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, buffer, content_len);
+    lsp_client_write_message(client, buffer, content_len);
 }
 
 void lsp_client_send_completion_request(LSPClient *client, const char *file_uri, int line, int character) {
@@ -411,12 +403,8 @@ void lsp_client_send_completion_request(LSPClient *client, const char *file_uri,
              "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/completion\",\"params\":%s}",
              client->id++, params);
 
-    char header[256];
     int content_len = strlen(buffer);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, buffer, content_len);
+    lsp_client_write_message(client, buffer, content_len);
 }
 
 void lsp_client_send_semantic_tokens_request(LSPClient *client, const char *file_uri) {
@@ -432,12 +420,8 @@ void lsp_client_send_semantic_tokens_request(LSPClient *client, const char *file
              "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/semanticTokens/full\",\"params\":%s}",
              client->id++, params);
     
-    char header[256];
     int content_len = strlen(buffer);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-    
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, buffer, content_len);
+    lsp_client_write_message(client, buffer, content_len);
 }
 
 void lsp_client_send_rename_request(LSPClient *client, const char *file_uri, int line, int character, const char *new_name) {
@@ -455,12 +439,8 @@ void lsp_client_send_rename_request(LSPClient *client, const char *file_uri, int
              "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/rename\",\"params\":%s}",
              client->id++, params);
     
-    char header[256];
     int content_len = strlen(buffer);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-    
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, buffer, content_len);
+    lsp_client_write_message(client, buffer, content_len);
 }
 
 void lsp_client_send_code_action_request(LSPClient *client, const char *file_uri, int start_line, int start_character, int end_line, int end_character) {
@@ -478,12 +458,8 @@ void lsp_client_send_code_action_request(LSPClient *client, const char *file_uri
              "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/codeAction\",\"params\":%s}",
              client->id++, params);
     
-    char header[256];
     int content_len = strlen(buffer);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-    
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, buffer, content_len);
+    lsp_client_write_message(client, buffer, content_len);
 }
 
 void lsp_client_send_type_definition_request(LSPClient *client, const char *file_uri, int line, int character) {
@@ -501,12 +477,8 @@ void lsp_client_send_type_definition_request(LSPClient *client, const char *file
              "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/typeDefinition\",\"params\":%s}",
              client->id++, params);
     
-    char header[256];
     int content_len = strlen(buffer);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-    
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, buffer, content_len);
+    lsp_client_write_message(client, buffer, content_len);
 }
 
 void lsp_client_send_references_request(LSPClient *client, const char *file_uri, int line, int character) {
@@ -524,12 +496,8 @@ void lsp_client_send_references_request(LSPClient *client, const char *file_uri,
              "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/references\",\"params\":%s}",
              client->id++, params);
     
-    char header[256];
     int content_len = strlen(buffer);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-    
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, buffer, content_len);
+    lsp_client_write_message(client, buffer, content_len);
 }
 
 void lsp_client_send_implementation_request(LSPClient *client, const char *file_uri, int line, int character) {
@@ -547,12 +515,8 @@ void lsp_client_send_implementation_request(LSPClient *client, const char *file_
              "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/implementation\",\"params\":%s}",
              client->id++, params);
     
-    char header[256];
     int content_len = strlen(buffer);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-    
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, buffer, content_len);
+    lsp_client_write_message(client, buffer, content_len);
 }
 
 void lsp_client_send_didOpen(LSPClient *client, const char *file_uri, const char *language_id, const char *text) {
