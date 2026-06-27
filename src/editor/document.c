@@ -880,13 +880,13 @@ void document_join_lines(Document *doc) {
     int cur_len = (int)buffer_line_len(&doc->buffer, cur->row);
     size_t join_pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur_len);
 
-    if (join_pos > 0 && doc->buffer.text[join_pos - 1] == '\n') {
-        buffer_delete(&doc->buffer, join_pos - 1, 1);
+    if (join_pos < doc->buffer.len && doc->buffer.text[join_pos] == '\n') {
         const char *next = buffer_line_ptr(&doc->buffer, cur->row + 1);
         int next_indent = 0;
         while (next[next_indent] == ' ' || next[next_indent] == '\t') next_indent++;
+        buffer_delete(&doc->buffer, join_pos, 1);
         if (next_indent > 0) {
-            buffer_delete(&doc->buffer, join_pos - 1, next_indent);
+            buffer_delete(&doc->buffer, join_pos, next_indent);
         }
     }
     cur->col = cur_len;
@@ -1202,12 +1202,12 @@ void document_join_lines_selection(Document *doc) {
         int prev_len = (int)buffer_line_len(&doc->buffer, r - 1);
 
         size_t join_pos = buffer_pos_from_row_col(&doc->buffer, r - 1, prev_len);
-        if (join_pos > 0 && doc->buffer.text[join_pos - 1] == '\n') {
-            buffer_delete(&doc->buffer, join_pos - 1, 1);
+        if (join_pos < doc->buffer.len && doc->buffer.text[join_pos] == '\n') {
+            buffer_delete(&doc->buffer, join_pos, 1);
             int indent = 0;
             while (line[indent] == ' ' || line[indent] == '\t') indent++;
             if (indent > 0 && len > 0) {
-                buffer_delete(&doc->buffer, join_pos - 1, indent);
+                buffer_delete(&doc->buffer, join_pos, indent);
             }
         }
     }
@@ -1311,9 +1311,10 @@ void document_search_next(Document *doc) {
     if (!doc->search_query || doc->search_len == 0) return;
     Cursor *cur = &doc->cursors[0];
     size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
-    if (pos + 1 < doc->buffer.len) {
-        const char *found = memmem(doc->buffer.text + pos + 1,
-                                   doc->buffer.len - pos - 1,
+    size_t search_start = pos + doc->search_len;
+    if (search_start < doc->buffer.len) {
+        const char *found = memmem(doc->buffer.text + search_start,
+                                   doc->buffer.len - search_start,
                                    doc->search_query, doc->search_len);
         if (found) {
             size_t fpos = (size_t)(found - doc->buffer.text);
@@ -1879,17 +1880,54 @@ void document_new(Document *doc) {
     document_init(doc);
 }
 
+static int cmp_lines(const void *a, const void *b) {
+    const char *sa = *(const char *const *)a;
+    const char *sb = *(const char *const *)b;
+    return strcmp(sa, sb);
+}
+
 void document_sort_selection(Document *doc) {
     Cursor *cur = &doc->cursors[0];
     if (!cur->has_selection) return;
     int sr, sc, er, ec;
     cursor_normalize(cur, &sr, &sc, &er, &ec);
-    size_t start = buffer_pos_from_row_col(&doc->buffer, sr, 0);
-    size_t end = buffer_pos_from_row_col(&doc->buffer, er, (int)buffer_line_len(&doc->buffer, er));
-    if (end > start) {
-        qsort(doc->buffer.text + start, end - start, 1,
-              (int(*)(const void*, const void*))strcmp);
+    int line_count = er - sr + 1;
+    if (line_count < 2) return;
+
+    /* Collect line pointers and lengths */
+    const char **lines = malloc(sizeof(char *) * line_count);
+    int *lengths = malloc(sizeof(int) * line_count);
+    for (int i = 0; i < line_count; i++) {
+        lines[i] = buffer_line_ptr(&doc->buffer, sr + i);
+        lengths[i] = (int)buffer_line_len(&doc->buffer, sr + i);
     }
+
+    /* Sort the line pointers by content */
+    qsort(lines, line_count, sizeof(char *), cmp_lines);
+
+    /* Rebuild the selected region */
+    size_t start = buffer_pos_from_row_col(&doc->buffer, sr, 0);
+    size_t old_end = buffer_pos_from_row_col(&doc->buffer, er, lengths[line_count - 1]);
+    size_t old_len = old_end - start;
+
+    /* Build new sorted text */
+    size_t new_cap = 0;
+    for (int i = 0; i < line_count; i++) new_cap += lengths[i] + 1;
+    char *new_text = malloc(new_cap);
+    size_t pos = 0;
+    for (int i = 0; i < line_count; i++) {
+        memcpy(new_text + pos, lines[i], lengths[i]);
+        pos += lengths[i];
+        if (sr + i < er) {
+            new_text[pos++] = '\n';
+        }
+    }
+
+    buffer_delete(&doc->buffer, start, old_len);
+    buffer_insert(&doc->buffer, start, new_text, pos);
+    free(new_text);
+    free(lines);
+    free(lengths);
     document_mark_dirty(doc);
 }
 
@@ -2139,6 +2177,8 @@ void document_select_all_matches(Document *doc, const char *pattern, size_t len)
     int sr = 0, sc = 0, er = (int)buffer_line_count(&doc->buffer) - 1, ec = 0;
     if (cur->has_selection) {
         cursor_normalize(cur, &sr, &sc, &er, &ec);
+    } else {
+        ec = (int)buffer_line_len(&doc->buffer, er);
     }
     size_t sel_start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
     size_t sel_end = buffer_pos_from_row_col(&doc->buffer, er, ec);
@@ -2241,6 +2281,8 @@ void document_keep_matching(Document *doc, const char *pattern, size_t len) {
     int sr = 0, sc = 0, er = (int)buffer_line_count(&doc->buffer) - 1, ec = 0;
     if (cur->has_selection) {
         cursor_normalize(cur, &sr, &sc, &er, &ec);
+    } else {
+        ec = (int)buffer_line_len(&doc->buffer, er);
     }
     size_t sel_start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
     size_t sel_end = buffer_pos_from_row_col(&doc->buffer, er, ec);

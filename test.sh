@@ -1,8 +1,19 @@
 #!/bin/bash
 set -e
 
-cd "$(dirname "$0")/build"
+DIR="$(cd "$(dirname "$0")" && pwd)"
+BUILD="$DIR/build"
 
-cmake .. -DCMAKE_BUILD_TYPE=Debug
-cmake --build . --target test_all
-ctest --output-on-failure
+mkdir -p "$BUILD"
+
+echo "=== Configuring ==="
+cmake -S "$DIR" -B "$BUILD" -DCMAKE_BUILD_TYPE=Debug
+
+echo ""
+echo "=== Building ==="
+cmake --build "$BUILD" --target test_all -j"$(nproc)"
+
+echo ""
+echo "=== Running Tests ==="
+cd "$BUILD"
+ctest --output-on-failure --test-dir "$BUILD"

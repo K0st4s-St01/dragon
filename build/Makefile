@@ -347,6 +347,7 @@ src/editor/config.o: src/editor/config.c.o
 # target to build an object file
 src/editor/config.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/config.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/config.c.o
 .PHONY : src/editor/config.c.o
 
 src/editor/config.i: src/editor/config.c.i
@@ -355,6 +356,7 @@ src/editor/config.i: src/editor/config.c.i
 # target to preprocess a source file
 src/editor/config.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/config.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/config.c.i
 .PHONY : src/editor/config.c.i
 
 src/editor/config.s: src/editor/config.c.s
@@ -363,6 +365,7 @@ src/editor/config.s: src/editor/config.c.s
 # target to generate assembly for a file
 src/editor/config.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/config.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/config.c.s
 .PHONY : src/editor/config.c.s
 
 src/editor/cursor.o: src/editor/cursor.c.o
@@ -398,6 +401,7 @@ src/editor/document.o: src/editor/document.c.o
 # target to build an object file
 src/editor/document.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/document.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/document.c.o
 .PHONY : src/editor/document.c.o
 
 src/editor/document.i: src/editor/document.c.i
@@ -406,6 +410,7 @@ src/editor/document.i: src/editor/document.c.i
 # target to preprocess a source file
 src/editor/document.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/document.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/document.c.i
 .PHONY : src/editor/document.c.i
 
 src/editor/document.s: src/editor/document.c.s
@@ -414,6 +419,7 @@ src/editor/document.s: src/editor/document.c.s
 # target to generate assembly for a file
 src/editor/document.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/document.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/document.c.s
 .PHONY : src/editor/document.c.s
 
 src/editor/history.o: src/editor/history.c.o
@@ -449,6 +455,7 @@ src/editor/lsp.o: src/editor/lsp.c.o
 # target to build an object file
 src/editor/lsp.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/lsp.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/lsp.c.o
 .PHONY : src/editor/lsp.c.o
 
 src/editor/lsp.i: src/editor/lsp.c.i
@@ -457,6 +464,7 @@ src/editor/lsp.i: src/editor/lsp.c.i
 # target to preprocess a source file
 src/editor/lsp.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/lsp.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/lsp.c.i
 .PHONY : src/editor/lsp.c.i
 
 src/editor/lsp.s: src/editor/lsp.c.s
@@ -465,6 +473,7 @@ src/editor/lsp.s: src/editor/lsp.c.s
 # target to generate assembly for a file
 src/editor/lsp.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/lsp.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/lsp.c.s
 .PHONY : src/editor/lsp.c.s
 
 src/editor/lsp_config.o: src/editor/lsp_config.c.o
@@ -473,6 +482,7 @@ src/editor/lsp_config.o: src/editor/lsp_config.c.o
 # target to build an object file
 src/editor/lsp_config.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/lsp_config.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/lsp_config.c.o
 .PHONY : src/editor/lsp_config.c.o
 
 src/editor/lsp_config.i: src/editor/lsp_config.c.i
@@ -481,6 +491,7 @@ src/editor/lsp_config.i: src/editor/lsp_config.c.i
 # target to preprocess a source file
 src/editor/lsp_config.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/lsp_config.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/lsp_config.c.i
 .PHONY : src/editor/lsp_config.c.i
 
 src/editor/lsp_config.s: src/editor/lsp_config.c.s
@@ -489,6 +500,7 @@ src/editor/lsp_config.s: src/editor/lsp_config.c.s
 # target to generate assembly for a file
 src/editor/lsp_config.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/lsp_config.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/lsp_config.c.s
 .PHONY : src/editor/lsp_config.c.s
 
 src/editor/syntax.o: src/editor/syntax.c.o
@@ -524,6 +536,7 @@ src/editor/treesitter.o: src/editor/treesitter.c.o
 # target to build an object file
 src/editor/treesitter.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/treesitter.c.o
 .PHONY : src/editor/treesitter.c.o
 
 src/editor/treesitter.i: src/editor/treesitter.c.i
@@ -532,6 +545,7 @@ src/editor/treesitter.i: src/editor/treesitter.c.i
 # target to preprocess a source file
 src/editor/treesitter.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/treesitter.c.i
 .PHONY : src/editor/treesitter.c.i
 
 src/editor/treesitter.s: src/editor/treesitter.c.s
@@ -540,6 +554,7 @@ src/editor/treesitter.s: src/editor/treesitter.c.s
 # target to generate assembly for a file
 src/editor/treesitter.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/treesitter.c.s
 .PHONY : src/editor/treesitter.c.s
 
 src/gui/gui.o: src/gui/gui.c.o

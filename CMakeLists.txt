@@ -94,19 +94,31 @@ set(TEST_SOURCES
     src/editor/history.c
     src/core/mode.c
     src/editor/syntax.c
+    src/editor/document.c
+    src/editor/lsp.c
+    src/editor/lsp_config.c
+    src/editor/treesitter.c
+    src/editor/config.c
 )
 
 add_library(dragon_core STATIC ${TEST_SOURCES})
 target_include_directories(dragon_core PUBLIC
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/dragon_editor
+    vendor/glad/include
+    vendor/stb
+    /usr/include/tree_sitter
 )
+target_link_libraries(dragon_core PUBLIC tree-sitter m dl)
 
 add_executable(test_all tests/test_all.c)
 target_include_directories(test_all PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/dragon_editor
+    vendor/glad/include
+    vendor/stb
+    /usr/include/tree_sitter
 )
-target_link_libraries(test_all PRIVATE dragon_core m)
+target_link_libraries(test_all PRIVATE dragon_core m dl tree-sitter)
 
 add_test(NAME unit_tests COMMAND test_all)

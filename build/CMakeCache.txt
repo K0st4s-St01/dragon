@@ -227,6 +227,9 @@ PKG_CONFIG_ARGN:STRING=
 //pkg-config executable
 PKG_CONFIG_EXECUTABLE:FILEPATH=/usr/bin/pkg-config
 
+//Dependencies for the target
+dragon_core_LIB_DEPENDS:STATIC=general;tree-sitter;general;m;general;dl;
+
 //Value Computed by CMake
 dragon_editor_BINARY_DIR:STATIC=/home/xator/dragon/build
 

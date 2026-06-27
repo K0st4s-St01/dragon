@@ -241,37 +241,67 @@
 },
 {
   "directory": "/home/xator/dragon/build",
-  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/buffer.c.o -c /home/xator/dragon/src/editor/buffer.c",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/buffer.c.o -c /home/xator/dragon/src/editor/buffer.c",
   "file": "/home/xator/dragon/src/editor/buffer.c",
   "output": "CMakeFiles/dragon_core.dir/src/editor/buffer.c.o"
 },
 {
   "directory": "/home/xator/dragon/build",
-  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/cursor.c.o -c /home/xator/dragon/src/editor/cursor.c",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/cursor.c.o -c /home/xator/dragon/src/editor/cursor.c",
   "file": "/home/xator/dragon/src/editor/cursor.c",
   "output": "CMakeFiles/dragon_core.dir/src/editor/cursor.c.o"
 },
 {
   "directory": "/home/xator/dragon/build",
-  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/history.c.o -c /home/xator/dragon/src/editor/history.c",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/history.c.o -c /home/xator/dragon/src/editor/history.c",
   "file": "/home/xator/dragon/src/editor/history.c",
   "output": "CMakeFiles/dragon_core.dir/src/editor/history.c.o"
 },
 {
   "directory": "/home/xator/dragon/build",
-  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/core/mode.c.o -c /home/xator/dragon/src/core/mode.c",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/core/mode.c.o -c /home/xator/dragon/src/core/mode.c",
   "file": "/home/xator/dragon/src/core/mode.c",
   "output": "CMakeFiles/dragon_core.dir/src/core/mode.c.o"
 },
 {
   "directory": "/home/xator/dragon/build",
-  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/syntax.c.o -c /home/xator/dragon/src/editor/syntax.c",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/syntax.c.o -c /home/xator/dragon/src/editor/syntax.c",
   "file": "/home/xator/dragon/src/editor/syntax.c",
   "output": "CMakeFiles/dragon_core.dir/src/editor/syntax.c.o"
 },
 {
   "directory": "/home/xator/dragon/build",
-  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -g -std=gnu11 -o CMakeFiles/test_all.dir/tests/test_all.c.o -c /home/xator/dragon/tests/test_all.c",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/document.c.o -c /home/xator/dragon/src/editor/document.c",
+  "file": "/home/xator/dragon/src/editor/document.c",
+  "output": "CMakeFiles/dragon_core.dir/src/editor/document.c.o"
+},
+{
+  "directory": "/home/xator/dragon/build",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/lsp.c.o -c /home/xator/dragon/src/editor/lsp.c",
+  "file": "/home/xator/dragon/src/editor/lsp.c",
+  "output": "CMakeFiles/dragon_core.dir/src/editor/lsp.c.o"
+},
+{
+  "directory": "/home/xator/dragon/build",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/lsp_config.c.o -c /home/xator/dragon/src/editor/lsp_config.c",
+  "file": "/home/xator/dragon/src/editor/lsp_config.c",
+  "output": "CMakeFiles/dragon_core.dir/src/editor/lsp_config.c.o"
+},
+{
+  "directory": "/home/xator/dragon/build",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/treesitter.c.o -c /home/xator/dragon/src/editor/treesitter.c",
+  "file": "/home/xator/dragon/src/editor/treesitter.c",
+  "output": "CMakeFiles/dragon_core.dir/src/editor/treesitter.c.o"
+},
+{
+  "directory": "/home/xator/dragon/build",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -g -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/config.c.o -c /home/xator/dragon/src/editor/config.c",
+  "file": "/home/xator/dragon/src/editor/config.c",
+  "output": "CMakeFiles/dragon_core.dir/src/editor/config.c.o"
+},
+{
+  "directory": "/home/xator/dragon/build",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -g -std=gnu11 -o CMakeFiles/test_all.dir/tests/test_all.c.o -c /home/xator/dragon/tests/test_all.c",
   "file": "/home/xator/dragon/tests/test_all.c",
   "output": "CMakeFiles/test_all.dir/tests/test_all.c.o"
 }
