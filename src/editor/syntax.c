@@ -46,8 +46,11 @@ void syntax_add_token(SyntaxHighlighting *sh, int sr, int sc, int er, int ec, Sy
 
 SyntaxType syntax_get_type_at(SyntaxHighlighting *sh, int row, int col) {
     /* Binary search for token at position */
-    for (int i = 0; i < sh->token_count; i++) {
-        SyntaxToken *token = &sh->tokens[i];
+    int left = 0, right = sh->token_count - 1;
+    
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+        SyntaxToken *token = &sh->tokens[mid];
         
         /* Check if position is within token bounds */
         if (token->start_row == row && token->end_row == row) {
@@ -65,6 +68,13 @@ SyntaxType syntax_get_type_at(SyntaxHighlighting *sh, int row, int col) {
             /* Middle of multi-line token */
             return token->type;
         }
+        
+        /* Move search bounds */
+        if (token->end_row < row || (token->end_row == row && token->end_col <= col)) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
     }
     
     return SYNTAX_NORMAL;
@@ -72,6 +82,9 @@ SyntaxType syntax_get_type_at(SyntaxHighlighting *sh, int row, int col) {
 
 void syntax_update_from_lsp(SyntaxHighlighting *sh, const char *response) {
     if (!response || !sh) return;
+    
+    /* Clear existing tokens to prevent accumulation */
+    syntax_clear(sh);
     
     /* Find the "data" array */
     const char *data_start = strstr(response, "\"data\"");

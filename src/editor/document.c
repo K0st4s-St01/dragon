@@ -125,7 +125,7 @@ void document_delete_char(Document *doc) {
     else {
         cur->row--;
         int len = (int)buffer_line_len(&doc->buffer, cur->row);
-        cur->col = len > 0 ? len - 1 : 0;
+        cur->col = len;
     }
     doc->dirty = true;
 }
@@ -226,7 +226,7 @@ void document_cursor_to(Document *doc, int row, int max_row) {
     if (row > max_row) row = max_row;
     cur->row = row;
     size_t len = buffer_line_len(&doc->buffer, cur->row);
-    if (cur->col >= (int)len) cur->col = (int)len - 1;
+    if (cur->col > (int)len) cur->col = (int)len;
     if (cur->col < 0) cur->col = 0;
     document_sync_viewport_to_cursor(doc);
 }
@@ -238,7 +238,7 @@ void document_cursor_home(Document *doc) {
 void document_cursor_end(Document *doc) {
     Cursor *cur = &doc->cursors[0];
     int len = (int)buffer_line_len(&doc->buffer, cur->row);
-    cur->col = len > 0 ? len - 1 : 0;
+    cur->col = len;
 }
 
 void document_cursor_page_up(Document *doc) {
@@ -367,7 +367,7 @@ void document_cursor_word_forward(Document *doc) {
     if (i < len && (line[i] != ' ' && line[i] != '\t'))
         while (i < len && line[i] != '\n' && line[i] != ' ' && line[i] != '\t')
             i++;
-    cur->col = i < len ? i : (len > 0 ? len - 1 : 0);
+    cur->col = i < len ? i : len;
 }
 
 void document_cursor_word_backward(Document *doc) {
@@ -582,7 +582,7 @@ void document_delete_char_multi(Document *doc) {
         else {
             cur->row--;
             int len = (int)buffer_line_len(&doc->buffer, cur->row);
-            cur->col = len > 0 ? len - 1 : 0;
+            cur->col = len;
         }
     }
     doc->dirty = true;
@@ -678,7 +678,7 @@ void document_cursor_first_non_blank(Document *doc) {
     int i = 0;
     while (i < len && (line[i] == ' ' || line[i] == '\t'))
         i++;
-    cur->col = i < len ? i : (len > 0 ? len - 1 : 0);
+    cur->col = i < len ? i : len;
 }
 
 void document_join_lines(Document *doc) {
@@ -698,7 +698,7 @@ void document_join_lines(Document *doc) {
             buffer_delete(&doc->buffer, join_pos - 1, next_indent);
         }
     }
-    cur->col = cur_len > 0 ? cur_len - 1 : 0;
+    cur->col = cur_len;
     doc->dirty = true;
 }
 
@@ -725,8 +725,7 @@ void document_delete_char_at_cursor(Document *doc) {
     buffer_delete(&doc->buffer, pos, 1);
     history_push_delete(&doc->history, pos, &deleted, 1, cur->row, cur->col);
     size_t max_col = buffer_line_len(&doc->buffer, cur->row);
-    if (max_col > 0 && cur->col >= (int)max_col)
-        cur->col = (int)max_col - 1;
+    if (cur->col > (int)max_col) cur->col = (int)max_col;
     if (cur->col < 0) cur->col = 0;
     doc->dirty = true;
 }
@@ -1163,7 +1162,7 @@ void document_extend_to_line_bounds(Document *doc) {
     Cursor *cur = &doc->cursors[0];
     if (!cur->has_selection) cursor_select_start(cur);
     int len = (int)buffer_line_len(&doc->buffer, cur->row);
-    cur->col = len > 0 ? len - 1 : 0;
+    cur->col = len;
 }
 
 void document_shrink_to_line_bounds(Document *doc) {
@@ -1188,7 +1187,7 @@ void document_goto_line_start(Document *doc) {
 void document_goto_line_end(Document *doc) {
     Cursor *cur = &doc->cursors[0];
     int len = (int)buffer_line_len(&doc->buffer, cur->row);
-    cursor_move_to(cur, cur->row, len > 0 ? len - 1 : 0);
+    cursor_move_to(cur, cur->row, len);
 }
 
 void document_goto_view_top(Document *doc) {
@@ -1708,7 +1707,7 @@ void document_cursor_WORD_forward(Document *doc) {
         i++;
     while (i < len && line[i] != ' ' && line[i] != '\t')
         i++;
-    cur->col = i < len ? i : (len > 0 ? len - 1 : 0);
+    cur->col = i < len ? i : len;
 }
 
 void document_cursor_WORD_backward(Document *doc) {
@@ -2518,7 +2517,7 @@ static void document_goto_position(Document *doc, int line, int col) {
     /* Bounds check column */
     size_t line_len = buffer_line_len(&doc->buffer, line);
     if (col < 0) col = 0;
-    if (col >= (int)line_len) col = (int)line_len - 1;
+    if (col > (int)line_len) col = (int)line_len;
     if (col < 0) col = 0;
     
     cur->col = col;
@@ -2831,8 +2830,8 @@ void document_update_syntax_from_lsp(Document *doc, void *lsp_manager) {
     /* Send semantic tokens request */
     lsp_client_send_semantic_tokens_request(client, uri);
     
-    /* Give LSP server time to respond */
-    usleep(200000);  /* 200ms for semantic tokens */
+    /* Give LSP server time to respond (non-blocking read follows) */
+    usleep(50000);  /* 50ms - reduced from 200ms to minimize freeze */
     
     /* Read response */
     char *response = lsp_client_read_response(client);

@@ -1046,7 +1046,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                     cur->has_selection = true;
                     cursor_move_to(cur, next_line, 0);
                     int next_len = (int)buffer_line_len(&doc->buffer, next_line);
-                    cur->col = next_len > 0 ? next_len - 1 : 0;
+                    cur->col = next_len;
                 }
             }
         }
@@ -1609,7 +1609,7 @@ static void handle_select_key(App *app, int key, int action, int mods) {
                 cur->has_selection = true;
                 cursor_move_to(cur, next_line, 0);
                 int next_len = (int)buffer_line_len(&doc->buffer, next_line);
-                cur->col = next_len > 0 ? next_len - 1 : 0;
+                cur->col = next_len;
             }
         }
         break;
