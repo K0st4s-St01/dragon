@@ -108,8 +108,13 @@ static void app_update_diagnostics_from_lsp(App *app) {
                 break;
 
             LSPDiagnostics *diagnostics = lsp_parse_publish_diagnostics_notification(response);
-            if (diagnostics)
+            if (diagnostics) {
                 app_store_diagnostics(app, diagnostics);
+            } else {
+                lsp_client_unread_response(client, response);
+                free(response);
+                break;
+            }
             free(response);
         }
     }

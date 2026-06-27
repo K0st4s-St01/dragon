@@ -875,6 +875,34 @@ char *lsp_client_read_response(LSPClient *client) {
     return response;
 }
 
+bool lsp_client_unread_response(LSPClient *client, const char *response) {
+    if (!client || !response) return false;
+
+    size_t body_len = strlen(response);
+    char header[256];
+    int header_len = snprintf(header, sizeof(header), "Content-Length: %zu\r\n\r\n", body_len);
+    if (header_len <= 0 || header_len >= (int)sizeof(header))
+        return false;
+
+    size_t frame_len = (size_t)header_len + body_len;
+    if (client->read_len + frame_len + 1 > client->read_capacity) {
+        size_t next = client->read_capacity ? client->read_capacity : 16384;
+        while (next < client->read_len + frame_len + 1)
+            next *= 2;
+        char *buf = realloc(client->read_buffer, next);
+        if (!buf) return false;
+        client->read_buffer = buf;
+        client->read_capacity = next;
+    }
+
+    memmove(client->read_buffer + frame_len, client->read_buffer, client->read_len);
+    memcpy(client->read_buffer, header, (size_t)header_len);
+    memcpy(client->read_buffer + header_len, response, body_len);
+    client->read_len += frame_len;
+    client->read_buffer[client->read_len] = '\0';
+    return true;
+}
+
 LSPLocation *lsp_parse_definition_response(const char *response, int *count) {
     if (!response || !count) return NULL;
     

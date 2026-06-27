@@ -145,6 +145,7 @@ void lsp_client_send_didChange(LSPClient *client, const char *file_uri, const ch
 
 /* Response parsing */
 char *lsp_client_read_response(LSPClient *client);
+bool lsp_client_unread_response(LSPClient *client, const char *response);
 LSPLocation *lsp_parse_definition_response(const char *response, int *count);
 LSPHover *lsp_parse_hover_response(const char *response);
 LSPCompletionItems *lsp_parse_completion_response(const char *response);
