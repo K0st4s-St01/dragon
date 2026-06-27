@@ -21,6 +21,7 @@ typedef struct {
     char   *filepath;
     bool    dirty;
     bool    syntax_dirty;
+    bool    lsp_dirty;
     int     scroll_y;
     int     scroll_x;
     int     viewport_lines;

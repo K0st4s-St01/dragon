@@ -178,8 +178,11 @@ void app_run(App *app) {
             if (parsed)
                 doc->syntax_dirty = false;
 
-            /* Notify LSP of document changes */
+        }
+
+        if (doc && doc->lsp_dirty && doc->filepath && doc->language_id) {
             document_notify_lsp_change(doc, &app->lsp_manager);
+            doc->lsp_dirty = false;
         }
 
         /* Throttled LSP semantic-token update for languages without local highlighting. */

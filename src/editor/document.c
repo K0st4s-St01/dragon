@@ -129,8 +129,10 @@ static void fallback_highlight_line(Document *doc, int row, const char *line, in
 }
 
 void document_mark_dirty(Document *doc) {
+    if (!doc) return;
     doc->dirty = true;
     doc->syntax_dirty = true;
+    doc->lsp_dirty = true;
     doc->ts_parsed = false;
     doc->ts_attempted = false;
 }
@@ -175,15 +177,24 @@ void document_free(Document *doc) {
 }
 
 void document_open(Document *doc, const char *path) {
-    buffer_load(&doc->buffer, path);
+    if (!doc || !path) return;
+    char *path_copy = strdup(path);
+    if (!path_copy) return;
+    if (!buffer_load(&doc->buffer, path_copy)) {
+        free(path_copy);
+        return;
+    }
     free(doc->filepath);
-    doc->filepath = strdup(path);
+    doc->filepath = path_copy;
     doc->dirty = false;
     doc->syntax_dirty = true;
+    doc->lsp_dirty = false;
     doc->ts_parsed = false;
     doc->ts_attempted = false;
-    doc->cursors[0] = (Cursor){0};
+    doc->cursor_count = 1;
+    cursor_init(&doc->cursors[0]);
     doc->scroll_y = 0;
+    doc->scroll_x = 0;
     history_clear(&doc->history);
     document_detect_language(doc);
     
@@ -199,20 +210,28 @@ void document_save(Document *doc) {
 }
 
 void document_save_as(Document *doc, const char *path) {
+    if (!doc || !path) return;
+    char *path_copy = strdup(path);
+    if (!path_copy) return;
     free(doc->filepath);
-    doc->filepath = strdup(path);
-    buffer_save(&doc->buffer, path);
+    doc->filepath = path_copy;
+    buffer_save(&doc->buffer, doc->filepath);
     doc->dirty = false;
     doc->syntax_dirty = true;
+    doc->lsp_dirty = true;
     doc->ts_parsed = false;
     doc->ts_attempted = false;
+    document_detect_language(doc);
+    syntax_free(&doc->syntax);
+    syntax_init(&doc->syntax, doc->language_id);
 }
 
 void document_insert_char(Document *doc, char c) {
+    if (!doc) return;
     Cursor *cur = &doc->cursors[0];
     size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
     buffer_insert(&doc->buffer, pos, &c, 1);
-    history_push_insert(&doc->history, pos, &c, 1, cur->row, cur->col - 1);
+    history_push_insert(&doc->history, pos, &c, 1, cur->row, cur->col);
     cur->col++;
     document_mark_dirty(doc);
 }
@@ -293,53 +312,52 @@ void document_insert_text(Document *doc, const char *text) {
 }
 
 void document_move_line_up(Document *doc) {
+    if (!doc) return;
     Cursor *cur = &doc->cursors[0];
     size_t lines = buffer_line_count(&doc->buffer);
     if (cur->row == 0 || lines < 2) return;
 
-    /* Get current line content */
-    const char *line = buffer_line_ptr(&doc->buffer, cur->row);
-    size_t len = buffer_line_len(&doc->buffer, cur->row);
-
+    size_t prev_start = buffer_pos_from_row_col(&doc->buffer, cur->row - 1, 0);
     size_t cur_start = buffer_pos_from_row_col(&doc->buffer, cur->row, 0);
+    size_t next_start = (size_t)cur->row + 1 < lines
+        ? buffer_pos_from_row_col(&doc->buffer, cur->row + 1, 0)
+        : doc->buffer.len;
+    size_t len = next_start - cur_start;
 
-    /* Find end of previous line (to insert before it) */
-    size_t prev_end = buffer_pos_from_row_col(&doc->buffer, cur->row - 1, 0);
-    size_t prev_len = buffer_line_len(&doc->buffer, cur->row - 1);
-    prev_end = prev_end + prev_len;
+    char *line = malloc(len);
+    if (!line) return;
+    memcpy(line, doc->buffer.text + cur_start, len);
 
-    /* Delete current line */
     buffer_delete(&doc->buffer, cur_start, len);
-
-    /* Insert it before the previous line */
-    buffer_insert(&doc->buffer, prev_end - len, line, len);
+    buffer_insert(&doc->buffer, prev_start, line, len);
+    free(line);
 
     cur->row--;
     document_mark_dirty(doc);
 }
 
 void document_move_line_down(Document *doc) {
+    if (!doc) return;
     Cursor *cur = &doc->cursors[0];
     size_t lines = buffer_line_count(&doc->buffer);
     if (cur->row >= (int)lines - 1 || lines < 2) return;
 
-    /* Get current line content */
-    const char *line = buffer_line_ptr(&doc->buffer, cur->row);
-    size_t len = buffer_line_len(&doc->buffer, cur->row);
-
-    /* Find start position for current line */
     size_t cur_start = buffer_pos_from_row_col(&doc->buffer, cur->row, 0);
-
-    /* Find start of next line */
     size_t next_start = buffer_pos_from_row_col(&doc->buffer, cur->row + 1, 0);
-    size_t next_len = buffer_line_len(&doc->buffer, cur->row + 1);
+    size_t after_next = (size_t)cur->row + 2 < lines
+        ? buffer_pos_from_row_col(&doc->buffer, cur->row + 2, 0)
+        : doc->buffer.len;
+    size_t len = next_start - cur_start;
+    size_t next_len = after_next - next_start;
 
-    /* Delete current line */
+    char *line = malloc(len);
+    if (!line) return;
+    memcpy(line, doc->buffer.text + cur_start, len);
+
     buffer_delete(&doc->buffer, cur_start, len);
-
-    /* Insert it after the next line (which is now at cur_start) */
-    size_t insert_pos = next_start + next_len - len;
+    size_t insert_pos = cur_start + next_len;
     buffer_insert(&doc->buffer, insert_pos, line, len);
+    free(line);
 
     cur->row++;
     document_mark_dirty(doc);
@@ -1852,15 +1870,9 @@ void document_split_regex(Document *doc, const char *pattern, size_t len) {
 }
 
 void document_new(Document *doc) {
+    if (!doc) return;
     document_free(doc);
-    buffer_init(&doc->buffer);
-    cursor_init(&doc->cursors[0]);
-    doc->cursor_count = 1;
-    doc->scroll_y = 0;
-    doc->dirty = false;
-    doc->syntax_dirty = true;
-    doc->ts_parsed = false;
-    doc->ts_attempted = false;
+    document_init(doc);
 }
 
 void document_sort_selection(Document *doc) {
@@ -2435,16 +2447,23 @@ void document_insert_file(Document *doc, const char *path) {
 }
 
 void document_move_file(Document *doc, const char *path) {
+    if (!doc || !path) return;
+    char *path_copy = strdup(path);
+    if (!path_copy) return;
     if (doc->filepath) {
-        rename(doc->filepath, path);
+        rename(doc->filepath, path_copy);
         free(doc->filepath);
     }
-    doc->filepath = strdup(path);
-    buffer_save(&doc->buffer, path);
+    doc->filepath = path_copy;
+    buffer_save(&doc->buffer, doc->filepath);
     doc->dirty = false;
     doc->syntax_dirty = true;
+    doc->lsp_dirty = true;
     doc->ts_parsed = false;
     doc->ts_attempted = false;
+    document_detect_language(doc);
+    syntax_free(&doc->syntax);
+    syntax_init(&doc->syntax, doc->language_id);
 }
 
 /* Shell command helpers */

@@ -26,7 +26,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-static char cmd_buf[64] = {0};
+#define CMD_BUF_MAX 1024
+
+static char cmd_buf[CMD_BUF_MAX] = {0};
 static int  cmd_len = 0;
 
 void input_cmd_reset(void) {
@@ -238,7 +240,7 @@ void input_handle_char(App *app, unsigned int c) {
             }
         }
     } else if (mode_is(mode, MODE_COMMAND)) {
-        if (c >= 32 && c < 127 && cmd_len < 63 && c != ':') {
+        if (c >= 32 && c < 127 && cmd_len < CMD_BUF_MAX - 1 && c != ':') {
             cmd_buf[cmd_len++] = (char)c;
             cmd_buf[cmd_len] = '\0';
         }
@@ -1436,8 +1438,33 @@ static void handle_command_key(App *app, int key, int action, int mods) {
 
     if (key != GLFW_KEY_ENTER) return;
 
+    const char *write_path = NULL;
+    bool write_and_quit = false;
+    if (strncmp(cmd_buf, "w ", 2) == 0) {
+        write_path = cmd_buf + 2;
+    } else if (strncmp(cmd_buf, "write ", 6) == 0) {
+        write_path = cmd_buf + 6;
+    } else if (strncmp(cmd_buf, "w! ", 3) == 0) {
+        write_path = cmd_buf + 3;
+    } else if (strncmp(cmd_buf, "write! ", 7) == 0) {
+        write_path = cmd_buf + 7;
+    } else if (strncmp(cmd_buf, "wq ", 3) == 0) {
+        write_path = cmd_buf + 3;
+        write_and_quit = true;
+    } else if (strncmp(cmd_buf, "write-quit ", 11) == 0) {
+        write_path = cmd_buf + 11;
+        write_and_quit = true;
+    } else if (strncmp(cmd_buf, "x ", 2) == 0) {
+        write_path = cmd_buf + 2;
+        write_and_quit = true;
+    }
+
     /* Execute command */
-    if (strcmp(cmd_buf, "w") == 0 || strcmp(cmd_buf, "write") == 0) {
+    if (write_path && *write_path) {
+        document_save_as(doc, write_path);
+        if (write_and_quit)
+            cmd_quit(app);
+    } else if (strcmp(cmd_buf, "w") == 0 || strcmp(cmd_buf, "write") == 0) {
         document_save(doc);
     } else if (strcmp(cmd_buf, "q") == 0 || strcmp(cmd_buf, "quit") == 0) {
         cmd_quit(app);
@@ -1467,10 +1494,12 @@ static void handle_command_key(App *app, int key, int action, int mods) {
         app_close_buffer(app, app_get_current_buffer_index(app));
     } else if (strcmp(cmd_buf, "new") == 0 || strcmp(cmd_buf, "n") == 0) {
         document_new(doc);
-    } else if (strncmp(cmd_buf, "e ", 2) == 0 || strncmp(cmd_buf, "open ", 5) == 0 || strncmp(cmd_buf, "edit ", 5) == 0) {
-        const char *path = cmd_buf[2] == ' ' ? cmd_buf + 3 :
-                           cmd_buf[5] == ' ' ? cmd_buf + 6 : cmd_buf + 6;
-        document_open(doc, path);
+    } else if (strncmp(cmd_buf, "e ", 2) == 0 ||
+               strncmp(cmd_buf, "o ", 2) == 0 ||
+               strncmp(cmd_buf, "open ", 5) == 0 ||
+               strncmp(cmd_buf, "edit ", 5) == 0) {
+        const char *path = (cmd_buf[1] == ' ') ? cmd_buf + 2 : cmd_buf + 5;
+        app_open_file(app, path);
     } else if (strncmp(cmd_buf, "r ", 2) == 0 || strncmp(cmd_buf, "read ", 5) == 0) {
         const char *path = cmd_buf[1] == ' ' ? cmd_buf + 2 : cmd_buf + 5;
         document_insert_file(doc, path);
@@ -1498,10 +1527,15 @@ static void handle_command_key(App *app, int key, int action, int mods) {
                strcmp(cmd_buf, "tree-sitter-highlight-name") == 0 ||
                strcmp(cmd_buf, "tree-sitter-scopes") == 0) {
         panel_treesitter_inspector_open(app);
-    } else if (cmd_buf[0] >= '1' && cmd_buf[0] <= '9') {
-        int line = atoi(cmd_buf);
-        if (line > 0)
-            document_cursor_to(doc, line - 1, (int)buffer_line_count(&doc->buffer) - 1);
+    } else {
+        Command *cmd = command_find(cmd_buf);
+        if (cmd && cmd->fn) {
+            cmd->fn(app);
+        } else if (cmd_buf[0] >= '1' && cmd_buf[0] <= '9') {
+            int line = atoi(cmd_buf);
+            if (line > 0)
+                document_cursor_to(doc, line - 1, (int)buffer_line_count(&doc->buffer) - 1);
+        }
     }
 
     input_cmd_reset();

@@ -568,21 +568,7 @@ static SyntaxType treesitter_node_type_to_syntax(const char *node_type, bool is_
     if (strcmp(node_type, "line_comment") == 0) return SYNTAX_COMMENT;
     if (strcmp(node_type, "block_comment") == 0) return SYNTAX_COMMENT;
     
-    /* Functions */
-    if (strcmp(node_type, "function_definition") == 0) return SYNTAX_FUNCTION;
-    if (strcmp(node_type, "call_expression") == 0) return SYNTAX_FUNCTION;
-    if (strcmp(node_type, "method_definition") == 0) return SYNTAX_FUNCTION;
-    if (strcmp(node_type, "function_declarator") == 0) return SYNTAX_FUNCTION;
-    if (strcmp(node_type, "function_item") == 0) return SYNTAX_FUNCTION;
-    if (strcmp(node_type, "function_declaration") == 0) return SYNTAX_FUNCTION;
-    if (strcmp(node_type, "arrow_function") == 0) return SYNTAX_FUNCTION;
-    if (strcmp(node_type, "method_call_expression") == 0) return SYNTAX_FUNCTION;
-    if (strcmp(node_type, "call") == 0) return SYNTAX_FUNCTION;
-    if (strcmp(node_type, "subscript") == 0) return SYNTAX_FUNCTION;
-    
     /* Variables */
-    if (strcmp(node_type, "identifier") == 0) return SYNTAX_VARIABLE;
-    if (strcmp(node_type, "field_identifier") == 0) return SYNTAX_VARIABLE;
     if (strcmp(node_type, "parameter_identifier") == 0) return SYNTAX_VARIABLE;
     if (strcmp(node_type, "variable_identifier") == 0) return SYNTAX_VARIABLE;
     
@@ -610,6 +596,30 @@ static SyntaxType treesitter_node_type_to_syntax(const char *node_type, bool is_
     return SYNTAX_NORMAL;
 }
 
+static bool node_parent_is(TSNode node, const char *type) {
+    TSNode parent = ts_node_parent(node);
+    return !ts_node_is_null(parent) && strcmp(ts_node_type(parent), type) == 0;
+}
+
+static SyntaxType treesitter_contextual_type(TSNode node, const char *node_type) {
+    if (strcmp(node_type, "identifier") == 0 ||
+        strcmp(node_type, "field_identifier") == 0 ||
+        strcmp(node_type, "property_identifier") == 0) {
+        if (node_parent_is(node, "function_declarator") ||
+            node_parent_is(node, "function_definition") ||
+            node_parent_is(node, "function_declaration") ||
+            node_parent_is(node, "method_definition") ||
+            node_parent_is(node, "call_expression") ||
+            node_parent_is(node, "method_call_expression") ||
+            node_parent_is(node, "call") ||
+            node_parent_is(node, "subscript")) {
+            return SYNTAX_FUNCTION;
+        }
+        return SYNTAX_VARIABLE;
+    }
+    return SYNTAX_NORMAL;
+}
+
 /* Recursively walk tree and generate syntax tokens */
 static void treesitter_walk_node(TSNode node, SyntaxHighlighting *sh) {
     if (ts_node_is_null(node)) return;
@@ -618,6 +628,8 @@ static void treesitter_walk_node(TSNode node, SyntaxHighlighting *sh) {
     const char *node_type = ts_node_type(node);
     bool is_named = ts_node_is_named(node);
     SyntaxType syntax_type = treesitter_node_type_to_syntax(node_type, is_named);
+    if (syntax_type == SYNTAX_NORMAL && is_named)
+        syntax_type = treesitter_contextual_type(node, node_type);
     
     /* Only add token if it's not NORMAL (to avoid flooding with useless tokens) */
     if (syntax_type != SYNTAX_NORMAL) {

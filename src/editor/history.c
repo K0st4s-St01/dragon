@@ -23,6 +23,8 @@ void history_clear(History *h) {
 
 static void push_entry(History *h, OpType type, size_t pos, const char *text,
                        size_t len, int cursor_row, int cursor_col) {
+    if (!h || (!text && len > 0)) return;
+
     /* Discard any redo entries beyond current */
     for (int i = h->current + 1; i < h->count; i++)
         free(h->entries[i].text);
@@ -39,8 +41,12 @@ static void push_entry(History *h, OpType type, size_t pos, const char *text,
     HistoryEntry *e = &h->entries[h->count];
     e->type = type;
     e->pos = pos;
-    e->text = malloc(len);
-    memcpy(e->text, text, len);
+    e->text = NULL;
+    if (len > 0) {
+        e->text = malloc(len);
+        if (!e->text) return;
+        memcpy(e->text, text, len);
+    }
     e->len = len;
     e->cursor_row = cursor_row;
     e->cursor_col = cursor_col;
