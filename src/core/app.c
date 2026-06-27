@@ -56,6 +56,65 @@ static void char_cb(GLFWwindow *win, unsigned int c) {
     input_handle_char(app, c);
 }
 
+static char *app_filepath_to_uri(const char *filepath) {
+    if (!filepath) return NULL;
+    char *uri = malloc(strlen(filepath) + 8);
+    if (!uri) return NULL;
+    snprintf(uri, strlen(filepath) + 8, "file://%s", filepath);
+    return uri;
+}
+
+static Document *app_find_doc_by_uri(App *app, const char *uri) {
+    if (!app || !uri || !*uri) return NULL;
+    for (int i = 0; i < app->doc_count; i++) {
+        Document *doc = &app->documents[i];
+        char *doc_uri = app_filepath_to_uri(doc->filepath);
+        bool matches = doc_uri && strcmp(doc_uri, uri) == 0;
+        free(doc_uri);
+        if (matches)
+            return doc;
+    }
+    return NULL;
+}
+
+static void app_store_diagnostics(App *app, LSPDiagnostics *diagnostics) {
+    if (!diagnostics) return;
+
+    Document *target = app_find_doc_by_uri(app, diagnostics->uri);
+    if (!target && (!diagnostics->uri || diagnostics->uri[0] == '\0'))
+        target = &app->documents[app->current_doc];
+
+    if (!target) {
+        lsp_free_diagnostics(diagnostics);
+        return;
+    }
+
+    if (target->diagnostics)
+        lsp_free_diagnostics((LSPDiagnostics *)target->diagnostics);
+    target->diagnostics = diagnostics;
+}
+
+static void app_update_diagnostics_from_lsp(App *app) {
+    if (!app) return;
+
+    for (int i = 0; i < app->lsp_manager.client_count; i++) {
+        LSPClient *client = &app->lsp_manager.clients[i];
+        if (client->status != LSP_STATUS_INITIALIZED)
+            continue;
+
+        for (int frame = 0; frame < 16; frame++) {
+            char *response = lsp_client_read_response(client);
+            if (!response)
+                break;
+
+            LSPDiagnostics *diagnostics = lsp_parse_publish_diagnostics_notification(response);
+            if (diagnostics)
+                app_store_diagnostics(app, diagnostics);
+            free(response);
+        }
+    }
+}
+
 int app_get_width(App *app)   { return app->win_w; }
 int app_get_height(App *app)  { return app->win_h; }
 double app_get_dt(App *app)   { return app->dt; }
@@ -195,9 +254,7 @@ void app_run(App *app) {
         }
         
         /* Check for LSP diagnostics notifications (non-blocking) */
-        if (doc && doc->language_id) {
-            document_update_diagnostics_from_lsp(doc, &app->lsp_manager);
-        }
+        app_update_diagnostics_from_lsp(app);
 
         renderer_clear(&app->renderer);
         gui_begin(&app->gui);

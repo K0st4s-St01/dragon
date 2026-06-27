@@ -2714,6 +2714,19 @@ static char *filepath_to_uri(const char *filepath) {
     return uri;
 }
 
+static bool diagnostic_uri_matches_document(const LSPDiagnostics *diagnostics, Document *doc) {
+    if (!diagnostics || !diagnostics->uri || diagnostics->uri[0] == '\0')
+        return true;
+    if (!doc || !doc->filepath)
+        return false;
+
+    char *doc_uri = filepath_to_uri(doc->filepath);
+    if (!doc_uri) return false;
+    bool matches = strcmp(diagnostics->uri, doc_uri) == 0;
+    free(doc_uri);
+    return matches;
+}
+
 void document_notify_lsp_open(Document *doc, void *lsp_manager) {
     if (!doc || !doc->filepath || !doc->language_id || !lsp_manager) return;
     
@@ -3181,10 +3194,14 @@ void document_update_diagnostics_from_lsp(Document *doc, void *lsp_manager) {
     LSPDiagnostics *diagnostics = lsp_parse_publish_diagnostics_notification(response);
     
     if (diagnostics) {
-        if (doc->diagnostics) {
-            lsp_free_diagnostics((LSPDiagnostics *)doc->diagnostics);
+        if (diagnostic_uri_matches_document(diagnostics, doc)) {
+            if (doc->diagnostics) {
+                lsp_free_diagnostics((LSPDiagnostics *)doc->diagnostics);
+            }
+            doc->diagnostics = diagnostics;
+        } else {
+            lsp_free_diagnostics(diagnostics);
         }
-        doc->diagnostics = diagnostics;
     }
     
     free(response);

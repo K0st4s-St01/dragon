@@ -82,6 +82,7 @@ typedef struct {
 } LSPDiagnostic;
 
 typedef struct {
+    char *uri;  /* Optional source URI for publishDiagnostics notifications */
     LSPDiagnostic *items;
     int count;
 } LSPDiagnostics;

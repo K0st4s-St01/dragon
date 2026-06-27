@@ -265,6 +265,12 @@ static void lsp_parse_diagnostic_object(const char *obj_start, const char *obj_e
         }
     }
 
+    if (out->end_line < out->start_line ||
+        (out->end_line == out->start_line && out->end_col <= out->start_col)) {
+        out->end_line = out->start_line;
+        out->end_col = out->start_col + 1;
+    }
+
     int severity = json_number_in_range(obj_start, obj_end, "severity", LSP_DIAG_ERROR);
     if (severity < LSP_DIAG_ERROR || severity > LSP_DIAG_HINT)
         severity = LSP_DIAG_ERROR;
@@ -1089,6 +1095,7 @@ LSPDiagnostics *lsp_parse_diagnostics_response(const char *response) {
 
 void lsp_free_diagnostics(LSPDiagnostics *diag) {
     if (!diag) return;
+    free(diag->uri);
     if (diag->items) {
         for (int i = 0; i < diag->count; i++) {
             free(diag->items[i].message);
@@ -1111,12 +1118,29 @@ LSPDiagnostics *lsp_parse_publish_diagnostics_notification(const char *response)
     const char *diagnostics_start = strstr(response, "\"diagnostics\"");
     if (!diagnostics_start) {
         LSPDiagnostics *diag = malloc(sizeof(LSPDiagnostics));
-        if (diag) memset(diag, 0, sizeof(*diag));
+        if (diag) {
+            memset(diag, 0, sizeof(*diag));
+            const char *params_start = NULL;
+            const char *params_end = NULL;
+            if (json_object_after_key_range(response, response + strlen(response),
+                                            "params", &params_start, &params_end)) {
+                diag->uri = json_string_in_range(params_start, params_end, "uri");
+            }
+        }
         return diag;
     }
 
     const char *array = strchr(diagnostics_start, '[');
-    return lsp_parse_diagnostics_array(array);
+    LSPDiagnostics *diag = lsp_parse_diagnostics_array(array);
+    if (diag) {
+        const char *params_start = NULL;
+        const char *params_end = NULL;
+        if (json_object_after_key_range(response, response + strlen(response),
+                                        "params", &params_start, &params_end)) {
+            diag->uri = json_string_in_range(params_start, params_end, "uri");
+        }
+    }
+    return diag;
 }
 
 LSPWorkspaceEdit *lsp_parse_rename_response(const char *response) {
