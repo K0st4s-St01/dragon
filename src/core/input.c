@@ -3,7 +3,6 @@
 #include "dragon_editor/document.h"
 #include "dragon_editor/mode.h"
 #include "dragon_editor/command.h"
-#include "panel_palette.h"
 #include "panel_file_browser.h"
 #include "panel_find_replace.h"
 #include "panel_goto.h"
@@ -46,7 +45,6 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
 
     /* Global escape */
     if (key == GLFW_KEY_ESCAPE) {
-        if (panel_palette_is_open()) { panel_palette_close(app); return; }
         if (panel_file_browser_is_open()) { panel_file_browser_close(app); return; }
         if (panel_find_is_open()) { panel_find_close(app); return; }
         if (panel_goto_is_open()) { panel_goto_close(app); return; }
@@ -60,11 +58,6 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
         if (panel_rename_is_open()) { panel_rename_close(app); return; }
         if (panel_code_actions_is_open()) { panel_code_actions_close(app); return; }
         if (panel_space_menu_is_open()) { panel_space_menu_close(app); return; }
-        if (mode_is(mode, MODE_COMMAND_PALETTE)) {
-            panel_palette_close(app);
-            mode_set(mode, MODE_NORMAL);
-            return;
-        }
         if (!mode_is(mode, MODE_NORMAL)) {
             if (mode_is(mode, MODE_INSERT)) {
                 Document *doc = (Document *)app_get_doc(app);
@@ -87,12 +80,6 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
     if (panel_find_is_open()) {
         Document *doc = (Document *)app_get_doc(app);
         panel_find_key(app, doc, key);
-        return;
-    }
-
-    /* Route keys to palette when open */
-    if (panel_palette_is_open()) {
-        panel_palette_key(app, key);
         return;
     }
 
@@ -155,7 +142,6 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
     case MODE_INSERT:          handle_insert_key(app, key, action, mods); break;
     case MODE_SELECT:          handle_select_key(app, key, action, mods); break;
     case MODE_COMMAND:         handle_command_key(app, key, action, mods); break;
-    case MODE_COMMAND_PALETTE: break;
     default: break;
     }
 }
@@ -163,10 +149,6 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
 void input_handle_char(App *app, unsigned int c) {
     ModeState *mode = (ModeState *)app_get_mode(app);
     
-    if (panel_palette_is_open()) {
-        panel_palette_input(app, c);
-        return;
-    }
     if (panel_find_is_open()) {
         Document *doc = (Document *)app_get_doc(app);
         panel_find_input(app, doc, c);
@@ -492,13 +474,6 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             if (key == GLFW_KEY_J) {
                 /* Space j - jumplist picker */
                 panel_jumplist_picker_open(app);
-                mode->pending_len = 0;
-                return;
-            }
-            if (key == GLFW_KEY_SLASH) {
-                /* Space ? - command palette */
-                mode_set(mode, MODE_COMMAND_PALETTE);
-                panel_palette_open(app);
                 mode->pending_len = 0;
                 return;
             }

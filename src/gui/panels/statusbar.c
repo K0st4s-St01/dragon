@@ -16,7 +16,6 @@ static const char *mode_name(Mode m) {
     case MODE_SELECT:          return " SELECT ";
     case MODE_VIEW:            return " VIEW ";
     case MODE_COMMAND:         return " : ";
-    case MODE_COMMAND_PALETTE: return " COMMAND ";
     case MODE_GOTO:            return " GOTO ";
     case MODE_FIND:            return " FIND ";
     case MODE_SEARCH:          return " SEARCH ";

@@ -57,9 +57,6 @@ void panel_about_render(Gui *g, App *app) {
     y += lh;
     renderer_draw_rect(r, px+14, y, pw-28, 1, t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
     y += 8;
-    font_draw(&g->font, r, "SPACE   command palette", px+14, y,
-              t->keyword[0], t->keyword[1], t->keyword[2], t->keyword[3]);
-    y += lh;
     font_draw(&g->font, r, "i       insert mode", px+14, y,
               t->keyword[0], t->keyword[1], t->keyword[2], t->keyword[3]);
     y += lh;

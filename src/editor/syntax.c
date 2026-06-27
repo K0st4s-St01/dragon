@@ -45,14 +45,19 @@ void syntax_add_token(SyntaxHighlighting *sh, int sr, int sc, int er, int ec, Sy
 }
 
 SyntaxType syntax_get_type_at(SyntaxHighlighting *sh, int row, int col) {
-    /* Binary search for token at position */
-    int left = 0, right = sh->token_count - 1;
-    
-    while (left <= right) {
-        int mid = left + (right - left) / 2;
-        SyntaxToken *token = &sh->tokens[mid];
+    /* Linear search with early termination */
+    for (int i = 0; i < sh->token_count; i++) {
+        SyntaxToken *token = &sh->tokens[i];
         
-        /* Check if position is within token bounds */
+        /* Skip tokens that end before this position */
+        if (token->end_row < row || (token->end_row == row && token->end_col <= col))
+            continue;
+        
+        /* Skip tokens that start after this position */
+        if (token->start_row > row || (token->start_row == row && token->start_col > col))
+            continue;
+        
+        /* Token covers this position */
         if (token->start_row == row && token->end_row == row) {
             /* Single line token */
             if (col >= token->start_col && col < token->end_col) {
@@ -67,13 +72,6 @@ SyntaxType syntax_get_type_at(SyntaxHighlighting *sh, int row, int col) {
         } else if (token->start_row < row && token->end_row > row) {
             /* Middle of multi-line token */
             return token->type;
-        }
-        
-        /* Move search bounds */
-        if (token->end_row < row || (token->end_row == row && token->end_col <= col)) {
-            left = mid + 1;
-        } else {
-            right = mid - 1;
         }
     }
     

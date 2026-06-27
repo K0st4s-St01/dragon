@@ -9,7 +9,6 @@
 #include "dragon_editor/lsp.h"
 
 #include "panel_statusbar.h"
-#include "panel_palette.h"
 #include "panel_file_browser.h"
 #include "panel_find_replace.h"
 #include "panel_goto.h"
@@ -232,7 +231,6 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
 void gui_render(Gui *g, App *app, Document *doc, ModeState *mode) {
     render_editor(g, app, doc, mode);
      panel_statusbar(g, app, doc, mode);
-     panel_palette_render(g, app);
      panel_file_browser_render(g, app);
      panel_find_render(g, app, doc);
      panel_goto_render(g, app, doc);

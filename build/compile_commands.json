@@ -127,12 +127,6 @@
 },
 {
   "directory": "/home/xator/Projects/dragon/build",
-  "command": "/usr/bin/cc  -I/home/xator/Projects/dragon/include -I/home/xator/Projects/dragon/include/dragon_editor -I/home/xator/Projects/dragon/vendor/glad/include -I/home/xator/Projects/dragon/vendor/stb -I/usr/include/tree_sitter -I/home/xator/Projects/dragon/vendor/tomlc99 -O3 -DNDEBUG -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o -c /home/xator/Projects/dragon/src/gui/panels/palette.c",
-  "file": "/home/xator/Projects/dragon/src/gui/panels/palette.c",
-  "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o"
-},
-{
-  "directory": "/home/xator/Projects/dragon/build",
   "command": "/usr/bin/cc  -I/home/xator/Projects/dragon/include -I/home/xator/Projects/dragon/include/dragon_editor -I/home/xator/Projects/dragon/vendor/glad/include -I/home/xator/Projects/dragon/vendor/stb -I/usr/include/tree_sitter -I/home/xator/Projects/dragon/vendor/tomlc99 -O3 -DNDEBUG -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o -c /home/xator/Projects/dragon/src/gui/panels/file_browser.c",
   "file": "/home/xator/Projects/dragon/src/gui/panels/file_browser.c",
   "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o"

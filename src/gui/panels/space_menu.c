@@ -26,7 +26,6 @@ static SpaceCommand commands[] = {
     
     /* Search & Navigation */
     {"/", "Global search", true},
-    {"?", "Command palette", true},
     {"g", "Changed files (git)", false},
     
     /* LSP features */
@@ -149,10 +148,6 @@ void panel_space_menu_input(App *app, unsigned int c) {
             } else if (strcmp(key_str, "/") == 0) {
                 extern void panel_find_open(App *, Document *);
                 panel_find_open(app, doc);
-            } else if (strcmp(key_str, "?") == 0) {
-                extern void panel_palette_open(App *);
-                panel_palette_open(app);
-                mode_set(mode, MODE_COMMAND_PALETTE);
             } else if (strcmp(key_str, "k") == 0) {
                 extern void document_lsp_hover(Document *, void *);
                 document_lsp_hover(doc, app_get_lsp_manager(app));

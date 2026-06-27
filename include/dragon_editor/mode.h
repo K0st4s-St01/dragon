@@ -8,7 +8,6 @@ typedef enum {
     MODE_INSERT,
     MODE_SELECT,
     MODE_VIEW,
-    MODE_COMMAND_PALETTE,
     MODE_COMMAND,
     MODE_GOTO,
     MODE_FIND,

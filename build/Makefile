@@ -755,30 +755,6 @@ src/gui/panels/lsp_hover_panel.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.s
 .PHONY : src/gui/panels/lsp_hover_panel.c.s
 
-src/gui/panels/palette.o: src/gui/panels/palette.c.o
-.PHONY : src/gui/panels/palette.o
-
-# target to build an object file
-src/gui/panels/palette.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o
-.PHONY : src/gui/panels/palette.c.o
-
-src/gui/panels/palette.i: src/gui/panels/palette.c.i
-.PHONY : src/gui/panels/palette.i
-
-# target to preprocess a source file
-src/gui/panels/palette.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.i
-.PHONY : src/gui/panels/palette.c.i
-
-src/gui/panels/palette.s: src/gui/panels/palette.c.s
-.PHONY : src/gui/panels/palette.s
-
-# target to generate assembly for a file
-src/gui/panels/palette.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.s
-.PHONY : src/gui/panels/palette.c.s
-
 src/gui/panels/rename.o: src/gui/panels/rename.c.o
 .PHONY : src/gui/panels/rename.o
 
@@ -1081,9 +1057,6 @@ help:
 	@echo "... src/gui/panels/lsp_hover_panel.o"
 	@echo "... src/gui/panels/lsp_hover_panel.i"
 	@echo "... src/gui/panels/lsp_hover_panel.s"
-	@echo "... src/gui/panels/palette.o"
-	@echo "... src/gui/panels/palette.i"
-	@echo "... src/gui/panels/palette.s"
 	@echo "... src/gui/panels/rename.o"
 	@echo "... src/gui/panels/rename.i"
 	@echo "... src/gui/panels/rename.s"

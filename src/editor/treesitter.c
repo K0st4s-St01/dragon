@@ -267,28 +267,111 @@ void treesitter_symbols_free(TreeSitterSymbols *symbols) {
 }
 
 /* Map tree-sitter node type to SyntaxType */
-static SyntaxType treesitter_node_type_to_syntax(const char *node_type) {
-    /* Keywords */
-    if (strcmp(node_type, "keyword") == 0) return SYNTAX_KEYWORD;
-    if (strcmp(node_type, "type") == 0) return SYNTAX_TYPE;
-    if (strcmp(node_type, "class") == 0) return SYNTAX_TYPE;
-    if (strcmp(node_type, "struct") == 0) return SYNTAX_TYPE;
-    if (strcmp(node_type, "enum") == 0) return SYNTAX_TYPE;
-    if (strcmp(node_type, "union") == 0) return SYNTAX_TYPE;
+static SyntaxType treesitter_node_type_to_syntax(const char *node_type, bool is_named) {
+    /* For anonymous/literal nodes, the type IS the keyword text */
+    if (!is_named) {
+        if (strcmp(node_type, "if") == 0 || strcmp(node_type, "else") == 0 ||
+            strcmp(node_type, "for") == 0 || strcmp(node_type, "while") == 0 ||
+            strcmp(node_type, "do") == 0 || strcmp(node_type, "switch") == 0 ||
+            strcmp(node_type, "case") == 0 || strcmp(node_type, "default") == 0 ||
+            strcmp(node_type, "break") == 0 || strcmp(node_type, "continue") == 0 ||
+            strcmp(node_type, "return") == 0 || strcmp(node_type, "goto") == 0 ||
+            strcmp(node_type, "struct") == 0 || strcmp(node_type, "union") == 0 ||
+            strcmp(node_type, "enum") == 0 || strcmp(node_type, "class") == 0 ||
+            strcmp(node_type, "typedef") == 0 || strcmp(node_type, "sizeof") == 0 ||
+            strcmp(node_type, "extern") == 0 || strcmp(node_type, "static") == 0 ||
+            strcmp(node_type, "const") == 0 || strcmp(node_type, "volatile") == 0 ||
+            strcmp(node_type, "auto") == 0 || strcmp(node_type, "register") == 0 ||
+            strcmp(node_type, "void") == 0 || strcmp(node_type, "int") == 0 ||
+            strcmp(node_type, "float") == 0 || strcmp(node_type, "double") == 0 ||
+            strcmp(node_type, "char") == 0 || strcmp(node_type, "short") == 0 ||
+            strcmp(node_type, "long") == 0 || strcmp(node_type, "unsigned") == 0 ||
+            strcmp(node_type, "signed") == 0 || strcmp(node_type, "bool") == 0 ||
+            strcmp(node_type, "true") == 0 || strcmp(node_type, "false") == 0 ||
+            strcmp(node_type, "null") == 0 || strcmp(node_type, "nil") == 0 ||
+            strcmp(node_type, "def") == 0 || strcmp(node_type, "fn") == 0 ||
+            strcmp(node_type, "func") == 0 || strcmp(node_type, "var") == 0 ||
+            strcmp(node_type, "let") == 0 || strcmp(node_type, "new") == 0 ||
+            strcmp(node_type, "delete") == 0 || strcmp(node_type, "try") == 0 ||
+            strcmp(node_type, "catch") == 0 || strcmp(node_type, "finally") == 0 ||
+            strcmp(node_type, "throw") == 0 || strcmp(node_type, "throws") == 0 ||
+            strcmp(node_type, "import") == 0 || strcmp(node_type, "include") == 0 ||
+            strcmp(node_type, "require") == 0 || strcmp(node_type, "module") == 0 ||
+            strcmp(node_type, "package") == 0 || strcmp(node_type, "namespace") == 0 ||
+            strcmp(node_type, "public") == 0 || strcmp(node_type, "private") == 0 ||
+            strcmp(node_type, "protected") == 0 || strcmp(node_type, "async") == 0 ||
+            strcmp(node_type, "await") == 0 || strcmp(node_type, "yield") == 0 ||
+            strcmp(node_type, "self") == 0 || strcmp(node_type, "Self") == 0 ||
+            strcmp(node_type, "interface") == 0 || strcmp(node_type, "trait") == 0 ||
+            strcmp(node_type, "impl") == 0 || strcmp(node_type, "in") == 0 ||
+            strcmp(node_type, "not") == 0 || strcmp(node_type, "and") == 0 ||
+            strcmp(node_type, "or") == 0 || strcmp(node_type, "is") == 0 ||
+            strcmp(node_type, "as") == 0 || strcmp(node_type, "with") == 0 ||
+            strcmp(node_type, "from") == 0 || strcmp(node_type, "lambda") == 0 ||
+            strcmp(node_type, "print") == 0 || strcmp(node_type, "pass") == 0 ||
+            strcmp(node_type, "elif") == 0 || strcmp(node_type, "except") == 0 ||
+            strcmp(node_type, "assert") == 0 || strcmp(node_type, "raise") == 0 ||
+            strcmp(node_type, "local") == 0 || strcmp(node_type, "global") == 0 ||
+            strcmp(node_type, "type") == 0 || strcmp(node_type, "ref") == 0 ||
+            strcmp(node_type, "defer") == 0 || strcmp(node_type, "go") == 0 ||
+            strcmp(node_type, "chan") == 0 || strcmp(node_type, "select") == 0 ||
+            strcmp(node_type, "struct") == 0 || strcmp(node_type, "make") == 0 ||
+            strcmp(node_type, "len") == 0 || strcmp(node_type, "append") == 0 ||
+            strcmp(node_type, "panic") == 0 || strcmp(node_type, "recover") == 0) {
+            return SYNTAX_KEYWORD;
+        }
+        /* Operators */
+        if (strcmp(node_type, "+") == 0 || strcmp(node_type, "-") == 0 ||
+            strcmp(node_type, "*") == 0 || strcmp(node_type, "/") == 0 ||
+            strcmp(node_type, "%") == 0 || strcmp(node_type, "=") == 0 ||
+            strcmp(node_type, "==") == 0 || strcmp(node_type, "!=") == 0 ||
+            strcmp(node_type, "<") == 0 || strcmp(node_type, ">") == 0 ||
+            strcmp(node_type, "<=") == 0 || strcmp(node_type, ">=") == 0 ||
+            strcmp(node_type, "+=") == 0 || strcmp(node_type, "-=") == 0 ||
+            strcmp(node_type, "*=") == 0 || strcmp(node_type, "/=") == 0 ||
+            strcmp(node_type, "!") == 0 || strcmp(node_type, "&") == 0 ||
+            strcmp(node_type, "|") == 0 || strcmp(node_type, "^") == 0 ||
+            strcmp(node_type, "~") == 0 || strcmp(node_type, "++") == 0 ||
+            strcmp(node_type, "--") == 0 || strcmp(node_type, "&&") == 0 ||
+            strcmp(node_type, "||") == 0 || strcmp(node_type, "->") == 0 ||
+            strcmp(node_type, ".") == 0 || strcmp(node_type, "::") == 0 ||
+            strcmp(node_type, "<<") == 0 || strcmp(node_type, ">>") == 0) {
+            return SYNTAX_OPERATOR;
+        }
+        return SYNTAX_NORMAL;
+    }
+
+    /* Named nodes - language-specific types */
+    /* C/C++ types */
+    if (strcmp(node_type, "primitive_type") == 0) return SYNTAX_TYPE;
+    if (strcmp(node_type, "type_identifier") == 0) return SYNTAX_TYPE;
+    if (strcmp(node_type, "sized_type_specifier") == 0) return SYNTAX_TYPE;
     
     /* Strings */
-    if (strcmp(node_type, "string") == 0) return SYNTAX_STRING;
     if (strcmp(node_type, "string_literal") == 0) return SYNTAX_STRING;
+    if (strcmp(node_type, "string") == 0) return SYNTAX_STRING;
+    if (strcmp(node_type, "concatenated_string") == 0) return SYNTAX_STRING;
+    if (strcmp(node_type, "raw_string_literal") == 0) return SYNTAX_STRING;
     if (strcmp(node_type, "character_literal") == 0) return SYNTAX_STRING;
     if (strcmp(node_type, "escape_sequence") == 0) return SYNTAX_STRING;
+    if (strcmp(node_type, "system_lib_string") == 0) return SYNTAX_STRING;
+    if (strcmp(node_type, "interpreted_string_literal") == 0) return SYNTAX_STRING;
+    if (strcmp(node_type, "raw_string_literal") == 0) return SYNTAX_STRING;
+    if (strcmp(node_type, "template_string") == 0) return SYNTAX_STRING;
+    if (strcmp(node_type, "string_content") == 0) return SYNTAX_STRING;
     
     /* Numbers */
-    if (strcmp(node_type, "number") == 0) return SYNTAX_NUMBER;
+    if (strcmp(node_type, "number_literal") == 0) return SYNTAX_NUMBER;
     if (strcmp(node_type, "integer_literal") == 0) return SYNTAX_NUMBER;
     if (strcmp(node_type, "float_literal") == 0) return SYNTAX_NUMBER;
     if (strcmp(node_type, "hex_literal") == 0) return SYNTAX_NUMBER;
     if (strcmp(node_type, "octal_literal") == 0) return SYNTAX_NUMBER;
     if (strcmp(node_type, "binary_literal") == 0) return SYNTAX_NUMBER;
+    if (strcmp(node_type, "oct_number_literal") == 0) return SYNTAX_NUMBER;
+    if (strcmp(node_type, "hex_number_literal") == 0) return SYNTAX_NUMBER;
+    if (strcmp(node_type, "decimal_literal") == 0) return SYNTAX_NUMBER;
+    if (strcmp(node_type, "float") == 0) return SYNTAX_NUMBER;
+    if (strcmp(node_type, "imaginary_literal") == 0) return SYNTAX_NUMBER;
     
     /* Comments */
     if (strcmp(node_type, "comment") == 0) return SYNTAX_COMMENT;
@@ -296,32 +379,43 @@ static SyntaxType treesitter_node_type_to_syntax(const char *node_type) {
     if (strcmp(node_type, "block_comment") == 0) return SYNTAX_COMMENT;
     
     /* Functions */
-    if (strcmp(node_type, "function") == 0) return SYNTAX_FUNCTION;
     if (strcmp(node_type, "function_definition") == 0) return SYNTAX_FUNCTION;
     if (strcmp(node_type, "call_expression") == 0) return SYNTAX_FUNCTION;
     if (strcmp(node_type, "method_definition") == 0) return SYNTAX_FUNCTION;
     if (strcmp(node_type, "function_declarator") == 0) return SYNTAX_FUNCTION;
+    if (strcmp(node_type, "function_item") == 0) return SYNTAX_FUNCTION;
+    if (strcmp(node_type, "function_declaration") == 0) return SYNTAX_FUNCTION;
+    if (strcmp(node_type, "arrow_function") == 0) return SYNTAX_FUNCTION;
+    if (strcmp(node_type, "method_call_expression") == 0) return SYNTAX_FUNCTION;
+    if (strcmp(node_type, "call") == 0) return SYNTAX_FUNCTION;
+    if (strcmp(node_type, "subscript") == 0) return SYNTAX_FUNCTION;
     
     /* Variables */
-    if (strcmp(node_type, "variable") == 0) return SYNTAX_VARIABLE;
     if (strcmp(node_type, "identifier") == 0) return SYNTAX_VARIABLE;
-    if (strcmp(node_type, "parameter") == 0) return SYNTAX_VARIABLE;
     if (strcmp(node_type, "field_identifier") == 0) return SYNTAX_VARIABLE;
+    if (strcmp(node_type, "parameter_identifier") == 0) return SYNTAX_VARIABLE;
+    if (strcmp(node_type, "variable_identifier") == 0) return SYNTAX_VARIABLE;
     
     /* Macros */
     if (strcmp(node_type, "macro_definition") == 0) return SYNTAX_MACRO;
     if (strcmp(node_type, "preproc_def") == 0) return SYNTAX_MACRO;
     if (strcmp(node_type, "preproc_function_def") == 0) return SYNTAX_MACRO;
-    
-    /* Operators */
-    if (strcmp(node_type, "operator") == 0) return SYNTAX_OPERATOR;
-    if (strcmp(node_type, "binary_expression") == 0) return SYNTAX_OPERATOR;
-    if (strcmp(node_type, "unary_expression") == 0) return SYNTAX_OPERATOR;
+    if (strcmp(node_type, "preproc_include") == 0) return SYNTAX_MACRO;
+    if (strcmp(node_type, "preproc_call") == 0) return SYNTAX_MACRO;
+    if (strcmp(node_type, "preproc_if") == 0) return SYNTAX_MACRO;
+    if (strcmp(node_type, "preproc_else") == 0) return SYNTAX_MACRO;
+    if (strcmp(node_type, "preproc_elif") == 0) return SYNTAX_MACRO;
+    if (strcmp(node_type, "preproc_directive") == 0) return SYNTAX_MACRO;
+    if (strcmp(node_type, "system_lib_string") == 0) return SYNTAX_MACRO;
+    if (strcmp(node_type, "string_literal") == 0) return SYNTAX_STRING;
     
     /* Namespace */
-    if (strcmp(node_type, "namespace") == 0) return SYNTAX_NAMESPACE;
     if (strcmp(node_type, "namespace_definition") == 0) return SYNTAX_NAMESPACE;
+    if (strcmp(node_type, "namespace") == 0) return SYNTAX_NAMESPACE;
     if (strcmp(node_type, "module") == 0) return SYNTAX_NAMESPACE;
+    if (strcmp(node_type, "package_clause") == 0) return SYNTAX_NAMESPACE;
+    if (strcmp(node_type, "import_spec") == 0) return SYNTAX_NAMESPACE;
+    if (strcmp(node_type, "import_declaration") == 0) return SYNTAX_NAMESPACE;
     
     return SYNTAX_NORMAL;
 }
@@ -332,7 +426,8 @@ static void treesitter_walk_node(TSNode node, SyntaxHighlighting *sh) {
     
     /* Get node type and map to syntax type */
     const char *node_type = ts_node_type(node);
-    SyntaxType syntax_type = treesitter_node_type_to_syntax(node_type);
+    bool is_named = ts_node_is_named(node);
+    SyntaxType syntax_type = treesitter_node_type_to_syntax(node_type, is_named);
     
     /* Only add token if it's not NORMAL (to avoid flooding with useless tokens) */
     if (syntax_type != SYNTAX_NORMAL) {
