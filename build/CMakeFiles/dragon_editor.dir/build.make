@@ -520,6 +520,48 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.s"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/xator/dragon/src/gui/panels/code_actions.c -o CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.s
 
+CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o: CMakeFiles/dragon_editor.dir/flags.make
+CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o: /home/xator/dragon/src/gui/panels/palette.c
+CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o: CMakeFiles/dragon_editor.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_33) "Building C object CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o -MF CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o.d -o CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o -c /home/xator/dragon/src/gui/panels/palette.c
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/xator/dragon/src/gui/panels/palette.c > CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.i
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/xator/dragon/src/gui/panels/palette.c -o CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.s
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o: CMakeFiles/dragon_editor.dir/flags.make
+CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o: /home/xator/dragon/src/gui/panels/settings.c
+CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o: CMakeFiles/dragon_editor.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_34) "Building C object CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o -MF CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o.d -o CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o -c /home/xator/dragon/src/gui/panels/settings.c
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/xator/dragon/src/gui/panels/settings.c > CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.i
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/xator/dragon/src/gui/panels/settings.c -o CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.s
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o: CMakeFiles/dragon_editor.dir/flags.make
+CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o: /home/xator/dragon/src/gui/panels/treesitter_inspector.c
+CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o: CMakeFiles/dragon_editor.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_35) "Building C object CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o -MF CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o.d -o CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o -c /home/xator/dragon/src/gui/panels/treesitter_inspector.c
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/xator/dragon/src/gui/panels/treesitter_inspector.c > CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.i
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/xator/dragon/src/gui/panels/treesitter_inspector.c -o CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.s
+
 # Object files for target dragon_editor
 dragon_editor_OBJECTS = \
 "CMakeFiles/dragon_editor.dir/src/main.c.o" \
@@ -553,7 +595,10 @@ dragon_editor_OBJECTS = \
 "CMakeFiles/dragon_editor.dir/src/gui/panels/space_menu.c.o" \
 "CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.o" \
 "CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.o" \
-"CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o"
+"CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o" \
+"CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o" \
+"CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o" \
+"CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o"
 
 # External object files for target dragon_editor
 dragon_editor_EXTERNAL_OBJECTS =
@@ -590,12 +635,15 @@ dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/space_menu.c.o
 dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.o
 dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.o
 dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o
+dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o
+dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o
+dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o
 dragon_editor: CMakeFiles/dragon_editor.dir/build.make
 dragon_editor: CMakeFiles/dragon_editor.dir/compiler_depend.ts
 dragon_editor: libglad.a
 dragon_editor: libtomlc99.a
 dragon_editor: CMakeFiles/dragon_editor.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_33) "Linking C executable dragon_editor"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_36) "Linking C executable dragon_editor"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/dragon_editor.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

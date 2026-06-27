@@ -16,6 +16,9 @@
 #include "panel_symbols_picker.h"
 #include "panel_rename.h"
 #include "panel_code_actions.h"
+#include "panel_palette.h"
+#include "panel_settings.h"
+#include "panel_treesitter_inspector.h"
 #include <GLFW/glfw3.h>
 #include <string.h>
 #include <stdlib.h>
@@ -58,6 +61,9 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
         if (panel_rename_is_open()) { panel_rename_close(app); return; }
         if (panel_code_actions_is_open()) { panel_code_actions_close(app); return; }
         if (panel_space_menu_is_open()) { panel_space_menu_close(app); return; }
+        if (panel_palette_is_open()) { panel_palette_close(app); return; }
+        if (panel_settings_is_open()) { panel_settings_close(app); return; }
+        if (panel_treesitter_inspector_is_open()) { panel_treesitter_inspector_close(app); return; }
         if (!mode_is(mode, MODE_NORMAL)) {
             if (mode_is(mode, MODE_INSERT)) {
                 Document *doc = (Document *)app_get_doc(app);
@@ -86,6 +92,16 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
     /* Route keys to file browser when open */
     if (panel_file_browser_is_open()) {
         panel_file_browser_key(app, key);
+        return;
+    }
+
+    if (panel_settings_is_open()) {
+        panel_settings_key(app, key);
+        return;
+    }
+
+    if (panel_treesitter_inspector_is_open()) {
+        panel_treesitter_inspector_key(app, key);
         return;
     }
 
@@ -136,6 +152,12 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
         panel_space_menu_key(app, key);
         return;
     }
+    
+    /* Route keys to palette when open */
+    if (panel_palette_is_open()) {
+        panel_palette_key(app, key);
+        return;
+    }
 
     switch (mode_get(mode)) {
     case MODE_NORMAL:          handle_normal_key(app, key, action, mods); break;
@@ -154,8 +176,16 @@ void input_handle_char(App *app, unsigned int c) {
         panel_find_input(app, doc, c);
         return;
     }
+    if (panel_file_browser_is_open()) {
+        panel_file_browser_input(app, c);
+        return;
+    }
     if (panel_space_menu_is_open()) {
         panel_space_menu_input(app, c);
+        return;
+    }
+    if (panel_palette_is_open()) {
+        panel_palette_input(app, c);
         return;
     }
     
@@ -491,14 +521,34 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                  return;
              }
               if (key == GLFW_KEY_D) {
-                  /* Space d - diagnostics picker */
+                  if (mods & GLFW_MOD_SHIFT) {
+                      mode->pending_len = 0;
+                      return;
+                  }
+                  /* Space d / D - diagnostics picker */
                   panel_lsp_diagnostics_open(app);
                   mode->pending_len = 0;
                   return;
               }
               if (key == GLFW_KEY_S) {
-                  /* Space s - document symbols picker */
+                  if (mods & GLFW_MOD_SHIFT) {
+                      mode->pending_len = 0;
+                      return;
+                  }
+                  /* Space s / S - symbols picker */
                   panel_symbols_picker_open(app);
+                  mode->pending_len = 0;
+                  return;
+              }
+              if (key == GLFW_KEY_H) {
+                  /* Space h - select references under cursor */
+                  document_lsp_select_references(doc, app_get_lsp_manager(app));
+                  mode->pending_len = 0;
+                  return;
+              }
+              if (key == GLFW_KEY_T) {
+                  /* Space t - tree-sitter node inspector */
+                  panel_treesitter_inspector_open(app);
                   mode->pending_len = 0;
                   return;
               }
@@ -1364,6 +1414,15 @@ static void handle_command_key(App *app, int key, int action, int mods) {
         document_sort_selection(doc);
     } else if (strcmp(cmd_buf, "fmt") == 0 || strcmp(cmd_buf, "format") == 0) {
         document_format_selection(doc);
+    } else if (strcmp(cmd_buf, "lsp-stop") == 0) {
+        lsp_manager_stop_all((LSPManager *)app_get_lsp_manager(app));
+    } else if (strcmp(cmd_buf, "lsp-restart") == 0) {
+        lsp_manager_restart_all((LSPManager *)app_get_lsp_manager(app));
+    } else if (strcmp(cmd_buf, "tree-sitter-subtree") == 0 ||
+               strcmp(cmd_buf, "ts-subtree") == 0 ||
+               strcmp(cmd_buf, "tree-sitter-highlight-name") == 0 ||
+               strcmp(cmd_buf, "tree-sitter-scopes") == 0) {
+        panel_treesitter_inspector_open(app);
     } else if (cmd_buf[0] >= '1' && cmd_buf[0] <= '9') {
         int line = atoi(cmd_buf);
         if (line > 0)

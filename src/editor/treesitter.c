@@ -49,7 +49,7 @@ static TSLanguage* treesitter_load_language_from_file(const char *language_name)
 }
 
 /* Map file extensions to language names */
-static const char* treesitter_get_language_name(const char *file_extension) {
+const char* treesitter_language_name_for_extension(const char *file_extension) {
     if (!file_extension) return NULL;
     
     /* Remove leading dot if present */
@@ -111,7 +111,7 @@ bool treesitter_load_language(TreeSitterManager *mgr, const char *file_extension
     if (!mgr || !file_extension) return false;
     if (mgr->language_count >= 32) return false;
     
-    const char *lang_name = treesitter_get_language_name(file_extension);
+    const char *lang_name = treesitter_language_name_for_extension(file_extension);
     if (!lang_name) return false;
     
     /* Check if already loaded */
@@ -200,6 +200,30 @@ TreeSitterHighlight treesitter_get_highlight_at(TreeSitterLanguage *lang, uint32
     }
     
     return result;
+}
+
+bool treesitter_describe_node_at(TreeSitterLanguage *lang, uint32_t row, uint32_t col,
+                                 char *buf, size_t buf_size) {
+    if (!buf || buf_size == 0) return false;
+    buf[0] = '\0';
+    if (!lang || !lang->tree) return false;
+
+    TSNode root = ts_tree_root_node(lang->tree);
+    TSPoint point = {row, col};
+    TSNode node = ts_node_named_descendant_for_point_range(root, point, point);
+    if (ts_node_is_null(node)) return false;
+
+    TSPoint start = ts_node_start_point(node);
+    TSPoint end = ts_node_end_point(node);
+    TSNode parent = ts_node_parent(node);
+    const char *parent_type = ts_node_is_null(parent) ? "<root>" : ts_node_type(parent);
+    snprintf(buf, buf_size,
+             "node: %s\nparent: %s\nrange: %u:%u-%u:%u\nnamed: %s\nchildren: %u",
+             ts_node_type(node), parent_type,
+             start.row + 1, start.column + 1, end.row + 1, end.column + 1,
+             ts_node_is_named(node) ? "yes" : "no",
+             ts_node_child_count(node));
+    return true;
 }
 
 TreeSitterSymbols treesitter_extract_symbols(TreeSitterLanguage *lang) {

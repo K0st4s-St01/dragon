@@ -104,12 +104,15 @@ void lsp_manager_init(LSPManager *manager);
 void lsp_manager_free(LSPManager *manager);
 void lsp_manager_add_server(LSPManager *manager, const char *language_id, 
                             const char *server_path, const char **args, int args_count);
+void lsp_manager_stop_all(LSPManager *manager);
+void lsp_manager_restart_all(LSPManager *manager);
 
 /* Server lifecycle */
 bool lsp_client_start(LSPClient *client);
 void lsp_client_stop(LSPClient *client);
 bool lsp_client_initialize(LSPClient *client, const char *workspace_root);
 LSPStatus lsp_client_get_status(LSPClient *client);
+void lsp_manager_status_counts(LSPManager *manager, int *initialized, int *connecting, int *errors);
 
 /* Communication - text position based on row/col */
 void lsp_client_send_definition_request(LSPClient *client, const char *file_uri, int line, int character);
@@ -142,4 +145,3 @@ const char *lsp_hover_get_contents(LSPHover *hover);
 LSPClient *lsp_manager_get_client(LSPManager *manager, const char *language_id);
 
 #endif
-

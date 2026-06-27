@@ -20,6 +20,7 @@ typedef struct {
     int     cursor_count;
     char   *filepath;
     bool    dirty;
+    bool    syntax_dirty;
     int     scroll_y;
     int     scroll_x;
     int     viewport_lines;
@@ -154,6 +155,8 @@ void document_copy_selection_above(Document *doc);
 void document_join_lines_with_space(Document *doc);
 void document_comment_toggle(Document *doc);
 void document_format_selection(Document *doc);
+void document_move_line_up(Document *doc);
+void document_move_line_down(Document *doc);
 void document_page_down_extend(Document *doc);
 void document_page_up_extend(Document *doc);
 void document_half_page_down_extend(Document *doc, int viewport_h);
@@ -197,6 +200,7 @@ void document_lsp_goto_type_definition(Document *doc, void *lsp_manager);
 void document_lsp_goto_references(Document *doc, void *lsp_manager);
 void document_lsp_goto_implementation(Document *doc, void *lsp_manager);
 void document_lsp_hover(Document *doc, void *lsp_manager);
+void document_lsp_select_references(Document *doc, void *lsp_manager);
 void document_update_syntax_from_lsp(Document *doc, void *lsp_manager);
 void document_update_diagnostics_from_lsp(Document *doc, void *lsp_manager);
 

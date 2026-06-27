@@ -101,6 +101,20 @@ void lsp_manager_add_server(LSPManager *manager, const char *language_id,
     manager->client_count++;
 }
 
+void lsp_manager_stop_all(LSPManager *manager) {
+    if (!manager) return;
+    for (int i = 0; i < manager->client_count; i++)
+        lsp_client_stop(&manager->clients[i]);
+}
+
+void lsp_manager_restart_all(LSPManager *manager) {
+    if (!manager) return;
+    for (int i = 0; i < manager->client_count; i++) {
+        lsp_client_stop(&manager->clients[i]);
+        lsp_client_initialize(&manager->clients[i], manager->workspace_root);
+    }
+}
+
 bool lsp_client_start(LSPClient *client) {
     if (client->status != LSP_STATUS_DISCONNECTED) {
         return client->status == LSP_STATUS_INITIALIZED;
@@ -234,6 +248,28 @@ bool lsp_client_initialize(LSPClient *client, const char *workspace_root) {
 
 LSPStatus lsp_client_get_status(LSPClient *client) {
     return client->status;
+}
+
+void lsp_manager_status_counts(LSPManager *manager, int *initialized, int *connecting, int *errors) {
+    if (initialized) *initialized = 0;
+    if (connecting) *connecting = 0;
+    if (errors) *errors = 0;
+    if (!manager) return;
+    for (int i = 0; i < manager->client_count; i++) {
+        switch (manager->clients[i].status) {
+        case LSP_STATUS_INITIALIZED:
+            if (initialized) (*initialized)++;
+            break;
+        case LSP_STATUS_CONNECTING:
+            if (connecting) (*connecting)++;
+            break;
+        case LSP_STATUS_ERROR:
+            if (errors) (*errors)++;
+            break;
+        default:
+            break;
+        }
+    }
 }
 
 void lsp_client_send_definition_request(LSPClient *client, const char *file_uri, int line, int character) {

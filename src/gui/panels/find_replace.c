@@ -37,6 +37,11 @@ void panel_find_open_ex(App *app, Document *doc, FindAction action) {
     fr_action = action;
 }
 
+void panel_find_open_replace(App *app, Document *doc) {
+    panel_find_open(app, doc);
+    fr_action = FR_ACTION_REPLACE;
+}
+
 void panel_find_close(App *app) {
     (void)app;
     fr_open = false;
@@ -46,7 +51,7 @@ bool panel_find_is_open(void) {
     return fr_open;
 }
 
-static bool find_next(Document *doc) {
+static bool find_next_range(Document *doc, size_t *start_out, size_t *end_out) {
     if (fr_query_len == 0 || !doc) return false;
     Buffer *buf = &doc->buffer;
     Cursor *cur = &doc->cursors[0];
@@ -59,13 +64,58 @@ static bool find_next(Document *doc) {
     if (!found) {
         found = memmem(buf->text, buf->len, fr_query, fr_query_len);
         if (!found) return false;
-        start = 0;
+        start = (size_t)(found - buf->text);
+    } else {
+        start += (size_t)(found - text);
     }
 
-    size_t pos = start + (size_t)(found - text);
+    *start_out = start;
+    *end_out = start + (size_t)fr_query_len;
+    return true;
+}
+
+static bool find_next(Document *doc) {
+    size_t start = 0, end = 0;
+    if (!find_next_range(doc, &start, &end)) return false;
     int row, col;
-    buffer_row_col_from_pos(buf, pos, &row, &col);
-    cursor_move_to(cur, row, col);
+    buffer_row_col_from_pos(&doc->buffer, start, &row, &col);
+    cursor_move_to(&doc->cursors[0], row, col);
+    return true;
+}
+
+static bool replace_next(Document *doc) {
+    if (fr_query_len == 0 || !doc) return false;
+    Cursor *cur = &doc->cursors[0];
+    bool replace_selection = false;
+
+    if (cur->has_selection) {
+        int sr, sc, er, ec;
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+        size_t start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
+        size_t end = buffer_pos_from_row_col(&doc->buffer, er, ec);
+        if (end >= start && end - start == (size_t)fr_query_len &&
+            memcmp(doc->buffer.text + start, fr_query, (size_t)fr_query_len) == 0) {
+            replace_selection = true;
+        }
+    }
+
+    size_t start = 0, end = 0;
+    if (replace_selection) {
+        int sr, sc, er, ec;
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+        start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
+        end = buffer_pos_from_row_col(&doc->buffer, er, ec);
+    } else if (!find_next_range(doc, &start, &end)) {
+        return false;
+    }
+
+    buffer_delete(&doc->buffer, start, end - start);
+    buffer_insert(&doc->buffer, start, fr_replace, (size_t)fr_replace_len);
+    buffer_row_col_from_pos(&doc->buffer, start + (size_t)fr_replace_len, &cur->row, &cur->col);
+    cursor_clear_selection(cur);
+    doc->dirty = true;
+    doc->syntax_dirty = true;
+    doc->ts_parsed = false;
     return true;
 }
 
@@ -99,6 +149,8 @@ void panel_find_key(App *app, Document *doc, int key) {
     if (key == GLFW_KEY_ENTER) {
         if (fr_action == FR_ACTION_FIND) {
             find_next(doc);
+        } else if (fr_action == FR_ACTION_REPLACE) {
+            replace_next(doc);
         } else if (fr_action == FR_ACTION_SELECT) {
             document_select_all_matches(doc, fr_query, fr_query_len);
             panel_find_close(app);
@@ -172,7 +224,10 @@ void panel_find_render(Gui *g, App *app, Document *doc) {
     /* Determine label based on action */
     const char *label = "Find:";
     const char *btn_label = "Find Next";
-    if (fr_action == FR_ACTION_PIPE) {
+    if (fr_action == FR_ACTION_REPLACE) {
+        label = "Find:";
+        btn_label = "Replace Next";
+    } else if (fr_action == FR_ACTION_PIPE) {
         label = "Pipe |:";
         btn_label = "Execute";
     } else if (fr_action == FR_ACTION_PIPE_TO) {

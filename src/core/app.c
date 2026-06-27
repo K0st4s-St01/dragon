@@ -165,7 +165,7 @@ void app_run(App *app) {
         /* Throttled syntax highlighting update every 30 frames (~500ms at 60fps) */
         Document *doc = &app->documents[app->current_doc];
         app->syntax_update_timer++;
-        if (app->syntax_update_timer >= 30 && doc && doc->language_id && !doc->ts_parsed) {
+        if (app->syntax_update_timer >= 30 && doc && doc->language_id && doc->syntax_dirty && !doc->ts_parsed) {
             app->syntax_update_timer = 0;
             document_update_syntax_from_lsp(doc, &app->lsp_manager);
         }
@@ -176,14 +176,13 @@ void app_run(App *app) {
         }
         
         /* Parse document with treesitter for better syntax highlighting (only when dirty) */
-        if (doc && app->ts_manager && doc->dirty) {
+        if (doc && app->ts_manager && doc->syntax_dirty) {
             document_parse_treesitter(doc, app->ts_manager);
             doc->ts_parsed = (doc->syntax.token_count > 0);
+            doc->syntax_dirty = false;
             
             /* Notify LSP of document changes */
             document_notify_lsp_change(doc, &app->lsp_manager);
-            
-            doc->dirty = false;
         }
 
         renderer_clear(&app->renderer);
@@ -272,4 +271,6 @@ const char *app_get_workspace_root(App *app) {
 void app_set_workspace_root(App *app, const char *path) {
     free(app->workspace_root);
     app->workspace_root = strdup(path);
+    free(app->lsp_manager.workspace_root);
+    app->lsp_manager.workspace_root = strdup(path);
 }

@@ -52,6 +52,9 @@ static PaletteEntry entries[] = {
     /* Help */
     {"About",           "",        "Help", cmd_about},
     {"Settings",        "",        "Help", cmd_settings},
+    {"Tree-sitter subtree", ":ts-subtree", "LSP", cmd_tree_sitter_inspect},
+    {"LSP restart",     ":lsp-restart", "LSP", cmd_lsp_restart},
+    {"LSP stop",        ":lsp-stop", "LSP", cmd_lsp_stop},
 };
 #define ENTRY_COUNT (int)(sizeof(entries) / sizeof(entries[0]))
 

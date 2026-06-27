@@ -50,7 +50,4 @@ SyntaxType syntax_get_type_at(SyntaxHighlighting *sh, int row, int col);
 /* Update from LSP semantic tokens response */
 void syntax_update_from_lsp(SyntaxHighlighting *sh, const char *response);
 
-/* Basic syntax highlighting for files without LSP */
-void syntax_highlight_basic(SyntaxHighlighting *sh, const char *text, size_t len);
-
 #endif

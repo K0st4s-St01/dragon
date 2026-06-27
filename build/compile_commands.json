@@ -202,5 +202,23 @@
   "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -I/home/xator/dragon/vendor/tomlc99 -O3 -DNDEBUG -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o -c /home/xator/dragon/src/gui/panels/code_actions.c",
   "file": "/home/xator/dragon/src/gui/panels/code_actions.c",
   "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o"
+},
+{
+  "directory": "/home/xator/dragon/build",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -I/home/xator/dragon/vendor/tomlc99 -O3 -DNDEBUG -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o -c /home/xator/dragon/src/gui/panels/palette.c",
+  "file": "/home/xator/dragon/src/gui/panels/palette.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o"
+},
+{
+  "directory": "/home/xator/dragon/build",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -I/home/xator/dragon/vendor/tomlc99 -O3 -DNDEBUG -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o -c /home/xator/dragon/src/gui/panels/settings.c",
+  "file": "/home/xator/dragon/src/gui/panels/settings.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o"
+},
+{
+  "directory": "/home/xator/dragon/build",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -I/home/xator/dragon/vendor/tomlc99 -O3 -DNDEBUG -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o -c /home/xator/dragon/src/gui/panels/treesitter_inspector.c",
+  "file": "/home/xator/dragon/src/gui/panels/treesitter_inspector.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o"
 }
 ]

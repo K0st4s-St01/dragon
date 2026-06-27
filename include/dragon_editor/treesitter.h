@@ -25,6 +25,7 @@ void treesitter_manager_free(TreeSitterManager *mgr);
 
 /* Load language by file extension */
 bool treesitter_load_language(TreeSitterManager *mgr, const char *file_extension);
+const char* treesitter_language_name_for_extension(const char *file_extension);
 
 /* Get current language */
 TreeSitterLanguage* treesitter_get_language(TreeSitterManager *mgr, const char *language_name);
@@ -42,6 +43,8 @@ typedef struct {
 
 TreeSitterHighlight treesitter_get_highlight_at(TreeSitterLanguage *lang, 
                                                   uint32_t row, uint32_t col);
+bool treesitter_describe_node_at(TreeSitterLanguage *lang, uint32_t row, uint32_t col,
+                                 char *buf, size_t buf_size);
 
 /* Query-based symbol extraction */
 typedef struct {

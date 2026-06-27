@@ -6,6 +6,7 @@
 #include "theme.h"
 #include "gui.h"
 #include "renderer.h"
+#include "lsp.h"
 
 extern const char *input_cmd_get(void);
 
@@ -24,6 +25,8 @@ static const char *mode_name(Mode m) {
 }
 
 void panel_statusbar(Gui *g, App *app, Document *doc, ModeState *mode) {
+    static int spinner_tick = 0;
+    static const char spinner[] = "|/-\\";
     Renderer *r = app_get_renderer(app);
     Theme *t = theme_get();
     int w = app_get_width(app);
@@ -71,6 +74,33 @@ void panel_statusbar(Gui *g, App *app, Document *doc, ModeState *mode) {
     float pos_x = (float)w - font_text_width(&g->font, pos_buf) - 120;
     font_draw(&g->font, r, pos_buf, pos_x, y + 4,
               t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
+
+    int errors = 0, warnings = 0, info = 0;
+    if (doc->diagnostics) {
+        LSPDiagnostics *diag = (LSPDiagnostics *)doc->diagnostics;
+        for (int i = 0; i < diag->count; i++) {
+            if (diag->items[i].severity == LSP_DIAG_ERROR) errors++;
+            else if (diag->items[i].severity == LSP_DIAG_WARNING) warnings++;
+            else info++;
+        }
+    }
+
+    int lsp_ready = 0, lsp_connecting = 0, lsp_errors = 0;
+    lsp_manager_status_counts((LSPManager *)app_get_lsp_manager(app),
+                              &lsp_ready, &lsp_connecting, &lsp_errors);
+    char lsp_buf[96];
+    char spin = lsp_connecting ? spinner[(spinner_tick++ / 8) % 4] : ' ';
+    snprintf(lsp_buf, sizeof(lsp_buf), "LSP%c%d%s  E%d W%d I%d",
+             spin,
+             lsp_ready,
+             lsp_errors ? "!" : "",
+             errors, warnings, info);
+    float lsp_x = pos_x - font_text_width(&g->font, lsp_buf) - 20;
+    if (lsp_x > file_x)
+        font_draw(&g->font, r, lsp_buf, lsp_x, y + 4,
+                  errors ? t->error[0] : t->gutter_fg[0],
+                  errors ? t->error[1] : t->gutter_fg[1],
+                  errors ? t->error[2] : t->gutter_fg[2], 1.0f);
 
     /* Line count */
     char count_buf[32];

@@ -357,21 +357,21 @@ Enter with `Space`.
 - [x] ~~`Space j` — jumplist picker.~~
 - [ ] `Space g` — changed-file picker.
 - [x] ~~`Space k` — hover documentation.~~
-- [ ] `Space s` — document symbol picker.
+- [x] ~~`Space s` — document symbol picker.~~
 - [ ] `Space S` — workspace symbol picker.
 - [x] ~~`Space d` — document diagnostics picker.~~
 - [ ] `Space D` — workspace diagnostics picker.
-- [ ] `Space r` — rename symbol.
-- [ ] `Space a` — code action.
-- [ ] `Space h` — select references to symbol under cursor.
+- [x] ~~`Space r` — rename symbol.~~
+- [x] ~~`Space a` — code action.~~
+- [x] ~~`Space h` — select references to symbol under cursor.~~
 - [ ] `Space '` — reopen last fuzzy picker.
 - [ ] `Space w` — enter window mode.
 - [x] ~~`Space c` — comment/uncomment selections.~~
 - [ ] `Space C` — block comment/uncomment.
 - [ ] `Space Alt-c` — line comment/uncomment.
-- [ ] `Space p` — paste system clipboard after selections.
-- [ ] `Space P` — paste system clipboard before selections.
-- [ ] `Space y` — yank selections to system clipboard.
+- [x] ~~`Space p` — paste system clipboard after selections.~~
+- [x] ~~`Space P` — paste system clipboard before selections.~~
+- [x] ~~`Space y` — yank selections to system clipboard.~~
 - [ ] `Space Y` — yank main selection to system clipboard.
 - [ ] `Space R` — replace selections with system clipboard.
 - [x] ~~`Space /` — global search in workspace.~~
@@ -478,8 +478,8 @@ Changed from original:
 - [ ] `:config-reload` — reload config.
 - [ ] `:log-open` — open Helix log.
 - [ ] `:tree-sitter-scopes` — show tree-sitter scopes.
-- [ ] `:tree-sitter-highlight-name` — show highlight scope under cursor.
-- [ ] `:tree-sitter-subtree`, `:ts-subtree` — inspect syntax subtree.
+- [x] ~~`:tree-sitter-highlight-name` — show highlight scope under cursor.~~
+- [x] ~~`:tree-sitter-subtree`, `:ts-subtree` — inspect syntax subtree.~~
 
 ### Shell commands
 
@@ -514,7 +514,7 @@ Changed from original:
 - [ ] Support search register `/`.
 - [ ] Support system clipboard commands through Space mode and command mode.
 - [ ] Support primary clipboard commands separately from system clipboard.
-- [ ] Support inserting register content in insert mode with `Ctrl-r`.
+- [x] ~~Support inserting register content in insert mode with `Ctrl-r`.~~
 
 Corrected:
 - [ ] Do not model Helix exactly as Vim registers like `0`, `*`, `+` unless intentionally adding compatibility aliases.
@@ -539,8 +539,8 @@ Corrected:
 
 ## 14. Syntax, Tree-sitter, and Text Objects
 
-- [ ] Syntax highlighting using tree-sitter queries.
-- [ ] Language detection by file name, extension, and shebang.
+- [x] ~~Syntax highlighting using tree-sitter queries.~~
+- [x] ~~Language detection by file name, extension, and shebang.~~
 - [ ] Per-language indentation settings.
 - [ ] Per-language comment tokens.
 - [ ] Per-language formatter command.
@@ -573,24 +573,24 @@ Corrected:
 - [x] `gi` — goto implementation. (Full implementation: request → parse response → navigate)
 - [x] `Space-k` — hover. (Full implementation: request → parse response → tooltip display)
 - [x] Syntax highlighting from LSP semanticTokens. (Delta-decoded parser, token type mapping, dynamic highlighting)
-- [ ] `Space-r` — rename symbol.
-- [ ] `Space-a` — code action.
-- [ ] `Space-s` — document symbols.
+- [x] ~~`Space-r` — rename symbol.~~
+- [x] ~~`Space-a` — code action.~~
+- [x] ~~`Space-s` — document symbols.~~
 - [ ] `Space-S` — workspace symbols.
-- [ ] `Space-d` — document diagnostics picker.
+- [x] ~~`Space-d` — document diagnostics picker.~~
 - [ ] `Space-D` — workspace diagnostics picker.
-- [ ] `Space-h` — select references to symbol under cursor.
+- [x] ~~`Space-h` — select references to symbol under cursor.~~
 - [ ] `Ctrl-x` in insert mode — completion menu.
-- [ ] `=` — format selection.
-- [ ] `:format` / `:fmt` — format file.
-- [ ] `:lsp-restart` — restart servers.
-- [ ] `:lsp-stop` — stop servers.
+- [x] ~~`=` — format selection.~~
+- [x] ~~`:format` / `:fmt` — format file.~~
+- [x] ~~`:lsp-restart` — restart servers.~~
+- [x] ~~`:lsp-stop` — stop servers.~~
 - [ ] `:lsp-workspace-command` — workspace commands.
-- [ ] LSP progress spinner in statusline.
+- [x] ~~LSP progress spinner in statusline.~~
 - [ ] Diagnostics:
-  - [ ] Inline diagnostics.
-  - [ ] Gutter diagnostics.
-  - [ ] Statusline diagnostic counts.
+  - [x] ~~Inline diagnostics.~~
+  - [x] ~~Gutter diagnostics.~~
+  - [x] ~~Statusline diagnostic counts.~~
   - [x] ~~`]d` / `[d` — next/previous diagnostic.~~
   - [x] ~~`]D` / `[D` — last/first diagnostic.~~
 
@@ -609,7 +609,7 @@ Corrected:
 
 ### Hover/signature popup
 
-- [ ] `Space-k` opens hover popup.
+- [x] ~~`Space-k` opens hover popup.~~
 - [ ] `Ctrl-u` / `Ctrl-d` scroll popup.
 - [ ] Signature help popup supports:
   - [ ] `Alt-p` — previous signature.
@@ -692,22 +692,22 @@ Corrected:
   - [ ] select
 - [ ] Configurable diagnostic severities.
 - [ ] Supported statusline elements:
-  - [ ] mode
-  - [ ] spinner
-  - [ ] file-name
+  - [x] ~~mode~~
+  - [x] ~~spinner~~
+  - [x] ~~file-name~~
   - [ ] file-absolute-path
   - [ ] file-base-name
-  - [ ] file-modification-indicator
+  - [x] ~~file-modification-indicator~~
   - [ ] file-encoding
   - [ ] file-line-ending
   - [ ] file-type
-  - [ ] diagnostics
+  - [x] ~~diagnostics~~
   - [ ] workspace-diagnostics
   - [ ] selections
   - [ ] primary-selection-length
-  - [ ] position
+  - [x] ~~position~~
   - [ ] position-percentage
-  - [ ] total-line-numbers
+  - [x] ~~total-line-numbers~~
   - [ ] register
   - [ ] version
 - [ ] Show macro recording indicator.
@@ -785,4 +785,3 @@ The following features are useful, but they should be marked as extensions, not 
 - Integrated syntax highlighting system ready for LSP semantic tokens
 - Added LSP goto keybindings (gd/gy/gr/gi) with infrastructure in place
 - Supported languages: C, C++, Rust, Python, Go, TypeScript, JavaScript
-

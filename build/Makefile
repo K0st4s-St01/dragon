@@ -755,6 +755,30 @@ src/gui/panels/lsp_hover_panel.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.s
 .PHONY : src/gui/panels/lsp_hover_panel.c.s
 
+src/gui/panels/palette.o: src/gui/panels/palette.c.o
+.PHONY : src/gui/panels/palette.o
+
+# target to build an object file
+src/gui/panels/palette.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o
+.PHONY : src/gui/panels/palette.c.o
+
+src/gui/panels/palette.i: src/gui/panels/palette.c.i
+.PHONY : src/gui/panels/palette.i
+
+# target to preprocess a source file
+src/gui/panels/palette.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.i
+.PHONY : src/gui/panels/palette.c.i
+
+src/gui/panels/palette.s: src/gui/panels/palette.c.s
+.PHONY : src/gui/panels/palette.s
+
+# target to generate assembly for a file
+src/gui/panels/palette.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.s
+.PHONY : src/gui/panels/palette.c.s
+
 src/gui/panels/rename.o: src/gui/panels/rename.c.o
 .PHONY : src/gui/panels/rename.o
 
@@ -778,6 +802,30 @@ src/gui/panels/rename.s: src/gui/panels/rename.c.s
 src/gui/panels/rename.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.s
 .PHONY : src/gui/panels/rename.c.s
+
+src/gui/panels/settings.o: src/gui/panels/settings.c.o
+.PHONY : src/gui/panels/settings.o
+
+# target to build an object file
+src/gui/panels/settings.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o
+.PHONY : src/gui/panels/settings.c.o
+
+src/gui/panels/settings.i: src/gui/panels/settings.c.i
+.PHONY : src/gui/panels/settings.i
+
+# target to preprocess a source file
+src/gui/panels/settings.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.i
+.PHONY : src/gui/panels/settings.c.i
+
+src/gui/panels/settings.s: src/gui/panels/settings.c.s
+.PHONY : src/gui/panels/settings.s
+
+# target to generate assembly for a file
+src/gui/panels/settings.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.s
+.PHONY : src/gui/panels/settings.c.s
 
 src/gui/panels/space_menu.o: src/gui/panels/space_menu.c.o
 .PHONY : src/gui/panels/space_menu.o
@@ -850,6 +898,30 @@ src/gui/panels/symbols_picker.s: src/gui/panels/symbols_picker.c.s
 src/gui/panels/symbols_picker.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.s
 .PHONY : src/gui/panels/symbols_picker.c.s
+
+src/gui/panels/treesitter_inspector.o: src/gui/panels/treesitter_inspector.c.o
+.PHONY : src/gui/panels/treesitter_inspector.o
+
+# target to build an object file
+src/gui/panels/treesitter_inspector.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o
+.PHONY : src/gui/panels/treesitter_inspector.c.o
+
+src/gui/panels/treesitter_inspector.i: src/gui/panels/treesitter_inspector.c.i
+.PHONY : src/gui/panels/treesitter_inspector.i
+
+# target to preprocess a source file
+src/gui/panels/treesitter_inspector.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.i
+.PHONY : src/gui/panels/treesitter_inspector.c.i
+
+src/gui/panels/treesitter_inspector.s: src/gui/panels/treesitter_inspector.c.s
+.PHONY : src/gui/panels/treesitter_inspector.s
+
+# target to generate assembly for a file
+src/gui/panels/treesitter_inspector.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.s
+.PHONY : src/gui/panels/treesitter_inspector.c.s
 
 src/gui/text.o: src/gui/text.c.o
 .PHONY : src/gui/text.o
@@ -1057,9 +1129,15 @@ help:
 	@echo "... src/gui/panels/lsp_hover_panel.o"
 	@echo "... src/gui/panels/lsp_hover_panel.i"
 	@echo "... src/gui/panels/lsp_hover_panel.s"
+	@echo "... src/gui/panels/palette.o"
+	@echo "... src/gui/panels/palette.i"
+	@echo "... src/gui/panels/palette.s"
 	@echo "... src/gui/panels/rename.o"
 	@echo "... src/gui/panels/rename.i"
 	@echo "... src/gui/panels/rename.s"
+	@echo "... src/gui/panels/settings.o"
+	@echo "... src/gui/panels/settings.i"
+	@echo "... src/gui/panels/settings.s"
 	@echo "... src/gui/panels/space_menu.o"
 	@echo "... src/gui/panels/space_menu.i"
 	@echo "... src/gui/panels/space_menu.s"
@@ -1069,6 +1147,9 @@ help:
 	@echo "... src/gui/panels/symbols_picker.o"
 	@echo "... src/gui/panels/symbols_picker.i"
 	@echo "... src/gui/panels/symbols_picker.s"
+	@echo "... src/gui/panels/treesitter_inspector.o"
+	@echo "... src/gui/panels/treesitter_inspector.i"
+	@echo "... src/gui/panels/treesitter_inspector.s"
 	@echo "... src/gui/text.o"
 	@echo "... src/gui/text.i"
 	@echo "... src/gui/text.s"

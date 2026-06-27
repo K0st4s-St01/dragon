@@ -9,6 +9,12 @@
 
 #define MAX_CURSORS 64
 
+static void document_mark_dirty(Document *doc) {
+    doc->dirty = true;
+    doc->syntax_dirty = true;
+    doc->ts_parsed = false;
+}
+
 void document_init(Document *doc) {
     memset(doc, 0, sizeof(*doc));
     buffer_init(&doc->buffer);
@@ -22,6 +28,7 @@ void document_init(Document *doc) {
     doc->goto_result_count = 0;
     doc->hover_result = NULL;
     doc->diagnostics = NULL;
+    doc->syntax_dirty = true;
 }
 
 void document_free(Document *doc) {
@@ -50,7 +57,9 @@ void document_open(Document *doc, const char *path) {
     buffer_load(&doc->buffer, path);
     free(doc->filepath);
     doc->filepath = strdup(path);
-    doc->dirty = true;
+    doc->dirty = false;
+    doc->syntax_dirty = true;
+    doc->ts_parsed = false;
     doc->cursors[0] = (Cursor){0};
     doc->scroll_y = 0;
     history_clear(&doc->history);
@@ -59,35 +68,6 @@ void document_open(Document *doc, const char *path) {
     /* Initialize syntax highlighting for the language */
     syntax_free(&doc->syntax);
     syntax_init(&doc->syntax, doc->language_id);
-    
-    /* Do initial basic syntax highlighting as fallback */
-    size_t total_lines = buffer_line_count(&doc->buffer);
-    if (total_lines > 0) {
-        /* Build document text */
-        size_t total_len = 0;
-        for (size_t i = 0; i < total_lines; i++) {
-            total_len += buffer_line_len(&doc->buffer, i);
-        }
-        
-        if (total_len > 0) {
-            char *buffer_text = (char *)malloc(total_len + 1);
-            if (buffer_text) {
-                size_t pos = 0;
-                for (size_t i = 0; i < total_lines; i++) {
-                    const char *line = buffer_line_ptr(&doc->buffer, i);
-                    size_t line_len = buffer_line_len(&doc->buffer, i);
-                    memcpy(buffer_text + pos, line, line_len);
-                    pos += line_len;
-                }
-                buffer_text[total_len] = '\0';
-                
-                /* Apply basic syntax highlighting */
-                syntax_highlight_basic(&doc->syntax, buffer_text, total_len);
-                
-                free(buffer_text);
-            }
-        }
-    }
 }
 
 void document_save(Document *doc) {
@@ -101,6 +81,8 @@ void document_save_as(Document *doc, const char *path) {
     doc->filepath = strdup(path);
     buffer_save(&doc->buffer, path);
     doc->dirty = false;
+    doc->syntax_dirty = true;
+    doc->ts_parsed = false;
 }
 
 void document_insert_char(Document *doc, char c) {
@@ -109,7 +91,7 @@ void document_insert_char(Document *doc, char c) {
     buffer_insert(&doc->buffer, pos, &c, 1);
     history_push_insert(&doc->history, pos, &c, 1, cur->row, cur->col - 1);
     cur->col++;
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_delete_char(Document *doc) {
@@ -126,7 +108,7 @@ void document_delete_char(Document *doc) {
         int len = (int)buffer_line_len(&doc->buffer, cur->row);
         cur->col = len;
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_delete_selection(Document *doc) {
@@ -144,7 +126,7 @@ void document_delete_selection(Document *doc) {
     free(deleted);
     cursor_move_to(cur, sr, sc);
     cursor_clear_selection(cur);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_newline(Document *doc) {
@@ -155,7 +137,7 @@ void document_newline(Document *doc) {
     history_push_insert(&doc->history, pos, &nl, 1, cur->row, cur->col);
     cur->row++;
     cur->col = 0;
-    doc->dirty = true;
+    document_mark_dirty(doc);
 
     /* auto-indent: copy leading whitespace from previous line */
     if (cur->row > 0) {
@@ -184,7 +166,60 @@ void document_insert_text(Document *doc, const char *text) {
         if (*p == '\n') { cur->row++; cur->col = 0; }
         else cur->col++;
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
+}
+
+void document_move_line_up(Document *doc) {
+    Cursor *cur = &doc->cursors[0];
+    size_t lines = buffer_line_count(&doc->buffer);
+    if (cur->row == 0 || lines < 2) return;
+
+    /* Get current line content */
+    const char *line = buffer_line_ptr(&doc->buffer, cur->row);
+    size_t len = buffer_line_len(&doc->buffer, cur->row);
+
+    size_t cur_start = buffer_pos_from_row_col(&doc->buffer, cur->row, 0);
+
+    /* Find end of previous line (to insert before it) */
+    size_t prev_end = buffer_pos_from_row_col(&doc->buffer, cur->row - 1, 0);
+    size_t prev_len = buffer_line_len(&doc->buffer, cur->row - 1);
+    prev_end = prev_end + prev_len;
+
+    /* Delete current line */
+    buffer_delete(&doc->buffer, cur_start, len);
+
+    /* Insert it before the previous line */
+    buffer_insert(&doc->buffer, prev_end - len, line, len);
+
+    cur->row--;
+    document_mark_dirty(doc);
+}
+
+void document_move_line_down(Document *doc) {
+    Cursor *cur = &doc->cursors[0];
+    size_t lines = buffer_line_count(&doc->buffer);
+    if (cur->row >= (int)lines - 1 || lines < 2) return;
+
+    /* Get current line content */
+    const char *line = buffer_line_ptr(&doc->buffer, cur->row);
+    size_t len = buffer_line_len(&doc->buffer, cur->row);
+
+    /* Find start position for current line */
+    size_t cur_start = buffer_pos_from_row_col(&doc->buffer, cur->row, 0);
+
+    /* Find start of next line */
+    size_t next_start = buffer_pos_from_row_col(&doc->buffer, cur->row + 1, 0);
+    size_t next_len = buffer_line_len(&doc->buffer, cur->row + 1);
+
+    /* Delete current line */
+    buffer_delete(&doc->buffer, cur_start, len);
+
+    /* Insert it after the next line (which is now at cur_start) */
+    size_t insert_pos = next_start + next_len - len;
+    buffer_insert(&doc->buffer, insert_pos, line, len);
+
+    cur->row++;
+    document_mark_dirty(doc);
 }
 
 void document_move_cursor(Document *doc, int dr, int dc) {
@@ -328,7 +363,7 @@ void document_undo(Document *doc) {
     }
     cursor_move_to(cur, e->cursor_row, e->cursor_col);
     history_regress(&doc->history);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_redo(Document *doc) {
@@ -346,7 +381,7 @@ void document_redo(Document *doc) {
     buffer_row_col_from_pos(&doc->buffer, new_pos, &row, &col);
     cursor_move_to(cur, row, col);
     history_advance(&doc->history);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_cursor_word_forward(Document *doc) {
@@ -436,7 +471,7 @@ void document_paste(Document *doc) {
         if (doc->clipboard[i] == '\n') { cur->row++; cur->col = 0; }
         else cur->col++;
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_delete_line_at(Document *doc) {
@@ -459,7 +494,7 @@ void document_delete_line_at(Document *doc) {
         cur->row = (int)buffer_line_count(&doc->buffer) - 1;
     if (cur->row < 0) cur->row = 0;
     cur->col = 0;
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 static void get_word_at_cursor(Cursor *cur, Buffer *buf, const char **word, int *word_len) {
@@ -557,7 +592,7 @@ void document_insert_char_multi(Document *doc, char c) {
         buffer_insert(&doc->buffer, pos, &c, 1);
         cur->col++;
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_delete_char_multi(Document *doc) {
@@ -584,7 +619,7 @@ void document_delete_char_multi(Document *doc) {
             cur->col = len;
         }
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_newline_multi(Document *doc) {
@@ -606,7 +641,7 @@ void document_newline_multi(Document *doc) {
         cur->row++;
         cur->col = 0;
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_replace_char(Document *doc, char c) {
@@ -616,7 +651,7 @@ void document_replace_char(Document *doc, char c) {
     history_push_delete(&doc->history, pos, &doc->buffer.text[pos], 1, cur->row, cur->col);
     doc->buffer.text[pos] = c;
     history_push_insert(&doc->history, pos, &c, 1, cur->row, cur->col);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_open_line_below(Document *doc) {
@@ -643,7 +678,7 @@ void document_open_line_below(Document *doc) {
             free(spaces);
         }
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_open_line_above(Document *doc) {
@@ -667,7 +702,7 @@ void document_open_line_above(Document *doc) {
             free(spaces);
         }
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_cursor_first_non_blank(Document *doc) {
@@ -698,7 +733,7 @@ void document_join_lines(Document *doc) {
         }
     }
     cur->col = cur_len;
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_change_selection(Document *doc) {
@@ -726,7 +761,7 @@ void document_delete_char_at_cursor(Document *doc) {
     size_t max_col = buffer_line_len(&doc->buffer, cur->row);
     if (cur->col > (int)max_col) cur->col = (int)max_col;
     if (cur->col < 0) cur->col = 0;
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_indent_line(Document *doc) {
@@ -736,7 +771,7 @@ void document_indent_line(Document *doc) {
     buffer_insert(&doc->buffer, pos, &tab, 1);
     history_push_insert(&doc->history, pos, &tab, 1, cur->row, 0);
     cur->col++;
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_dedent_line(Document *doc) {
@@ -747,7 +782,7 @@ void document_dedent_line(Document *doc) {
         buffer_delete(&doc->buffer, pos, 1);
         history_push_delete(&doc->history, pos, "\t", 1, cur->row, 0);
         if (cur->col > 0) cur->col--;
-        doc->dirty = true;
+        document_mark_dirty(doc);
     } else if (line[0] == ' ') {
         int spaces = 0;
         while (line[spaces] == ' ' && spaces < 4) spaces++;
@@ -757,7 +792,7 @@ void document_dedent_line(Document *doc) {
             history_push_delete(&doc->history, pos, line, spaces, cur->row, 0);
             cur->col -= spaces;
             if (cur->col < 0) cur->col = 0;
-            doc->dirty = true;
+            document_mark_dirty(doc);
         }
     }
 }
@@ -801,7 +836,7 @@ void document_replace_selection_char(Document *doc, char c) {
 
     cursor_move_to(cur, sr, sc);
     cursor_clear_selection(cur);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_replace_selection_yanked(Document *doc) {
@@ -825,7 +860,7 @@ void document_replace_selection_yanked(Document *doc) {
 
     cursor_move_to(cur, sr, sc);
     cursor_clear_selection(cur);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 static void do_toggle_case(Document *doc, int sr, int sc, int er, int ec) {
@@ -857,13 +892,13 @@ void document_toggle_case(Document *doc) {
             if (c >= 'a' && c <= 'z') doc->buffer.text[pos] = c - 32;
             else if (c >= 'A' && c <= 'Z') doc->buffer.text[pos] = c + 32;
         }
-        doc->dirty = true;
+        document_mark_dirty(doc);
         return;
     }
     int sr, sc, er, ec;
     cursor_normalize(cur, &sr, &sc, &er, &ec);
     do_toggle_case(doc, sr, sc, er, ec);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_lowercase(Document *doc) {
@@ -872,7 +907,7 @@ void document_lowercase(Document *doc) {
     int sr, sc, er, ec;
     cursor_normalize(cur, &sr, &sc, &er, &ec);
     do_set_case(doc, sr, sc, er, ec, 32);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_uppercase(Document *doc) {
@@ -881,7 +916,7 @@ void document_uppercase(Document *doc) {
     int sr, sc, er, ec;
     cursor_normalize(cur, &sr, &sc, &er, &ec);
     do_set_case(doc, sr, sc, er, ec, -32);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_indent_selection(Document *doc) {
@@ -898,7 +933,7 @@ void document_indent_selection(Document *doc) {
         buffer_insert(&doc->buffer, pos, &tab, 1);
         history_push_insert(&doc->history, pos, &tab, 1, r, 0);
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_dedent_selection(Document *doc) {
@@ -924,7 +959,7 @@ void document_dedent_selection(Document *doc) {
             }
         }
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_collapse_selection(Document *doc) {
@@ -978,7 +1013,7 @@ void document_copy_selection_below(Document *doc) {
     buffer_insert(&doc->buffer, insert_pos, text, len);
     history_push_insert(&doc->history, insert_pos, text, len, er + 1, 0);
     free(text);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_join_lines_selection(Document *doc) {
@@ -1005,7 +1040,7 @@ void document_join_lines_selection(Document *doc) {
             }
         }
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_find_char_forward(Document *doc, char c) {
@@ -1222,7 +1257,7 @@ void document_paste_before(Document *doc) {
             else cur->col++;
         }
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_search_word(Document *doc, bool word_boundary) {
@@ -1392,7 +1427,7 @@ void document_rotate_selection_contents_backward(Document *doc) {
     }
     
     for (int i = 0; i < count; i++) free(contents[i]);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_rotate_selection_contents_forward(Document *doc) {
@@ -1477,7 +1512,7 @@ void document_rotate_selection_contents_forward(Document *doc) {
     }
     
     for (int i = 0; i < count; i++) free(contents[i]);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_delete_word_forward(Document *doc) {
@@ -1493,7 +1528,7 @@ void document_delete_word_forward(Document *doc) {
         int del = end - col;
         size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, col);
         buffer_delete(&doc->buffer, pos, del);
-        doc->dirty = true;
+        document_mark_dirty(doc);
     }
 }
 
@@ -1535,7 +1570,7 @@ void document_trim_whitespace(Document *doc) {
         if (end < len) {
             size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, end);
             buffer_delete(&doc->buffer, pos, len - end);
-            doc->dirty = true;
+            document_mark_dirty(doc);
         }
     } else {
         int sr, sc, er, ec;
@@ -1552,7 +1587,7 @@ void document_trim_whitespace(Document *doc) {
             }
         }
         cursor_clear_selection(cur);
-        doc->dirty = true;
+        document_mark_dirty(doc);
     }
 }
 
@@ -1576,7 +1611,7 @@ void document_copy_selection_above(Document *doc) {
     cur->anchor_col = ec;
     cur->has_selection = true;
     free(text);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_join_lines_with_space(Document *doc) {
@@ -1586,7 +1621,7 @@ void document_join_lines_with_space(Document *doc) {
         size_t join_pos = buffer_pos_from_row_col(&doc->buffer, cur->row, len);
         if (join_pos < doc->buffer.len && doc->buffer.text[join_pos] == '\n') {
             doc->buffer.text[join_pos] = ' ';
-            doc->dirty = true;
+            document_mark_dirty(doc);
         }
     } else {
         int sr, sc, er, ec;
@@ -1602,7 +1637,7 @@ void document_join_lines_with_space(Document *doc) {
         cursor_move_to(cur, sr, sc);
         cur->anchor_col = new_end_col;
         cur->has_selection = true;
-        doc->dirty = true;
+        document_mark_dirty(doc);
     }
 }
 
@@ -1622,7 +1657,7 @@ void document_comment_toggle(Document *doc) {
         buffer_insert(&doc->buffer, pos, "//", 2);
         cur->col = first_nonblank + 2;
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_format_selection(Document *doc) {
@@ -1674,6 +1709,8 @@ void document_new(Document *doc) {
     doc->cursor_count = 1;
     doc->scroll_y = 0;
     doc->dirty = false;
+    doc->syntax_dirty = true;
+    doc->ts_parsed = false;
 }
 
 void document_sort_selection(Document *doc) {
@@ -1687,7 +1724,7 @@ void document_sort_selection(Document *doc) {
         qsort(doc->buffer.text + start, end - start, 1,
               (int(*)(const void*, const void*))strcmp);
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_cursor_WORD_forward(Document *doc) {
@@ -1765,7 +1802,7 @@ void document_increment_number(Document *doc) {
             buffer_delete(&doc->buffer, pos, num_len);
             buffer_insert(&doc->buffer, pos, new_str, new_len);
             cur->col = start + new_len;
-            doc->dirty = true;
+            document_mark_dirty(doc);
         }
     }
 }
@@ -1800,7 +1837,7 @@ void document_decrement_number(Document *doc) {
             buffer_delete(&doc->buffer, pos, num_len);
             buffer_insert(&doc->buffer, pos, new_str, new_len);
             cur->col = start + new_len;
-            doc->dirty = true;
+            document_mark_dirty(doc);
         }
     }
 }
@@ -1823,7 +1860,7 @@ void document_surround(Document *doc, char c) {
     cur->anchor_row = er;
     cur->anchor_col = ec + 1;
     cur->has_selection = true;
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_delete_surround(Document *doc, char c) {
@@ -1844,7 +1881,7 @@ void document_delete_surround(Document *doc, char c) {
         buffer_delete(&doc->buffer, start_pos - 1, 1);
         cursor_move_to(cur, sr, sc - 1);
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_align_selections(Document *doc) {
@@ -1881,7 +1918,7 @@ void document_align_selections(Document *doc) {
             }
         }
     }
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_jumplist_push(Document *doc, int row, int col) {
@@ -2087,7 +2124,7 @@ void document_replace_surround(Document *doc, char from, char to) {
     size_t start_pos = buffer_pos_from_row_col(&doc->buffer, sr, sc);
     if (start_pos > 0 && doc->buffer.text[start_pos - 1] == from)
         doc->buffer.text[start_pos - 1] = to;
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_go_to_file(Document *doc) {
@@ -2244,7 +2281,7 @@ void document_insert_file(Document *doc, const char *path) {
         else cur->col++;
     }
     free(data);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_move_file(Document *doc, const char *path) {
@@ -2255,6 +2292,8 @@ void document_move_file(Document *doc, const char *path) {
     doc->filepath = strdup(path);
     buffer_save(&doc->buffer, path);
     doc->dirty = false;
+    doc->syntax_dirty = true;
+    doc->ts_parsed = false;
 }
 
 /* Shell command helpers */
@@ -2370,7 +2409,7 @@ void document_pipe_selection(Document *doc, const char *cmd) {
     cursor_clear_selection(cur);
     
     free(output);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_pipe_to(Document *doc, const char *cmd) {
@@ -2403,7 +2442,7 @@ void document_insert_output(Document *doc, const char *cmd) {
     }
     
     free(output);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_append_output(Document *doc, const char *cmd) {
@@ -2430,7 +2469,7 @@ void document_append_output(Document *doc, const char *cmd) {
     }
     
     free(output);
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_filter_selection(Document *doc, const char *cmd) {
@@ -2879,6 +2918,45 @@ void document_lsp_hover(Document *doc, void *lsp_manager) {
     free(uri);
 }
 
+void document_lsp_select_references(Document *doc, void *lsp_manager) {
+    if (!doc || !doc->language_id || !doc->filepath || !lsp_manager) return;
+
+    LSPManager *manager = (LSPManager *)lsp_manager;
+    LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
+    if (!client) return;
+
+    Cursor *cur = &doc->cursors[0];
+    char *uri = filepath_to_uri(doc->filepath);
+    if (!uri) return;
+
+    lsp_client_send_references_request(client, uri, cur->row, cur->col);
+    usleep(100000);
+    char *response = lsp_client_read_response(client);
+    if (!response) {
+        free(uri);
+        return;
+    }
+
+    int count = 0;
+    LSPLocation *locations = lsp_parse_definition_response(response, &count);
+    doc->cursor_count = 1;
+    cur->has_selection = false;
+    for (int i = 0; locations && i < count && doc->cursor_count < MAX_CURSORS; i++) {
+        if (!locations[i].uri || strcmp(locations[i].uri, uri) != 0) continue;
+        Cursor *target = (doc->cursor_count == 1 && !cur->has_selection) ?
+            cur : &doc->cursors[doc->cursor_count++];
+        cursor_init(target);
+        cursor_move_to(target, locations[i].range.start.line, locations[i].range.start.character);
+        target->anchor_row = locations[i].range.end.line;
+        target->anchor_col = locations[i].range.end.character;
+        target->has_selection = true;
+    }
+
+    lsp_free_locations(locations, count);
+    free(response);
+    free(uri);
+}
+
 /* Update syntax highlighting from LSP semantic tokens */
 void document_update_syntax_from_lsp(Document *doc, void *lsp_manager) {
     if (!doc || !doc->language_id || !lsp_manager) return;
@@ -2961,26 +3039,7 @@ void document_parse_treesitter(Document *doc, void *ts_manager) {
     
     /* Get the correct language based on file extension */
     const char *lang_name = NULL;
-    if (strcmp(ext, "c") == 0 || strcmp(ext, "h") == 0 || 
-        strcmp(ext, "cpp") == 0 || strcmp(ext, "cc") == 0 || 
-        strcmp(ext, "cxx") == 0 || strcmp(ext, "hpp") == 0 || 
-        strcmp(ext, "hh") == 0 || strcmp(ext, "hxx") == 0 ||
-        strcmp(ext, "m") == 0 || strcmp(ext, "mm") == 0 || 
-        strcmp(ext, "cu") == 0) {
-        lang_name = "c";
-    } else if (strcmp(ext, "py") == 0) {
-        lang_name = "python";
-    } else if (strcmp(ext, "js") == 0 || strcmp(ext, "mjs") == 0) {
-        lang_name = "javascript";
-    } else if (strcmp(ext, "ts") == 0) {
-        lang_name = "typescript";
-    } else if (strcmp(ext, "sh") == 0) {
-        lang_name = "bash";
-    } else if (strcmp(ext, "lua") == 0) {
-        lang_name = "lua";
-    } else if (strcmp(ext, "md") == 0) {
-        lang_name = "markdown";
-    }
+    lang_name = treesitter_language_name_for_extension(ext);
     
     if (!lang_name) return;
     
@@ -3202,7 +3261,7 @@ void document_apply_text_edit(Document *doc, const LSPTextEdit *edit) {
         document_insert_text(doc, edit->new_text);
     }
     
-    doc->dirty = true;
+    document_mark_dirty(doc);
 }
 
 void document_apply_workspace_edit(Document *doc, const LSPWorkspaceEdit *edit) {

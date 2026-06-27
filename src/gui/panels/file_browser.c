@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "panel_file_browser.h"
 #include "app.h"
+#include "document.h"
 #include "theme.h"
 #include "gui.h"
 #include "renderer.h"
@@ -23,10 +24,20 @@ typedef struct {
     bool is_dir;
 } FbEntry;
 
+typedef enum {
+    FB_MODE_OPEN_FILE,
+    FB_MODE_SAVE_AS,
+    FB_MODE_CHANGE_DIR,
+    FB_MODE_WORKSPACE,
+} FbMode;
+
 static bool    fb_open = false;
 static int     fb_selected = 0;
 static int     fb_scroll = 0;
+static FbMode  fb_mode = FB_MODE_OPEN_FILE;
 static char    fb_root[FB_PATH_MAX];
+static char    fb_path_input[FB_PATH_MAX];
+static int     fb_path_len = 0;
 static FbEntry fb_entries[FB_MAX_ENTRIES];
 static int     fb_count = 0;
 
@@ -125,42 +136,84 @@ static void fb_rebuild(void) {
     if (fb_selected < 0) fb_selected = 0;
 }
 
-void panel_file_browser_open(App *app) {
+static void fb_set_input_join(const char *dir, const char *name) {
+    const char *base = (dir && *dir) ? dir : ".";
+    size_t base_len = strlen(base);
+    size_t pos = base_len < FB_PATH_MAX - 1 ? base_len : FB_PATH_MAX - 1;
+    memcpy(fb_path_input, base, pos);
+    if (pos > 0 && fb_path_input[pos - 1] != '/' && pos < FB_PATH_MAX - 1)
+        fb_path_input[pos++] = '/';
+    for (size_t i = 0; name[i] && pos < FB_PATH_MAX - 1; i++)
+        fb_path_input[pos++] = name[i];
+    fb_path_input[pos] = '\0';
+}
+
+static void fb_open_at_root(App *app, const char *root, FbMode mode) {
     (void)app;
     fb_open = true;
     fb_selected = 0;
     fb_scroll = 0;
-    if (!getcwd(fb_root, sizeof(fb_root)))
+    fb_mode = mode;
+    fb_path_input[0] = '\0';
+    fb_path_len = 0;
+    if (root && *root) {
+        char resolved[FB_PATH_MAX];
+        if (realpath(root, resolved))
+            snprintf(fb_root, sizeof(fb_root), "%s", resolved);
+        else
+            snprintf(fb_root, sizeof(fb_root), "%s", root);
+    } else if (!getcwd(fb_root, sizeof(fb_root))) {
         snprintf(fb_root, sizeof(fb_root), ".");
+    }
     fb_rebuild();
+}
+
+void panel_file_browser_open(App *app) {
+    fb_open_at_root(app, NULL, FB_MODE_OPEN_FILE);
 }
 
 void panel_file_browser_open_at(App *app, const char *root) {
-    (void)app;
-    fb_open = true;
-    fb_selected = 0;
-    fb_scroll = 0;
-    
-    /* Resolve to absolute path */
-    char resolved[FB_PATH_MAX];
-    if (realpath(root ? root : ".", resolved)) {
-        snprintf(fb_root, sizeof(fb_root), "%s", resolved);
-    } else {
-        snprintf(fb_root, sizeof(fb_root), "%s", root ? root : ".");
-    }
-    
-    fb_rebuild();
+    fb_open_at_root(app, root ? root : ".", FB_MODE_OPEN_FILE);
 }
 
 void panel_file_browser_open_at_home(App *app) {
-    (void)app;
     const char *home = getenv("HOME");
     if (!home) home = ".";
-    fb_open = true;
-    fb_selected = 0;
-    fb_scroll = 0;
-    snprintf(fb_root, sizeof(fb_root), "%s", home);
-    fb_rebuild();
+    fb_open_at_root(app, home, FB_MODE_OPEN_FILE);
+}
+
+void panel_file_browser_open_save_as(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    const char *root = app_get_workspace_root(app);
+    if (doc && doc->filepath) {
+        snprintf(fb_path_input, sizeof(fb_path_input), "%s", doc->filepath);
+        char dir[FB_PATH_MAX];
+        snprintf(dir, sizeof(dir), "%s", doc->filepath);
+        char *slash = strrchr(dir, '/');
+        if (slash && slash != dir) {
+            *slash = '\0';
+            root = dir;
+        } else if (slash == dir) {
+            root = "/";
+        }
+    } else {
+        fb_set_input_join(root, "untitled.txt");
+    }
+    fb_open_at_root(app, root, FB_MODE_SAVE_AS);
+    if (doc && doc->filepath) {
+        snprintf(fb_path_input, sizeof(fb_path_input), "%s", doc->filepath);
+    } else {
+        fb_set_input_join(fb_root, "untitled.txt");
+    }
+    fb_path_len = (int)strlen(fb_path_input);
+}
+
+void panel_file_browser_open_change_dir(App *app) {
+    fb_open_at_root(app, app_get_workspace_root(app), FB_MODE_CHANGE_DIR);
+}
+
+void panel_file_browser_open_workspace(App *app) {
+    fb_open_at_root(app, app_get_workspace_root(app), FB_MODE_WORKSPACE);
 }
 
 void panel_file_browser_close(App *app) {
@@ -172,10 +225,24 @@ bool panel_file_browser_is_open(void) {
     return fb_open;
 }
 
+void panel_file_browser_input(App *app, unsigned int c) {
+    (void)app;
+    if (!fb_open || fb_mode != FB_MODE_SAVE_AS) return;
+    if (c >= 32 && c < 127 && fb_path_len < FB_PATH_MAX - 1) {
+        fb_path_input[fb_path_len++] = (char)c;
+        fb_path_input[fb_path_len] = '\0';
+    }
+}
+
 void panel_file_browser_key(App *app, int key) {
     if (!fb_open) return;
 
     switch (key) {
+    case GLFW_KEY_BACKSPACE:
+        if (fb_mode == FB_MODE_SAVE_AS && fb_path_len > 0) {
+            fb_path_input[--fb_path_len] = '\0';
+        }
+        break;
     case GLFW_KEY_DOWN:
     case GLFW_KEY_J:
     case GLFW_KEY_N: /* Ctrl-n routed as plain n here */
@@ -227,9 +294,36 @@ void panel_file_browser_key(App *app, int key) {
         break;
     }
     case GLFW_KEY_ENTER: {
-        if (fb_count == 0) break;
+        if (fb_mode == FB_MODE_SAVE_AS) {
+            Document *doc = (Document *)app_get_doc(app);
+            if (doc && fb_path_len > 0) {
+                document_save_as(doc, fb_path_input);
+                panel_file_browser_close(app);
+            }
+            break;
+        }
+        if (fb_count == 0) {
+            if (fb_mode == FB_MODE_CHANGE_DIR && chdir(fb_root) == 0) {
+                app_set_workspace_root(app, fb_root);
+                panel_file_browser_close(app);
+            } else if (fb_mode == FB_MODE_WORKSPACE) {
+                app_set_workspace_root(app, fb_root);
+                panel_file_browser_close(app);
+            }
+            break;
+        }
         FbEntry *e = &fb_entries[fb_selected];
-        if (e->is_dir) {
+        if (fb_mode == FB_MODE_CHANGE_DIR) {
+            const char *path = e->is_dir ? e->path : fb_root;
+            if (chdir(path) == 0) {
+                app_set_workspace_root(app, path);
+                panel_file_browser_close(app);
+            }
+        } else if (fb_mode == FB_MODE_WORKSPACE) {
+            const char *path = e->is_dir ? e->path : fb_root;
+            app_set_workspace_root(app, path);
+            panel_file_browser_close(app);
+        } else if (e->is_dir) {
             /* Handle parent directory (..) specially */
             if (strcmp(e->name, "..") == 0) {
                 /* Navigate to parent directory */
@@ -261,7 +355,6 @@ void panel_file_browser_key(App *app, int key) {
         if (fb_count == 0) break;
         FbEntry *e = &fb_entries[fb_selected];
         if (e->is_dir) {
-            extern void app_set_workspace_root(App *, const char *);
             app_set_workspace_root(app, e->path);
             panel_file_browser_close(app);
         }
@@ -301,12 +394,25 @@ void panel_file_browser_render(Gui *g, App *app) {
     const char *root_name = strrchr(fb_root, '/');
     root_name = root_name ? root_name + 1 : fb_root;
     char title[FB_PATH_MAX + 16];
-    snprintf(title, sizeof(title), "Files: %s", root_name);
+    const char *prefix = "Files";
+    if (fb_mode == FB_MODE_SAVE_AS) prefix = "Save as";
+    else if (fb_mode == FB_MODE_CHANGE_DIR) prefix = "Change dir";
+    else if (fb_mode == FB_MODE_WORKSPACE) prefix = "Workspace";
+    snprintf(title, sizeof(title), "%s: %s", prefix, root_name);
     font_draw(&g->font, r, title, px + 14, py + 10,
               t->accent[0], t->accent[1], t->accent[2], 1.0f);
 
     /* List */
     float list_y = py + 40;
+    if (fb_mode == FB_MODE_SAVE_AS) {
+        renderer_draw_rect(r, px + 14, list_y - 2, pw - 28, g->font.glyph_h + 8,
+                           t->gutter_bg[0], t->gutter_bg[1], t->gutter_bg[2], t->gutter_bg[3]);
+        char input[FB_PATH_MAX + 2];
+        snprintf(input, sizeof(input), "%s_", fb_path_input);
+        font_draw(&g->font, r, input, px + 18, list_y + 2,
+                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+        list_y += g->font.glyph_h + 18;
+    }
     float line_h = g->font.glyph_h + 6;
     int max_visible = (int)((ph - 64) / line_h);
     if (max_visible < 1) max_visible = 1;
@@ -362,7 +468,9 @@ void panel_file_browser_render(Gui *g, App *app) {
     renderer_draw_rect(r, px, footer_y - 4, pw, 1,
                        t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], 0.3f);
     font_draw(&g->font, r,
-              "j/k move  l open  h collapse  w workspace  Esc close",
+              fb_mode == FB_MODE_SAVE_AS
+                  ? "type path  Enter save  j/k move  l expand  Esc close"
+                  : "j/k move  Enter choose  l open  h collapse  w workspace  Esc close",
               px + 14, footer_y,
               t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 }

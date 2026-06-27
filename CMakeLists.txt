@@ -50,6 +50,9 @@ set(EDITOR_SOURCES
     src/gui/panels/symbols_picker.c
     src/gui/panels/rename.c
     src/gui/panels/code_actions.c
+    src/gui/panels/palette.c
+    src/gui/panels/settings.c
+    src/gui/panels/treesitter_inspector.c
 )
 
 add_executable(${PROJECT_NAME} ${EDITOR_SOURCES})

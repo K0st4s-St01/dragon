@@ -37,6 +37,11 @@ void command_registry_init(void) {
     command_register("bc",             "Buffer close",        "Buffer",  cmd_buffer_close);
     command_register("open-workspace", "Open workspace",      "Workspace", cmd_open_workspace);
     command_register("cwd",            "Change working dir",  "Workspace", cmd_change_dir);
+    command_register("tree-sitter-subtree", "Tree-sitter subtree", "LSP", cmd_tree_sitter_inspect);
+    command_register("ts-subtree",     "Tree-sitter subtree", "LSP", cmd_tree_sitter_inspect);
+    command_register("tree-sitter-highlight-name", "Tree-sitter highlight", "LSP", cmd_tree_sitter_inspect);
+    command_register("lsp-stop",       "LSP stop",            "LSP", cmd_lsp_stop);
+    command_register("lsp-restart",    "LSP restart",         "LSP", cmd_lsp_restart);
 }
 
 void command_register(const char *name, const char *label,
@@ -86,7 +91,8 @@ void cmd_save(App *app) {
 }
 
 void cmd_save_as(App *app) {
-    (void)app;
+    extern void panel_file_browser_open_save_as(App *);
+    panel_file_browser_open_save_as(app);
 }
 
 void cmd_quit(App *app) {
@@ -100,7 +106,9 @@ void cmd_find(App *app) {
 }
 
 void cmd_replace(App *app) {
-    (void)app;
+    extern void panel_find_open_replace(App *, Document *);
+    Document *doc = (Document *)app_get_doc(app);
+    panel_find_open_replace(app, doc);
 }
 
 void cmd_goto_line(App *app) {
@@ -124,9 +132,18 @@ void cmd_select_all(App *app) {
     document_select_all(doc);
 }
 
-void cmd_copy(App *app) { (void)app; }
-void cmd_paste(App *app) { (void)app; }
-void cmd_cut(App *app) { (void)app; }
+void cmd_copy(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_yank(doc);
+}
+void cmd_paste(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_paste(doc);
+}
+void cmd_cut(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_delete_selection(doc);
+}
 
 void cmd_delete_line(App *app) {
     Document *doc = (Document *)app_get_doc(app);
@@ -143,10 +160,22 @@ void cmd_duplicate_line(App *app) {
         document_insert_char(doc, line[i]);
 }
 
-void cmd_move_line_up(App *app) { (void)app; }
-void cmd_move_line_down(App *app) { (void)app; }
-void cmd_indent(App *app) { (void)app; }
-void cmd_unindent(App *app) { (void)app; }
+void cmd_move_line_up(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_move_line_up(doc);
+}
+void cmd_move_line_down(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_move_line_down(doc);
+}
+void cmd_indent(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_indent_selection(doc);
+}
+void cmd_unindent(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_dedent_selection(doc);
+}
 
 void cmd_goto_top(App *app) {
     Document *doc = (Document *)app_get_doc(app);
@@ -173,7 +202,10 @@ void cmd_about(App *app) {
     panel_about_open(app);
 }
 
-void cmd_settings(App *app) { (void)app; }
+void cmd_settings(App *app) {
+    extern void panel_settings_open(App *);
+    panel_settings_open(app);
+}
 
 void cmd_buffer_next(App *app) {
     app_next_buffer(app);
@@ -189,12 +221,24 @@ void cmd_buffer_close(App *app) {
 }
 
 void cmd_open_workspace(App *app) {
-    /* For now, use file browser to select workspace directory */
-    extern void panel_file_browser_open(App *);
-    panel_file_browser_open(app);
+    extern void panel_file_browser_open_workspace(App *);
+    panel_file_browser_open_workspace(app);
 }
 
 void cmd_change_dir(App *app) {
-    (void)app;
-    /* TODO: Implement directory change prompt */
+    extern void panel_file_browser_open_change_dir(App *);
+    panel_file_browser_open_change_dir(app);
+}
+
+void cmd_tree_sitter_inspect(App *app) {
+    extern void panel_treesitter_inspector_open(App *);
+    panel_treesitter_inspector_open(app);
+}
+
+void cmd_lsp_stop(App *app) {
+    lsp_manager_stop_all((LSPManager *)app_get_lsp_manager(app));
+}
+
+void cmd_lsp_restart(App *app) {
+    lsp_manager_restart_all((LSPManager *)app_get_lsp_manager(app));
 }

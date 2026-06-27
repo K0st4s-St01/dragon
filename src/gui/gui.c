@@ -23,6 +23,9 @@
 #include "panel_rename.h"
 #include "panel_code_actions.h"
 #include "panel_space_menu.h"
+#include "panel_palette.h"
+#include "panel_settings.h"
+#include "panel_treesitter_inspector.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -232,6 +235,24 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
                 col++;
             }
         }
+
+        if (doc->diagnostics) {
+            LSPDiagnostics *diag = (LSPDiagnostics *)doc->diagnostics;
+            for (int d = 0; d < diag->count; d++) {
+                if (diag->items[d].start_line != line_num) continue;
+                float dr = diag->items[d].severity == LSP_DIAG_ERROR ? t->error[0] : t->warning[0];
+                float dg = diag->items[d].severity == LSP_DIAG_ERROR ? t->error[1] : t->warning[1];
+                float db = diag->items[d].severity == LSP_DIAG_ERROR ? t->error[2] : t->warning[2];
+                int start_col = diag->items[d].start_col < line_len ? diag->items[d].start_col : line_len;
+                float dx = text_x + display_col(line, start_col, tab_width) * g->font.glyph_w;
+                renderer_draw_rect(r, dx, y + line_h - 4, g->font.glyph_w * 6, 2, dr, dg, db, 0.85f);
+                if (line_num == cur->row && diag->items[d].message) {
+                    float msg_x = text_x + (float)(line_len + 2) * g->font.glyph_w;
+                    font_draw(&g->font, r, diag->items[d].message, msg_x, y + 2, dr, dg, db, 1.0f);
+                }
+                break;
+            }
+        }
     }
 
     /* Cursors */
@@ -282,4 +303,7 @@ void gui_render(Gui *g, App *app, Document *doc, ModeState *mode) {
       panel_rename_render(g, app);
       panel_code_actions_render(g, app);
       panel_space_menu_render(g, app);
+      panel_palette_render(g, app);
+      panel_settings_render(g, app);
+      panel_treesitter_inspector_render(g, app);
 }

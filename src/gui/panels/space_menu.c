@@ -26,6 +26,7 @@ static SpaceCommand commands[] = {
     
     /* Search & Navigation */
     {"/", "Global search", true},
+    {"?", "Command palette", true},
     {"g", "Changed files (git)", false},
     
     /* LSP features */
@@ -36,7 +37,8 @@ static SpaceCommand commands[] = {
     {"D", "Workspace diagnostics", false},
     {"r", "Rename symbol", true},
     {"a", "Code actions", true},
-    {"h", "Highlight references", false},
+    {"h", "Select references", true},
+    {"t", "Tree-sitter node", true},
     
     /* Editing */
     {"c", "Comment toggle", true},
@@ -156,9 +158,32 @@ void panel_space_menu_input(App *app, unsigned int c) {
             } else if (strcmp(key_str, "d") == 0) {
                 extern void panel_lsp_diagnostics_open(App *);
                 panel_lsp_diagnostics_open(app);
+            } else if (strcmp(key_str, "?") == 0) {
+                extern void panel_palette_open(App *);
+                panel_palette_open(app);
             } else if (strcmp(key_str, "c") == 0) {
                 extern void document_comment_toggle(Document *);
                 document_comment_toggle(doc);
+            } else if (strcmp(key_str, "s") == 0) {
+                extern void panel_symbols_picker_open(App *);
+                panel_symbols_picker_open(app);
+            } else if (strcmp(key_str, "r") == 0) {
+                extern void panel_rename_open(App *);
+                panel_rename_open(app);
+            } else if (strcmp(key_str, "a") == 0) {
+                extern void panel_code_actions_open(App *);
+                panel_code_actions_open(app);
+            } else if (strcmp(key_str, "h") == 0) {
+                document_lsp_select_references(doc, app_get_lsp_manager(app));
+            } else if (strcmp(key_str, "t") == 0) {
+                extern void panel_treesitter_inspector_open(App *);
+                panel_treesitter_inspector_open(app);
+            } else if (strcmp(key_str, "y") == 0) {
+                document_yank(doc);
+            } else if (strcmp(key_str, "p") == 0) {
+                document_paste(doc);
+            } else if (strcmp(key_str, "P") == 0) {
+                document_paste_before(doc);
             }
             
             panel_space_menu_close(app);
