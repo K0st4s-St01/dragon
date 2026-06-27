@@ -62,6 +62,9 @@ if [ "$INSTALL_DEPS" = true ]; then
     install_deps
 fi
 
+# Init git submodules
+init_submodules
+
 # Clean build directory
 if [ "$CLEAN" = true ]; then
     clean_build
