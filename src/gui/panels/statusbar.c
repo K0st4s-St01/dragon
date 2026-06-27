@@ -85,16 +85,28 @@ void panel_statusbar(Gui *g, App *app, Document *doc, ModeState *mode) {
         }
     }
 
+    int ws_errors = 0, ws_warnings = 0;
+    int buffers = app_get_buffer_count(app);
+    for (int b = 0; b < buffers; b++) {
+        Document *other = (Document *)app_get_doc_at(app, b);
+        if (!other || !other->diagnostics) continue;
+        LSPDiagnostics *diag = (LSPDiagnostics *)other->diagnostics;
+        for (int i = 0; i < diag->count; i++) {
+            if (diag->items[i].severity == LSP_DIAG_ERROR) ws_errors++;
+            else if (diag->items[i].severity == LSP_DIAG_WARNING) ws_warnings++;
+        }
+    }
+
     int lsp_ready = 0, lsp_connecting = 0, lsp_errors = 0;
     lsp_manager_status_counts((LSPManager *)app_get_lsp_manager(app),
                               &lsp_ready, &lsp_connecting, &lsp_errors);
     char lsp_buf[96];
     char spin = lsp_connecting ? spinner[(spinner_tick++ / 8) % 4] : ' ';
-    snprintf(lsp_buf, sizeof(lsp_buf), "LSP%c%d%s  E%d W%d I%d",
+    snprintf(lsp_buf, sizeof(lsp_buf), "LSP%c%d%s E%d W%d I%d WE%d WW%d",
              spin,
              lsp_ready,
              lsp_errors ? "!" : "",
-             errors, warnings, info);
+             errors, warnings, info, ws_errors, ws_warnings);
     float lsp_x = pos_x - font_text_width(&g->font, lsp_buf) - 20;
     if (lsp_x > file_x)
         font_draw(&g->font, r, lsp_buf, lsp_x, y + 4,

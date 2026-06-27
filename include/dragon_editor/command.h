@@ -55,5 +55,7 @@ void     cmd_change_dir(App *app);
 void     cmd_tree_sitter_inspect(App *app);
 void     cmd_lsp_stop(App *app);
 void     cmd_lsp_restart(App *app);
+void     cmd_workspace_symbols(App *app);
+void     cmd_workspace_diagnostics(App *app);
 
 #endif

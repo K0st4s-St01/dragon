@@ -19,6 +19,8 @@
 #include "panel_palette.h"
 #include "panel_settings.h"
 #include "panel_treesitter_inspector.h"
+#include "panel_workspace_symbols.h"
+#include "panel_workspace_diagnostics.h"
 #include <GLFW/glfw3.h>
 #include <string.h>
 #include <stdlib.h>
@@ -64,6 +66,8 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
         if (panel_palette_is_open()) { panel_palette_close(app); return; }
         if (panel_settings_is_open()) { panel_settings_close(app); return; }
         if (panel_treesitter_inspector_is_open()) { panel_treesitter_inspector_close(app); return; }
+        if (panel_workspace_symbols_is_open()) { panel_workspace_symbols_close(app); return; }
+        if (panel_workspace_diagnostics_is_open()) { panel_workspace_diagnostics_close(app); return; }
         if (!mode_is(mode, MODE_NORMAL)) {
             if (mode_is(mode, MODE_INSERT)) {
                 Document *doc = (Document *)app_get_doc(app);
@@ -102,6 +106,16 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
 
     if (panel_treesitter_inspector_is_open()) {
         panel_treesitter_inspector_key(app, key);
+        return;
+    }
+
+    if (panel_workspace_symbols_is_open()) {
+        panel_workspace_symbols_key(app, key);
+        return;
+    }
+
+    if (panel_workspace_diagnostics_is_open()) {
+        panel_workspace_diagnostics_key(app, key);
         return;
     }
 
@@ -522,6 +536,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
              }
               if (key == GLFW_KEY_D) {
                   if (mods & GLFW_MOD_SHIFT) {
+                      panel_workspace_diagnostics_open(app);
                       mode->pending_len = 0;
                       return;
                   }
@@ -532,6 +547,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
               }
               if (key == GLFW_KEY_S) {
                   if (mods & GLFW_MOD_SHIFT) {
+                      panel_workspace_symbols_open(app);
                       mode->pending_len = 0;
                       return;
                   }
@@ -1418,6 +1434,10 @@ static void handle_command_key(App *app, int key, int action, int mods) {
         lsp_manager_stop_all((LSPManager *)app_get_lsp_manager(app));
     } else if (strcmp(cmd_buf, "lsp-restart") == 0) {
         lsp_manager_restart_all((LSPManager *)app_get_lsp_manager(app));
+    } else if (strcmp(cmd_buf, "workspace-symbols") == 0) {
+        panel_workspace_symbols_open(app);
+    } else if (strcmp(cmd_buf, "workspace-diagnostics") == 0) {
+        panel_workspace_diagnostics_open(app);
     } else if (strcmp(cmd_buf, "tree-sitter-subtree") == 0 ||
                strcmp(cmd_buf, "ts-subtree") == 0 ||
                strcmp(cmd_buf, "tree-sitter-highlight-name") == 0 ||

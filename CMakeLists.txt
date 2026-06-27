@@ -53,6 +53,8 @@ set(EDITOR_SOURCES
     src/gui/panels/palette.c
     src/gui/panels/settings.c
     src/gui/panels/treesitter_inspector.c
+    src/gui/panels/workspace_symbols.c
+    src/gui/panels/workspace_diagnostics.c
 )
 
 add_executable(${PROJECT_NAME} ${EDITOR_SOURCES})

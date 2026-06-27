@@ -562,6 +562,34 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.s: cmake_forc
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.s"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/xator/dragon/src/gui/panels/treesitter_inspector.c -o CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.s
 
+CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o: CMakeFiles/dragon_editor.dir/flags.make
+CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o: /home/xator/dragon/src/gui/panels/workspace_symbols.c
+CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o: CMakeFiles/dragon_editor.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_36) "Building C object CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o -MF CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o.d -o CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o -c /home/xator/dragon/src/gui/panels/workspace_symbols.c
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/xator/dragon/src/gui/panels/workspace_symbols.c > CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.i
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/xator/dragon/src/gui/panels/workspace_symbols.c -o CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.s
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o: CMakeFiles/dragon_editor.dir/flags.make
+CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o: /home/xator/dragon/src/gui/panels/workspace_diagnostics.c
+CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o: CMakeFiles/dragon_editor.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_37) "Building C object CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o -MF CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o.d -o CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o -c /home/xator/dragon/src/gui/panels/workspace_diagnostics.c
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/xator/dragon/src/gui/panels/workspace_diagnostics.c > CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.i
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/xator/dragon/src/gui/panels/workspace_diagnostics.c -o CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.s
+
 # Object files for target dragon_editor
 dragon_editor_OBJECTS = \
 "CMakeFiles/dragon_editor.dir/src/main.c.o" \
@@ -598,7 +626,9 @@ dragon_editor_OBJECTS = \
 "CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o" \
 "CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o" \
 "CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o" \
-"CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o"
+"CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o" \
+"CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o" \
+"CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o"
 
 # External object files for target dragon_editor
 dragon_editor_EXTERNAL_OBJECTS =
@@ -638,12 +668,14 @@ dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o
 dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o
 dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o
 dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o
+dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o
+dragon_editor: CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o
 dragon_editor: CMakeFiles/dragon_editor.dir/build.make
 dragon_editor: CMakeFiles/dragon_editor.dir/compiler_depend.ts
 dragon_editor: libglad.a
 dragon_editor: libtomlc99.a
 dragon_editor: CMakeFiles/dragon_editor.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_36) "Linking C executable dragon_editor"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_38) "Linking C executable dragon_editor"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/dragon_editor.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

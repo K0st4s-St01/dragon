@@ -26,6 +26,8 @@
 #include "panel_palette.h"
 #include "panel_settings.h"
 #include "panel_treesitter_inspector.h"
+#include "panel_workspace_symbols.h"
+#include "panel_workspace_diagnostics.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -306,4 +308,6 @@ void gui_render(Gui *g, App *app, Document *doc, ModeState *mode) {
       panel_palette_render(g, app);
       panel_settings_render(g, app);
       panel_treesitter_inspector_render(g, app);
+      panel_workspace_symbols_render(g, app);
+      panel_workspace_diagnostics_render(g, app);
 }

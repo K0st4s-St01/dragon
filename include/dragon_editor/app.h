@@ -17,6 +17,7 @@ int        app_get_width(App *app);
 int        app_get_height(App *app);
 double     app_get_dt(App *app);
 void      *app_get_doc(App *app);
+void      *app_get_doc_at(App *app, int index);
 void      *app_get_mode(App *app);
 Renderer  *app_get_renderer(App *app);
 

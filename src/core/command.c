@@ -42,6 +42,8 @@ void command_registry_init(void) {
     command_register("tree-sitter-highlight-name", "Tree-sitter highlight", "LSP", cmd_tree_sitter_inspect);
     command_register("lsp-stop",       "LSP stop",            "LSP", cmd_lsp_stop);
     command_register("lsp-restart",    "LSP restart",         "LSP", cmd_lsp_restart);
+    command_register("workspace-symbols", "Workspace symbols", "LSP", cmd_workspace_symbols);
+    command_register("workspace-diagnostics", "Workspace diagnostics", "LSP", cmd_workspace_diagnostics);
 }
 
 void command_register(const char *name, const char *label,
@@ -241,4 +243,14 @@ void cmd_lsp_stop(App *app) {
 
 void cmd_lsp_restart(App *app) {
     lsp_manager_restart_all((LSPManager *)app_get_lsp_manager(app));
+}
+
+void cmd_workspace_symbols(App *app) {
+    extern void panel_workspace_symbols_open(App *);
+    panel_workspace_symbols_open(app);
+}
+
+void cmd_workspace_diagnostics(App *app) {
+    extern void panel_workspace_diagnostics_open(App *);
+    panel_workspace_diagnostics_open(app);
 }

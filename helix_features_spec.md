@@ -358,9 +358,9 @@ Enter with `Space`.
 - [ ] `Space g` — changed-file picker.
 - [x] ~~`Space k` — hover documentation.~~
 - [x] ~~`Space s` — document symbol picker.~~
-- [ ] `Space S` — workspace symbol picker.
+- [x] ~~`Space S` — workspace symbol picker.~~
 - [x] ~~`Space d` — document diagnostics picker.~~
-- [ ] `Space D` — workspace diagnostics picker.
+- [x] ~~`Space D` — workspace diagnostics picker.~~
 - [x] ~~`Space r` — rename symbol.~~
 - [x] ~~`Space a` — code action.~~
 - [x] ~~`Space h` — select references to symbol under cursor.~~
@@ -576,9 +576,9 @@ Corrected:
 - [x] ~~`Space-r` — rename symbol.~~
 - [x] ~~`Space-a` — code action.~~
 - [x] ~~`Space-s` — document symbols.~~
-- [ ] `Space-S` — workspace symbols.
+- [x] ~~`Space-S` — workspace symbols.~~
 - [x] ~~`Space-d` — document diagnostics picker.~~
-- [ ] `Space-D` — workspace diagnostics picker.
+- [x] ~~`Space-D` — workspace diagnostics picker.~~
 - [x] ~~`Space-h` — select references to symbol under cursor.~~
 - [ ] `Ctrl-x` in insert mode — completion menu.
 - [x] ~~`=` — format selection.~~
@@ -702,7 +702,7 @@ Corrected:
   - [ ] file-line-ending
   - [ ] file-type
   - [x] ~~diagnostics~~
-  - [ ] workspace-diagnostics
+  - [x] ~~workspace-diagnostics~~
   - [ ] selections
   - [ ] primary-selection-length
   - [x] ~~position~~

@@ -923,6 +923,54 @@ src/gui/panels/treesitter_inspector.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.s
 .PHONY : src/gui/panels/treesitter_inspector.c.s
 
+src/gui/panels/workspace_diagnostics.o: src/gui/panels/workspace_diagnostics.c.o
+.PHONY : src/gui/panels/workspace_diagnostics.o
+
+# target to build an object file
+src/gui/panels/workspace_diagnostics.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o
+.PHONY : src/gui/panels/workspace_diagnostics.c.o
+
+src/gui/panels/workspace_diagnostics.i: src/gui/panels/workspace_diagnostics.c.i
+.PHONY : src/gui/panels/workspace_diagnostics.i
+
+# target to preprocess a source file
+src/gui/panels/workspace_diagnostics.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.i
+.PHONY : src/gui/panels/workspace_diagnostics.c.i
+
+src/gui/panels/workspace_diagnostics.s: src/gui/panels/workspace_diagnostics.c.s
+.PHONY : src/gui/panels/workspace_diagnostics.s
+
+# target to generate assembly for a file
+src/gui/panels/workspace_diagnostics.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.s
+.PHONY : src/gui/panels/workspace_diagnostics.c.s
+
+src/gui/panels/workspace_symbols.o: src/gui/panels/workspace_symbols.c.o
+.PHONY : src/gui/panels/workspace_symbols.o
+
+# target to build an object file
+src/gui/panels/workspace_symbols.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o
+.PHONY : src/gui/panels/workspace_symbols.c.o
+
+src/gui/panels/workspace_symbols.i: src/gui/panels/workspace_symbols.c.i
+.PHONY : src/gui/panels/workspace_symbols.i
+
+# target to preprocess a source file
+src/gui/panels/workspace_symbols.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.i
+.PHONY : src/gui/panels/workspace_symbols.c.i
+
+src/gui/panels/workspace_symbols.s: src/gui/panels/workspace_symbols.c.s
+.PHONY : src/gui/panels/workspace_symbols.s
+
+# target to generate assembly for a file
+src/gui/panels/workspace_symbols.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.s
+.PHONY : src/gui/panels/workspace_symbols.c.s
+
 src/gui/text.o: src/gui/text.c.o
 .PHONY : src/gui/text.o
 
@@ -1150,6 +1198,12 @@ help:
 	@echo "... src/gui/panels/treesitter_inspector.o"
 	@echo "... src/gui/panels/treesitter_inspector.i"
 	@echo "... src/gui/panels/treesitter_inspector.s"
+	@echo "... src/gui/panels/workspace_diagnostics.o"
+	@echo "... src/gui/panels/workspace_diagnostics.i"
+	@echo "... src/gui/panels/workspace_diagnostics.s"
+	@echo "... src/gui/panels/workspace_symbols.o"
+	@echo "... src/gui/panels/workspace_symbols.i"
+	@echo "... src/gui/panels/workspace_symbols.s"
 	@echo "... src/gui/text.o"
 	@echo "... src/gui/text.i"
 	@echo "... src/gui/text.s"

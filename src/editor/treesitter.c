@@ -102,6 +102,7 @@ void treesitter_manager_free(TreeSitterManager *mgr) {
         if (lang->parser) ts_parser_delete(lang->parser);
         if (lang->tree) ts_tree_delete(lang->tree);
         if (lang->highlight_query) ts_query_delete(lang->highlight_query);
+        free(lang->source_text);
         free(lang);
     }
     free(mgr);
@@ -136,6 +137,8 @@ bool treesitter_load_language(TreeSitterManager *mgr, const char *file_extension
     lang->highlight_query = NULL;
     lang->capture_names = NULL;
     lang->capture_count = 0;
+    lang->source_text = NULL;
+    lang->source_len = 0;
     
     mgr->languages[mgr->language_count++] = lang;
     return true;
@@ -162,6 +165,15 @@ void treesitter_parse(TreeSitterLanguage *lang, const char *text, uint32_t len) 
     if (lang->tree) {
         ts_tree_delete(lang->tree);
     }
+    free(lang->source_text);
+    lang->source_text = malloc(len + 1);
+    if (lang->source_text) {
+        memcpy(lang->source_text, text, len);
+        lang->source_text[len] = '\0';
+        lang->source_len = len;
+    } else {
+        lang->source_len = 0;
+    }
     
     TSInputPayload payload = {
         .text = text,
@@ -175,6 +187,19 @@ void treesitter_parse(TreeSitterLanguage *lang, const char *text, uint32_t len) 
     };
     
     lang->tree = ts_parser_parse(lang->parser, NULL, input);
+}
+
+static char *treesitter_node_text(TreeSitterLanguage *lang, TSNode node) {
+    if (!lang || !lang->source_text) return strdup("");
+    uint32_t start = ts_node_start_byte(node);
+    uint32_t end = ts_node_end_byte(node);
+    if (end < start || end > lang->source_len) return strdup("");
+    size_t len = end - start;
+    char *text = malloc(len + 1);
+    if (!text) return strdup("");
+    memcpy(text, lang->source_text + start, len);
+    text[len] = '\0';
+    return text;
 }
 
 TreeSitterHighlight treesitter_get_highlight_at(TreeSitterLanguage *lang, uint32_t row, uint32_t col) {
@@ -266,7 +291,7 @@ TreeSitterSymbols treesitter_extract_symbols(TreeSitterLanguage *lang) {
                     TSQueryCapture capture = match.captures[i];
                     TSNode node = capture.node;
                     
-                    result.symbols[result.count].name = ts_node_string(node);
+                    result.symbols[result.count].name = treesitter_node_text(lang, node);
                     result.symbols[result.count].kind = "function";
                     result.symbols[result.count].start_row = ts_node_start_point(node).row;
                     result.symbols[result.count].start_col = ts_node_start_point(node).column;
@@ -286,6 +311,8 @@ TreeSitterSymbols treesitter_extract_symbols(TreeSitterLanguage *lang) {
 
 void treesitter_symbols_free(TreeSitterSymbols *symbols) {
     if (!symbols) return;
+    for (uint32_t i = 0; i < symbols->count; i++)
+        free(symbols->symbols[i].name);
     free(symbols->symbols);
     symbols->count = 0;
 }

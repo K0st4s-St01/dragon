@@ -60,6 +60,10 @@ int app_get_width(App *app)   { return app->win_w; }
 int app_get_height(App *app)  { return app->win_h; }
 double app_get_dt(App *app)   { return app->dt; }
 void *app_get_doc(App *app)    { return &app->documents[app->current_doc]; }
+void *app_get_doc_at(App *app, int index) {
+    if (!app || index < 0 || index >= app->doc_count) return NULL;
+    return &app->documents[index];
+}
 void *app_get_mode(App *app)  { return &app->mode; }
 Renderer *app_get_renderer(App *app) { return &app->renderer; }
 void *app_get_lsp_manager(App *app) { return &app->lsp_manager; }

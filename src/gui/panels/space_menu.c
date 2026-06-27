@@ -32,9 +32,9 @@ static SpaceCommand commands[] = {
     /* LSP features */
     {"k", "Hover documentation", true},
     {"s", "Document symbols", true},
-    {"S", "Workspace symbols", false},
+    {"S", "Workspace symbols", true},
     {"d", "Document diagnostics", true},
-    {"D", "Workspace diagnostics", false},
+    {"D", "Workspace diagnostics", true},
     {"r", "Rename symbol", true},
     {"a", "Code actions", true},
     {"h", "Select references", true},
@@ -158,6 +158,9 @@ void panel_space_menu_input(App *app, unsigned int c) {
             } else if (strcmp(key_str, "d") == 0) {
                 extern void panel_lsp_diagnostics_open(App *);
                 panel_lsp_diagnostics_open(app);
+            } else if (strcmp(key_str, "D") == 0) {
+                extern void panel_workspace_diagnostics_open(App *);
+                panel_workspace_diagnostics_open(app);
             } else if (strcmp(key_str, "?") == 0) {
                 extern void panel_palette_open(App *);
                 panel_palette_open(app);
@@ -167,6 +170,9 @@ void panel_space_menu_input(App *app, unsigned int c) {
             } else if (strcmp(key_str, "s") == 0) {
                 extern void panel_symbols_picker_open(App *);
                 panel_symbols_picker_open(app);
+            } else if (strcmp(key_str, "S") == 0) {
+                extern void panel_workspace_symbols_open(App *);
+                panel_workspace_symbols_open(app);
             } else if (strcmp(key_str, "r") == 0) {
                 extern void panel_rename_open(App *);
                 panel_rename_open(app);

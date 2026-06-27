@@ -12,6 +12,8 @@ typedef struct {
     TSQuery *highlight_query;
     const uint32_t *capture_names;
     uint32_t capture_count;
+    char *source_text;
+    uint32_t source_len;
 } TreeSitterLanguage;
 
 typedef struct {
@@ -48,7 +50,7 @@ bool treesitter_describe_node_at(TreeSitterLanguage *lang, uint32_t row, uint32_
 
 /* Query-based symbol extraction */
 typedef struct {
-    const char *name;
+    char *name;
     const char *kind;  /* "function", "class", "variable", etc */
     uint32_t start_row;
     uint32_t start_col;

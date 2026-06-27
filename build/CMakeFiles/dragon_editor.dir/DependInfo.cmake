@@ -40,6 +40,8 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/xator/dragon/src/gui/panels/statusbar.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o.d"
   "/home/xator/dragon/src/gui/panels/symbols_picker.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.o.d"
   "/home/xator/dragon/src/gui/panels/treesitter_inspector.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o.d"
+  "/home/xator/dragon/src/gui/panels/workspace_diagnostics.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o.d"
+  "/home/xator/dragon/src/gui/panels/workspace_symbols.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o.d"
   "/home/xator/dragon/src/gui/text.c" "CMakeFiles/dragon_editor.dir/src/gui/text.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/text.c.o.d"
   "/home/xator/dragon/src/gui/theme.c" "CMakeFiles/dragon_editor.dir/src/gui/theme.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/theme.c.o.d"
   "/home/xator/dragon/src/main.c" "CMakeFiles/dragon_editor.dir/src/main.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/main.c.o.d"

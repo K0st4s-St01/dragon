@@ -55,6 +55,8 @@ static PaletteEntry entries[] = {
     {"Tree-sitter subtree", ":ts-subtree", "LSP", cmd_tree_sitter_inspect},
     {"LSP restart",     ":lsp-restart", "LSP", cmd_lsp_restart},
     {"LSP stop",        ":lsp-stop", "LSP", cmd_lsp_stop},
+    {"Workspace symbols", "Space S", "LSP", cmd_workspace_symbols},
+    {"Workspace diagnostics", "Space D", "LSP", cmd_workspace_diagnostics},
 };
 #define ENTRY_COUNT (int)(sizeof(entries) / sizeof(entries[0]))
 
