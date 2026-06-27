@@ -115,8 +115,10 @@ static int char_display_width(char c, int display_col, int tab_width) {
 static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
     Renderer *r = app_get_renderer(app);
     Theme *t = theme_get();
+    Config *cfg = app_get_config(app);
     int win_w = app_get_width(app);
     int win_h = app_get_height(app);
+    int tab_width = cfg ? cfg->tab_width : 4;
 
     float gutter_w = 60.0f;
     float line_h = g->font.glyph_h + 6.0f;  /* Better spacing */
@@ -209,8 +211,6 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
         while (line_len > 0 && (line[line_len-1] == '\n' || line[line_len-1] == '\r'))
             line_len--;
 
-        int tab_width = 4;
-        
         /* Render text with syntax highlighting */
         if (line_len > 0) {
             int col = 0;
@@ -236,7 +236,6 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
 
     /* Cursors */
     if (mode_is(mode, MODE_INSERT) || mode_is(mode, MODE_NORMAL)) {
-        int tab_width = 4;
         for (int ci = 0; ci < doc->cursor_count; ci++) {
             Cursor *c = &doc->cursors[ci];
             int csr = c->row - first_line;

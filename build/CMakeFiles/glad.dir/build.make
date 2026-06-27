@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/xator/Projects/dragon
+CMAKE_SOURCE_DIR = /home/xator/dragon
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/xator/Projects/dragon/build
+CMAKE_BINARY_DIR = /home/xator/dragon/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/glad.dir/depend.make
@@ -73,18 +73,18 @@ CMakeFiles/glad.dir/codegen:
 .PHONY : CMakeFiles/glad.dir/codegen
 
 CMakeFiles/glad.dir/vendor/glad/src/glad.c.o: CMakeFiles/glad.dir/flags.make
-CMakeFiles/glad.dir/vendor/glad/src/glad.c.o: /home/xator/Projects/dragon/vendor/glad/src/glad.c
+CMakeFiles/glad.dir/vendor/glad/src/glad.c.o: /home/xator/dragon/vendor/glad/src/glad.c
 CMakeFiles/glad.dir/vendor/glad/src/glad.c.o: CMakeFiles/glad.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/xator/Projects/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/glad.dir/vendor/glad/src/glad.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/glad.dir/vendor/glad/src/glad.c.o -MF CMakeFiles/glad.dir/vendor/glad/src/glad.c.o.d -o CMakeFiles/glad.dir/vendor/glad/src/glad.c.o -c /home/xator/Projects/dragon/vendor/glad/src/glad.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/glad.dir/vendor/glad/src/glad.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/glad.dir/vendor/glad/src/glad.c.o -MF CMakeFiles/glad.dir/vendor/glad/src/glad.c.o.d -o CMakeFiles/glad.dir/vendor/glad/src/glad.c.o -c /home/xator/dragon/vendor/glad/src/glad.c
 
 CMakeFiles/glad.dir/vendor/glad/src/glad.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/glad.dir/vendor/glad/src/glad.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/xator/Projects/dragon/vendor/glad/src/glad.c > CMakeFiles/glad.dir/vendor/glad/src/glad.c.i
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/xator/dragon/vendor/glad/src/glad.c > CMakeFiles/glad.dir/vendor/glad/src/glad.c.i
 
 CMakeFiles/glad.dir/vendor/glad/src/glad.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/glad.dir/vendor/glad/src/glad.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/xator/Projects/dragon/vendor/glad/src/glad.c -o CMakeFiles/glad.dir/vendor/glad/src/glad.c.s
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/xator/dragon/vendor/glad/src/glad.c -o CMakeFiles/glad.dir/vendor/glad/src/glad.c.s
 
 # Object files for target glad
 glad_OBJECTS = \
@@ -96,7 +96,7 @@ glad_EXTERNAL_OBJECTS =
 libglad.a: CMakeFiles/glad.dir/vendor/glad/src/glad.c.o
 libglad.a: CMakeFiles/glad.dir/build.make
 libglad.a: CMakeFiles/glad.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/xator/Projects/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking C static library libglad.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking C static library libglad.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/glad.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/glad.dir/link.txt --verbose=$(VERBOSE)
 
@@ -109,6 +109,6 @@ CMakeFiles/glad.dir/clean:
 .PHONY : CMakeFiles/glad.dir/clean
 
 CMakeFiles/glad.dir/depend:
-	cd /home/xator/Projects/dragon/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/xator/Projects/dragon /home/xator/Projects/dragon /home/xator/Projects/dragon/build /home/xator/Projects/dragon/build /home/xator/Projects/dragon/build/CMakeFiles/glad.dir/DependInfo.cmake "--color=$(COLOR)" glad
+	cd /home/xator/dragon/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/xator/dragon /home/xator/dragon /home/xator/dragon/build /home/xator/dragon/build /home/xator/dragon/build/CMakeFiles/glad.dir/DependInfo.cmake "--color=$(COLOR)" glad
 .PHONY : CMakeFiles/glad.dir/depend
 

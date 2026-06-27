@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/xator/Projects/dragon
+CMAKE_SOURCE_DIR = /home/xator/dragon
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/xator/Projects/dragon/build
+CMAKE_BINARY_DIR = /home/xator/dragon/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/tomlc99.dir/depend.make
@@ -73,18 +73,18 @@ CMakeFiles/tomlc99.dir/codegen:
 .PHONY : CMakeFiles/tomlc99.dir/codegen
 
 CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: CMakeFiles/tomlc99.dir/flags.make
-CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: /home/xator/Projects/dragon/vendor/tomlc99/toml.c
+CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: /home/xator/dragon/vendor/tomlc99/toml.c
 CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: CMakeFiles/tomlc99.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/xator/Projects/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o -MF CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o.d -o CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o -c /home/xator/Projects/dragon/vendor/tomlc99/toml.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o -MF CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o.d -o CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o -c /home/xator/dragon/vendor/tomlc99/toml.c
 
 CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/xator/Projects/dragon/vendor/tomlc99/toml.c > CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.i
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/xator/dragon/vendor/tomlc99/toml.c > CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.i
 
 CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/xator/Projects/dragon/vendor/tomlc99/toml.c -o CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.s
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/xator/dragon/vendor/tomlc99/toml.c -o CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.s
 
 # Object files for target tomlc99
 tomlc99_OBJECTS = \
@@ -96,7 +96,7 @@ tomlc99_EXTERNAL_OBJECTS =
 libtomlc99.a: CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o
 libtomlc99.a: CMakeFiles/tomlc99.dir/build.make
 libtomlc99.a: CMakeFiles/tomlc99.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/xator/Projects/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking C static library libtomlc99.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/xator/dragon/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking C static library libtomlc99.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/tomlc99.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/tomlc99.dir/link.txt --verbose=$(VERBOSE)
 
@@ -109,6 +109,6 @@ CMakeFiles/tomlc99.dir/clean:
 .PHONY : CMakeFiles/tomlc99.dir/clean
 
 CMakeFiles/tomlc99.dir/depend:
-	cd /home/xator/Projects/dragon/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/xator/Projects/dragon /home/xator/Projects/dragon /home/xator/Projects/dragon/build /home/xator/Projects/dragon/build /home/xator/Projects/dragon/build/CMakeFiles/tomlc99.dir/DependInfo.cmake "--color=$(COLOR)" tomlc99
+	cd /home/xator/dragon/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/xator/dragon /home/xator/dragon /home/xator/dragon/build /home/xator/dragon/build /home/xator/dragon/build/CMakeFiles/tomlc99.dir/DependInfo.cmake "--color=$(COLOR)" tomlc99
 .PHONY : CMakeFiles/tomlc99.dir/depend
 

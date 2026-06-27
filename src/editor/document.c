@@ -82,7 +82,6 @@ void document_open(Document *doc, const char *path) {
                 buffer_text[total_len] = '\0';
                 
                 /* Apply basic syntax highlighting */
-                extern void syntax_highlight_basic(SyntaxHighlighting *, const char *, size_t);
                 syntax_highlight_basic(&doc->syntax, buffer_text, total_len);
                 
                 free(buffer_text);
@@ -2907,7 +2906,6 @@ void document_update_syntax_from_lsp(Document *doc, void *lsp_manager) {
     }
     
     /* Parse and update syntax */
-    extern void syntax_update_from_lsp(SyntaxHighlighting *, const char *);
     syntax_update_from_lsp(&doc->syntax, response);
     
     free(response);
@@ -2928,7 +2926,6 @@ void document_update_diagnostics_from_lsp(Document *doc, void *lsp_manager) {
     if (!response) return;
     
     /* Check if it's a publishDiagnostics notification */
-    extern LSPDiagnostics *lsp_parse_publish_diagnostics_notification(const char *);
     LSPDiagnostics *diagnostics = lsp_parse_publish_diagnostics_notification(response);
     
     if (diagnostics && diagnostics->count > 0) {
@@ -3019,7 +3016,6 @@ void document_parse_treesitter(Document *doc, void *ts_manager) {
     treesitter_parse(lang, buffer_text, (uint32_t)total_len);
     
     /* Generate syntax tokens from tree-sitter parse */
-    extern void treesitter_generate_syntax_tokens(TreeSitterLanguage *, SyntaxHighlighting *);
     treesitter_generate_syntax_tokens(lang, &doc->syntax);
     
     free(buffer_text);

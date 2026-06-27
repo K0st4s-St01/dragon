@@ -38,38 +38,38 @@ Config *config_default(void) {
     cfg->theme.bg[0] = cfg->theme.bg[1] = cfg->theme.bg[2] = 0.0f;
     cfg->theme.bg[3] = 1.0f;
     
-    cfg->theme.fg[0] = cfg->theme.fg[1] = cfg->theme.fg[2] = 1.0f;
+    cfg->theme.fg[0] = 1.0f; cfg->theme.fg[1] = 0.0f; cfg->theme.fg[2] = 0.0f;
     cfg->theme.fg[3] = 1.0f;
     
     cfg->theme.gutter_bg[0] = cfg->theme.gutter_bg[1] = cfg->theme.gutter_bg[2] = 0.0f;
     cfg->theme.gutter_bg[3] = 1.0f;
     
-    cfg->theme.gutter_fg[0] = 0.5f; cfg->theme.gutter_fg[1] = 0.5f; cfg->theme.gutter_fg[2] = 0.5f;
+    cfg->theme.gutter_fg[0] = 1.0f; cfg->theme.gutter_fg[1] = 0.0f; cfg->theme.gutter_fg[2] = 1.0f;
     cfg->theme.gutter_fg[3] = 1.0f;
     
-    cfg->theme.status_bg[0] = cfg->theme.status_bg[1] = cfg->theme.status_bg[2] = 0.0f;
+    cfg->theme.status_bg[0] = 0.05f; cfg->theme.status_bg[1] = 0.0f; cfg->theme.status_bg[2] = 0.05f;
     cfg->theme.status_bg[3] = 1.0f;
     
-    cfg->theme.status_fg[0] = cfg->theme.status_fg[1] = cfg->theme.status_fg[2] = 1.0f;
+    cfg->theme.status_fg[0] = 1.0f; cfg->theme.status_fg[1] = 0.0f; cfg->theme.status_fg[2] = 1.0f;
     cfg->theme.status_fg[3] = 1.0f;
     
-    cfg->theme.selection_bg[0] = 0.5f; cfg->theme.selection_bg[1] = 0.0f; cfg->theme.selection_bg[2] = 0.5f;
-    cfg->theme.selection_bg[3] = 0.5f;
+    cfg->theme.selection_bg[0] = 1.0f; cfg->theme.selection_bg[1] = 0.0f; cfg->theme.selection_bg[2] = 0.5f;
+    cfg->theme.selection_bg[3] = 1.0f;
     
-    cfg->theme.cursor_color[0] = 1.0f; cfg->theme.cursor_color[1] = 1.0f; cfg->theme.cursor_color[2] = 1.0f;
+    cfg->theme.cursor_color[0] = 1.0f; cfg->theme.cursor_color[1] = 0.0f; cfg->theme.cursor_color[2] = 0.0f;
     cfg->theme.cursor_color[3] = 1.0f;
     
-    cfg->theme.line_highlight[0] = 0.1f; cfg->theme.line_highlight[1] = 0.1f; cfg->theme.line_highlight[2] = 0.1f;
-    cfg->theme.line_highlight[3] = 0.3f;
+    cfg->theme.line_highlight[0] = 0.2f; cfg->theme.line_highlight[1] = 0.0f; cfg->theme.line_highlight[2] = 0.0f;
+    cfg->theme.line_highlight[3] = 0.6f;
     
     cfg->theme.menu_bg[0] = cfg->theme.menu_bg[1] = cfg->theme.menu_bg[2] = 0.0f;
-    cfg->theme.menu_bg[3] = 1.0f;
+    cfg->theme.menu_bg[3] = 0.99f;
     
-    cfg->theme.menu_fg[0] = cfg->theme.menu_fg[1] = cfg->theme.menu_fg[2] = 1.0f;
+    cfg->theme.menu_fg[0] = 1.0f; cfg->theme.menu_fg[1] = 0.0f; cfg->theme.menu_fg[2] = 1.0f;
     cfg->theme.menu_fg[3] = 1.0f;
     
-    cfg->theme.menu_selected[0] = 0.5f; cfg->theme.menu_selected[1] = 0.0f; cfg->theme.menu_selected[2] = 0.5f;
-    cfg->theme.menu_selected[3] = 1.0f;
+    cfg->theme.menu_selected[0] = 1.0f; cfg->theme.menu_selected[1] = 0.0f; cfg->theme.menu_selected[2] = 0.5f;
+    cfg->theme.menu_selected[3] = 0.9f;
     
     cfg->theme.accent[0] = 1.0f; cfg->theme.accent[1] = 0.0f; cfg->theme.accent[2] = 1.0f;
     cfg->theme.accent[3] = 1.0f;
@@ -83,16 +83,16 @@ Config *config_default(void) {
     cfg->theme.keyword[0] = 1.0f; cfg->theme.keyword[1] = 0.0f; cfg->theme.keyword[2] = 1.0f;
     cfg->theme.keyword[3] = 1.0f;
     
-    cfg->theme.string[0] = 0.0f; cfg->theme.string[1] = 1.0f; cfg->theme.string[2] = 0.0f;
+    cfg->theme.string[0] = 1.0f; cfg->theme.string[1] = 1.0f; cfg->theme.string[2] = 0.0f;
     cfg->theme.string[3] = 1.0f;
     
     cfg->theme.number[0] = 0.0f; cfg->theme.number[1] = 1.0f; cfg->theme.number[2] = 1.0f;
     cfg->theme.number[3] = 1.0f;
     
-    cfg->theme.comment[0] = 0.5f; cfg->theme.comment[1] = 0.5f; cfg->theme.comment[2] = 0.5f;
+    cfg->theme.comment[0] = 0.5f; cfg->theme.comment[1] = 0.0f; cfg->theme.comment[2] = 0.5f;
     cfg->theme.comment[3] = 1.0f;
     
-    cfg->theme.function_color[0] = 0.0f; cfg->theme.function_color[1] = 1.0f; cfg->theme.function_color[2] = 1.0f;
+    cfg->theme.function_color[0] = 0.0f; cfg->theme.function_color[1] = 1.0f; cfg->theme.function_color[2] = 0.0f;
     cfg->theme.function_color[3] = 1.0f;
     
     cfg->theme.type_color[0] = 0.0f; cfg->theme.type_color[1] = 1.0f; cfg->theme.type_color[2] = 1.0f;

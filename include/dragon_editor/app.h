@@ -41,4 +41,7 @@ void *app_get_lsp_manager(App *app);
 /* Tree-Sitter management */
 void *app_get_treesitter_manager(App *app);
 
+/* Config */
+Config *app_get_config(App *app);
+
 #endif

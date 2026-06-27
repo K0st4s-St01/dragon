@@ -4,7 +4,7 @@
 # compile C with /usr/bin/cc
 C_DEFINES = 
 
-C_INCLUDES = -I/home/xator/Projects/dragon/vendor/glad/include
+C_INCLUDES = -I/home/xator/dragon/vendor/glad/include
 
 C_FLAGS = -O3 -DNDEBUG -std=gnu11
 

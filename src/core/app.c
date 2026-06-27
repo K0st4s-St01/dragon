@@ -9,6 +9,7 @@
 #include "dragon_editor/lsp_config.h"
 #include "dragon_editor/treesitter.h"
 #include "dragon_editor/config.h"
+#include "dragon_editor/theme.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -63,6 +64,7 @@ void *app_get_mode(App *app)  { return &app->mode; }
 Renderer *app_get_renderer(App *app) { return &app->renderer; }
 void *app_get_lsp_manager(App *app) { return &app->lsp_manager; }
 void *app_get_treesitter_manager(App *app) { return app->ts_manager; }
+Config *app_get_config(App *app) { return app->config; }
 
 void app_set_clipboard(App *app, const char *text) {
     free(app->clipboard);
@@ -109,7 +111,6 @@ App *app_create(int width, int height, const char *title) {
     mode_init(&app->mode);
     
     /* Load configuration and apply theme */
-    extern void theme_apply_config(const void *config_ptr);
     app->config = config_load();
     theme_apply_config(app->config);
     
@@ -164,25 +165,22 @@ void app_run(App *app) {
         /* Throttled syntax highlighting update every 30 frames (~500ms at 60fps) */
         Document *doc = &app->documents[app->current_doc];
         app->syntax_update_timer++;
-        if (app->syntax_update_timer >= 30 && doc && doc->language_id) {
+        if (app->syntax_update_timer >= 30 && doc && doc->language_id && !doc->ts_parsed) {
             app->syntax_update_timer = 0;
-            extern void document_update_syntax_from_lsp(Document *, void *);
             document_update_syntax_from_lsp(doc, &app->lsp_manager);
         }
         
         /* Check for LSP diagnostics notifications (non-blocking) */
         if (doc && doc->language_id) {
-            extern void document_update_diagnostics_from_lsp(Document *, void *);
             document_update_diagnostics_from_lsp(doc, &app->lsp_manager);
         }
         
         /* Parse document with treesitter for better syntax highlighting (only when dirty) */
         if (doc && app->ts_manager && doc->dirty) {
-            extern void document_parse_treesitter(Document *, void *);
             document_parse_treesitter(doc, app->ts_manager);
+            doc->ts_parsed = (doc->syntax.token_count > 0);
             
             /* Notify LSP of document changes */
-            extern void document_notify_lsp_change(Document *, void *);
             document_notify_lsp_change(doc, &app->lsp_manager);
             
             doc->dirty = false;

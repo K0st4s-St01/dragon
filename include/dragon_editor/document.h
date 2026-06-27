@@ -37,6 +37,7 @@ typedef struct {
     int goto_result_count;
     void *hover_result;  /* LSPHover* from LSP hover request */
     void *diagnostics;  /* LSPDiagnostics* from LSP publish diagnostics */
+    bool  ts_parsed;    /* True if tree-sitter has parsed this document */
 } Document;
 
 void document_init(Document *doc);
