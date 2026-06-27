@@ -4,12 +4,14 @@
 #include "theme.h"
 #include "gui.h"
 #include "renderer.h"
+#include "document.h"
 
 #include <string.h>
 #include <GLFW/glfw3.h>
 
 static bool sm_open = false;
-static int sm_scroll = 0;  /* Scroll offset */
+static int sm_scroll = 0;
+static bool sm_submenu = false;  /* true when viewing window submenu */
 
 typedef struct {
     const char *key;
@@ -17,19 +19,20 @@ typedef struct {
     bool implemented;
 } SpaceCommand;
 
+/* ---- Main menu commands ---- */
 static SpaceCommand commands[] = {
-    /* File operations */
+    /* Files & Buffers */
     {"f", "File picker (workspace root)", true},
     {"F", "File picker (current dir)", true},
+    {"o", "File picker ($HOME)", true},
     {"b", "Buffer picker", true},
     {"j", "Jumplist picker", true},
-    
-    /* Search & Navigation */
+
+    /* Search */
     {"/", "Global search", true},
     {"?", "Command palette", true},
-    {"g", "Changed files (git)", false},
-    
-    /* LSP features */
+
+    /* LSP Features */
     {"k", "Hover documentation", true},
     {"s", "Document symbols", true},
     {"S", "Workspace symbols", true},
@@ -39,34 +42,63 @@ static SpaceCommand commands[] = {
     {"a", "Code actions", true},
     {"h", "Select references", true},
     {"t", "Tree-sitter node", true},
-    
+
     /* Editing */
-    {"c", "Comment toggle", true},
-    {"C", "Block comment", false},
-    
-    /* Clipboard */
-    {"y", "Yank to clipboard", true},
-    {"Y", "Yank primary selection", false},
-    {"p", "Paste after", true},
-    {"P", "Paste before", true},
-    {"R", "Replace with clipboard", false},
-    
-    /* Modes */
-    {"w", "Window mode", false},
+    {"c", "Comment toggle (line)", true},
+    {"C", "Comment toggle (block)", true},
+
+    /* Clipboard (System) */
+    {"y", "Yank selection to clipboard", true},
+    {"Y", "Yank main selection to clipboard", true},
+    {"p", "Paste from clipboard (after)", true},
+    {"P", "Paste from clipboard (before)", true},
+    {"R", "Replace selection with clipboard", true},
+
+    /* Window */
+    {"w", "Window management ...", true},
 };
 
 #define CMD_COUNT (int)(sizeof(commands) / sizeof(commands[0]))
+
+/* ---- Window submenu commands ---- */
+static SpaceCommand window_cmds[] = {
+    {"v", "Split vertical",         true},
+    {"h", "Split horizontal",       true},
+    {"q", "Close split",            true},
+    {"j", "Navigate down",          true},
+    {"k", "Navigate up",            true},
+    {"H", "Navigate left",          true},
+    {"L", "Navigate right",         true},
+    {"z", "Maximize split",         true},
+    {"e", "Equalize splits",        true},
+    {"n", "Next window",            true},
+    {"p", "Previous window",        true},
+};
+
+#define WIN_CMD_COUNT (int)(sizeof(window_cmds) / sizeof(window_cmds[0]))
+
+static const char *get_category(int idx) {
+    if (idx == 0)  return "Files & Buffers";
+    if (idx == 5)  return "Search";
+    if (idx == 7)  return "LSP Features";
+    if (idx == 16) return "Editing";
+    if (idx == 18) return "Clipboard (System)";
+    if (idx == 23) return "Window";
+    return "";
+}
 
 void panel_space_menu_open(App *app) {
     (void)app;
     sm_open = true;
     sm_scroll = 0;
+    sm_submenu = false;
 }
 
 void panel_space_menu_close(App *app) {
     (void)app;
     sm_open = false;
     sm_scroll = 0;
+    sm_submenu = false;
 }
 
 bool panel_space_menu_is_open(void) {
@@ -76,10 +108,11 @@ bool panel_space_menu_is_open(void) {
 void panel_space_menu_key(App *app, int key) {
     (void)app;
     if (!sm_open) return;
-    
-    int max_scroll = CMD_COUNT - 8;  /* Show ~8 items at a time */
+
+    int count = sm_submenu ? WIN_CMD_COUNT : CMD_COUNT;
+    int max_scroll = count - 8;
     if (max_scroll < 0) max_scroll = 0;
-    
+
     switch (key) {
         case GLFW_KEY_UP:
             if (sm_scroll > 0) sm_scroll--;
@@ -95,52 +128,76 @@ void panel_space_menu_key(App *app, int key) {
             sm_scroll += 5;
             if (sm_scroll > max_scroll) sm_scroll = max_scroll;
             break;
+        case GLFW_KEY_BACKSPACE:
+            /* Go back from submenu to main menu */
+            if (sm_submenu) {
+                sm_submenu = false;
+                sm_scroll = 0;
+            }
+            break;
     }
 }
 
 void panel_space_menu_input(App *app, unsigned int c) {
     if (!sm_open) return;
-    
-    /* Ignore space key - it just opens/closes the menu */
     if (c == ' ') return;
-    
+
     Document *doc = (Document *)app_get_doc(app);
     ModeState *mode = (ModeState *)app_get_mode(app);
-    
-    /* Convert character to key string for matching */
+
     char cmd_key[2] = {(char)c, '\0'};
-    
-    /* Handle special key characters */
     const char *key_str = NULL;
     if (c == '/') key_str = "/";
     else if (c == '?') key_str = "?";
-    else if (c > 32 && c < 127) {
-        key_str = cmd_key;
-    }
-    
+    else if (c > 32 && c < 127) key_str = cmd_key;
+
     if (!key_str) {
         panel_space_menu_close(app);
         return;
     }
-    
-    /* Find and execute matching command */
+
+    /* ---- Submenu mode ---- */
+    if (sm_submenu) {
+        for (int i = 0; i < WIN_CMD_COUNT; i++) {
+            if (strcmp(window_cmds[i].key, key_str) == 0) {
+                if (strcmp(key_str, "v") == 0) { app_split_vertical(app); }
+                else if (strcmp(key_str, "h") == 0) { app_split_horizontal(app); }
+                else if (strcmp(key_str, "q") == 0) { app_close_split(app); }
+                else if (strcmp(key_str, "j") == 0) { app_goto_window_down(app); }
+                else if (strcmp(key_str, "k") == 0) { app_goto_window_up(app); }
+                else if (strcmp(key_str, "H") == 0) { app_goto_window_left(app); }
+                else if (strcmp(key_str, "L") == 0) { app_goto_window_right(app); }
+                else if (strcmp(key_str, "z") == 0) { app_maximize_window(app); }
+                else if (strcmp(key_str, "e") == 0) { app_equalize_windows(app); }
+                else if (strcmp(key_str, "n") == 0) { app_next_window(app); }
+                else if (strcmp(key_str, "p") == 0) { app_prev_window(app); }
+
+                panel_space_menu_close(app);
+                mode->pending_len = 0;
+                return;
+            }
+        }
+        panel_space_menu_close(app);
+        return;
+    }
+
+    /* ---- Main menu mode ---- */
     for (int i = 0; i < CMD_COUNT; i++) {
         if (strcmp(commands[i].key, key_str) == 0) {
-            /* Command found - execute if implemented */
             if (!commands[i].implemented) {
-                /* Not implemented */
                 panel_space_menu_close(app);
                 return;
             }
-            
-            /* Execute command based on key */
+
             if (strcmp(key_str, "f") == 0) {
                 extern void panel_file_browser_open_at(App *, const char *);
-                const char *workspace = app_get_workspace_root(app);
-                panel_file_browser_open_at(app, workspace);
+                panel_file_browser_open_at(app, app_get_workspace_root(app));
             } else if (strcmp(key_str, "F") == 0) {
                 extern void panel_file_browser_open(App *);
                 panel_file_browser_open(app);
+            } else if (strcmp(key_str, "o") == 0) {
+                extern void panel_file_browser_open_at_home(App *);
+                panel_file_browser_open_at_home(app);
             } else if (strcmp(key_str, "b") == 0) {
                 extern void panel_buffer_picker_open(App *);
                 panel_buffer_picker_open(app);
@@ -150,29 +207,26 @@ void panel_space_menu_input(App *app, unsigned int c) {
             } else if (strcmp(key_str, "/") == 0) {
                 extern void panel_find_open(App *, Document *);
                 panel_find_open(app, doc);
-            } else if (strcmp(key_str, "k") == 0) {
-                extern void document_lsp_hover(Document *, void *);
-                document_lsp_hover(doc, app_get_lsp_manager(app));
-                extern void panel_lsp_hover_open(App *);
-                panel_lsp_hover_open(app);
-            } else if (strcmp(key_str, "d") == 0) {
-                extern void panel_lsp_diagnostics_open(App *);
-                panel_lsp_diagnostics_open(app);
-            } else if (strcmp(key_str, "D") == 0) {
-                extern void panel_workspace_diagnostics_open(App *);
-                panel_workspace_diagnostics_open(app);
             } else if (strcmp(key_str, "?") == 0) {
                 extern void panel_palette_open(App *);
                 panel_palette_open(app);
-            } else if (strcmp(key_str, "c") == 0) {
-                extern void document_comment_toggle(Document *);
-                document_comment_toggle(doc);
+            } else if (strcmp(key_str, "k") == 0) {
+                extern void document_lsp_hover(Document *, void *);
+                extern void panel_lsp_hover_open(App *);
+                document_lsp_hover(doc, app_get_lsp_manager(app));
+                panel_lsp_hover_open(app);
             } else if (strcmp(key_str, "s") == 0) {
                 extern void panel_symbols_picker_open(App *);
                 panel_symbols_picker_open(app);
             } else if (strcmp(key_str, "S") == 0) {
                 extern void panel_workspace_symbols_open(App *);
                 panel_workspace_symbols_open(app);
+            } else if (strcmp(key_str, "d") == 0) {
+                extern void panel_lsp_diagnostics_open(App *);
+                panel_lsp_diagnostics_open(app);
+            } else if (strcmp(key_str, "D") == 0) {
+                extern void panel_workspace_diagnostics_open(App *);
+                panel_workspace_diagnostics_open(app);
             } else if (strcmp(key_str, "r") == 0) {
                 extern void panel_rename_open(App *);
                 panel_rename_open(app);
@@ -184,217 +238,163 @@ void panel_space_menu_input(App *app, unsigned int c) {
             } else if (strcmp(key_str, "t") == 0) {
                 extern void panel_treesitter_inspector_open(App *);
                 panel_treesitter_inspector_open(app);
+            } else if (strcmp(key_str, "c") == 0) {
+                document_comment_toggle(doc);
+            } else if (strcmp(key_str, "C") == 0) {
+                const LanguageSettings *ls = language_settings_get(doc->language_id);
+                if (ls && ls->comment_open && ls->comment_open[0])
+                    document_comment_toggle_block(doc, ls->comment_open, ls->comment_close);
+                else
+                    document_comment_toggle_block(doc, "/*", "*/");
             } else if (strcmp(key_str, "y") == 0) {
-                document_yank(doc);
+                document_yank_to_system_clipboard(doc);
+            } else if (strcmp(key_str, "Y") == 0) {
+                document_yank_main_to_system_clipboard(doc);
             } else if (strcmp(key_str, "p") == 0) {
-                document_paste(doc);
+                document_paste_from_system_clipboard(doc);
             } else if (strcmp(key_str, "P") == 0) {
-                document_paste_before(doc);
+                document_paste_before_from_system_clipboard(doc);
+            } else if (strcmp(key_str, "R") == 0) {
+                document_replace_selection_from_system_clipboard(doc);
+            } else if (strcmp(key_str, "w") == 0) {
+                /* Open window submenu */
+                sm_submenu = true;
+                sm_scroll = 0;
+                mode->pending_len = 0;
+                return;
             }
-            
+
             panel_space_menu_close(app);
             mode->pending_len = 0;
             return;
         }
     }
-    
-    /* Command not found */
+
     panel_space_menu_close(app);
 }
 
-void panel_space_menu_render(Gui *g, App *app) {
-    if (!sm_open) return;
-    
+static void render_menu_list(Gui *g, App *app, SpaceCommand *cmds, int count,
+                             const char *title, const char *subtitle) {
     Renderer *r = app_get_renderer(app);
     Theme *t = theme_get();
     int w = app_get_width(app);
     int h = app_get_height(app);
-    
-    /* Panel dimensions - full height, right side */
+
     float pw = 620.0f;
     float ph = (float)h;
     float px = (float)w - pw;
     float py = 0.0f;
-    
-    /* Darker overlay on left side for more contrast */
+
+    /* Dim overlay */
     renderer_draw_rect(r, 0, 0, px, (float)h,
                        0.0f, 0.0f, 0.0f, 0.5f);
-    
-    /* Panel background - pure black for evil look */
+
+    /* Panel background */
     renderer_draw_rect(r, px, py, pw, ph,
                        0.00f, 0.00f, 0.00f, 0.99f);
-    
-    /* Thick evil magenta left accent border */
+
+    /* Borders */
     renderer_draw_rect(r, px, py, 4, ph,
                        t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    
-    /* Top accent border too */
     renderer_draw_rect(r, px, py, pw, 3,
                        t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    
-    /* Right border */
     renderer_draw_rect(r, px + pw - 2, py, 2, ph,
                        t->accent[0], t->accent[1], t->accent[2], 0.3f);
-    
-    /* Title area background */
+
+    /* Title area */
     renderer_draw_rect(r, px, py, pw, 56,
                        0.05f, 0.05f, 0.08f, 0.9f);
-    
-    /* Separator after title */
     renderer_draw_rect(r, px + 4, py + 56, pw - 8, 1,
                        t->accent[0], t->accent[1], t->accent[2], 0.3f);
-    
-    /* Title - bigger and more visible */
-    font_draw(&g->font, r, "Space Mode Commands", px + 20, py + 14,
+
+    font_draw(&g->font, r, title, px + 20, py + 14,
               t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    
-    /* Subtitle */
-    font_draw(&g->font, r, "Use ↑↓ to scroll, type key, or press Esc", px + 20, py + 34,
+    font_draw(&g->font, r, subtitle, px + 20, py + 34,
               t->accent[0] * 0.8f, t->accent[1] * 0.8f, t->accent[2] * 0.8f, 0.8f);
-    
-    /* Scrollable list area - between title and footer */
+
+    /* Scrollable list */
     float list_y = py + 62;
-    float list_h = ph - 62 - 40;  /* Leave room for footer (40px) */
+    float list_h = ph - 62 - 40;
     float line_h = g->font.glyph_h + 8;
     int visible_lines = (int)(list_h / line_h);
-    
-    /* Draw scrollable area boundary */
+
     renderer_draw_rect(r, px + 8, list_y, pw - 8 - 12, list_h,
                        0.0f, 0.0f, 0.0f, 0.3f);
-    
-    /* Render visible items */
-    const char *current_category = "";
-    int line_count = 0;
-    float y = list_y;
-    int start_idx = 0;
+
+    /* Clamp scroll */
+    int max_scroll = count - visible_lines;
+    if (max_scroll < 0) max_scroll = 0;
+    if (sm_scroll > max_scroll) sm_scroll = max_scroll;
+    if (sm_scroll < 0) sm_scroll = 0;
+
+    int start_idx = sm_scroll;
     int rendered = 0;
-    
-    for (int i = 0; i < CMD_COUNT; i++) {
-        /* Count category headers */
-        const char *category = "";
-        if (i == 0) category = "Files & Buffers";
-        else if (i == 4) category = "Search";
-        else if (i == 7) category = "LSP Features";
-        else if (i == 15) category = "Editing";
-        else if (i == 17) category = "Clipboard";
-        else if (i == 22) category = "Modes";
-        
-        if (category[0] && strcmp(category, current_category) != 0) {
-            current_category = category;
-            line_count++;  /* Category header takes a line */
-        }
-        
-        if (line_count > sm_scroll) {
-            start_idx = i;
-            break;
-        }
-        line_count++;
-    }
-    
-    /* Reset for actual rendering */
-    current_category = "";
-    line_count = 0;
-    for (int i = 0; i < start_idx; i++) {
-        const char *category = "";
-        if (i == 0) category = "Files & Buffers";
-        else if (i == 4) category = "Search";
-        else if (i == 7) category = "LSP Features";
-        else if (i == 15) category = "Editing";
-        else if (i == 17) category = "Clipboard";
-        else if (i == 22) category = "Modes";
-        
-        if (category[0] && strcmp(category, current_category) != 0) {
-            current_category = category;
-        }
-    }
-    
-    /* Render from scroll position */
-    y = list_y;
-    for (int i = start_idx; i < CMD_COUNT && rendered < visible_lines; i++) {
-        SpaceCommand *cmd = &commands[i];
-        
-        /* Category headers */
-        const char *category = "";
-        if (i == 0) category = "Files & Buffers";
-        else if (i == 4) category = "Search";
-        else if (i == 7) category = "LSP Features";
-        else if (i == 15) category = "Editing";
-        else if (i == 17) category = "Clipboard";
-        else if (i == 22) category = "Modes";
-        
-        if (category[0] && strcmp(category, current_category) != 0) {
-            current_category = category;
-            y += 8;
-            
-            /* Category background */
-            renderer_draw_rect(r, px + 12, y - 2, pw - 28, line_h - 2,
-                               0.08f, 0.00f, 0.08f, 0.4f);
-            
-            /* Category header */
-            font_draw(&g->font, r, category, px + 20, y,
-                      t->accent[0], t->accent[1], t->accent[2], 1.0f);
-            
-            y += line_h + 6;
-            rendered++;
-            if (rendered >= visible_lines) break;
-        }
-        
+
+    for (int i = start_idx; i < count && rendered < visible_lines; i++) {
+        SpaceCommand *cmd = &cmds[i];
+        float y = list_y + rendered * line_h;
+
         /* Key binding */
-        char key_str[16];
-        snprintf(key_str, sizeof(key_str), "Space %s", cmd->key);
-        
-        float key_color_r = cmd->implemented ? t->accent[0] : 0.50f;
-        float key_color_g = cmd->implemented ? t->accent[1] : 0.00f;
-        float key_color_b = cmd->implemented ? t->accent[2] : 0.50f;
-        
-        font_draw(&g->font, r, key_str, px + 30, y,
-                  key_color_r, key_color_g, key_color_b, 1.0f);
-        
+        char key_display[16];
+        snprintf(key_display, sizeof(key_display), "%s%s",
+                 sm_submenu ? "Space w " : "Space ", cmd->key);
+
+        float kr = cmd->implemented ? t->accent[0] : 0.50f;
+        float kg = cmd->implemented ? t->accent[1] : 0.00f;
+        float kb = cmd->implemented ? t->accent[2] : 0.50f;
+
+        font_draw(&g->font, r, key_display, px + 30, y,
+                  kr, kg, kb, 1.0f);
+
         /* Description */
-        float desc_x = px + 180;
-        font_draw(&g->font, r, cmd->description, desc_x, y,
-                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], 
+        font_draw(&g->font, r, cmd->description, px + 200, y,
+                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2],
                   cmd->implemented ? 1.0f : 0.4f);
-        
-        /* Status indicator */
+
         if (!cmd->implemented) {
-            const char *status = "[TODO]";
-            float status_x = px + pw - 90;
-            font_draw(&g->font, r, status, status_x, y,
+            font_draw(&g->font, r, "[TODO]", px + pw - 90, y,
                       0.50f, 0.00f, 0.50f, 0.7f);
         }
-        
-        y += line_h;
+
         rendered++;
     }
-    
+
     /* Scrollbar */
-    if (CMD_COUNT > visible_lines) {
-        float scrollbar_x = px + pw - 10;
-        float scrollbar_h = list_h * visible_lines / CMD_COUNT;
-        float scrollbar_y = list_y + (list_h - scrollbar_h) * sm_scroll / (CMD_COUNT - visible_lines);
-        
-        /* Scrollbar background */
-        renderer_draw_rect(r, scrollbar_x - 2, list_y, 8, list_h,
+    if (count > visible_lines) {
+        float sb_x = px + pw - 10;
+        float sb_h = list_h * visible_lines / count;
+        float sb_y = list_y + (list_h - sb_h) * sm_scroll / (count - visible_lines);
+
+        renderer_draw_rect(r, sb_x - 2, list_y, 8, list_h,
                            0.0f, 0.0f, 0.0f, 0.2f);
-        
-        /* Scrollbar thumb */
-        renderer_draw_rect(r, scrollbar_x - 2, scrollbar_y, 8, scrollbar_h,
+        renderer_draw_rect(r, sb_x - 2, sb_y, 8, sb_h,
                            t->accent[0], t->accent[1], t->accent[2], 0.8f);
     }
-    
-    /* Footer area - at bottom of panel */
+
+    /* Footer */
     float footer_y = py + ph - 34;
-    
-    /* Footer background */
     renderer_draw_rect(r, px, footer_y - 4, pw, 32,
                        0.05f, 0.05f, 0.08f, 0.9f);
-    
-    /* Separator before footer */
     renderer_draw_rect(r, px + 4, footer_y - 4, pw - 8, 1,
                        t->accent[0], t->accent[1], t->accent[2], 0.3f);
-    
-    /* Footer text */
-    font_draw(&g->font, r, "↑↓:Scroll  Type Key:Execute  Esc:Cancel", px + 20, footer_y,
+
+    const char *footer = sm_submenu
+        ? "Up/Down:Scroll  Type Key:Execute  Backspace:Back  Esc:Cancel"
+        : "Up/Down:Scroll  Type Key:Execute  Esc:Cancel";
+    font_draw(&g->font, r, footer, px + 20, footer_y,
               t->accent[0] * 0.7f, t->accent[1] * 0.7f, t->accent[2] * 0.7f, 1.0f);
+}
+
+void panel_space_menu_render(Gui *g, App *app) {
+    if (!sm_open) return;
+
+    if (sm_submenu) {
+        render_menu_list(g, app, window_cmds, WIN_CMD_COUNT,
+                         "Window Management",
+                         "Split, navigate, and manage windows");
+    } else {
+        render_menu_list(g, app, commands, CMD_COUNT,
+                         "Space Mode Commands",
+                         "Type a key or use arrows to scroll");
+    }
 }

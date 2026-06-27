@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "renderer.h"
 #include "config.h"
+#include "document.h"
 
 typedef struct App App;
 
@@ -31,6 +32,20 @@ void app_switch_to_buffer(App *app, int index);
 void app_next_buffer(App *app);
 void app_prev_buffer(App *app);
 bool app_close_buffer(App *app, int index);
+
+/* Window/split management */
+WindowManager *app_get_window_manager(App *app);
+void app_split_vertical(App *app);
+void app_split_horizontal(App *app);
+void app_close_split(App *app);
+void app_next_window(App *app);
+void app_prev_window(App *app);
+void app_goto_window_left(App *app);
+void app_goto_window_right(App *app);
+void app_goto_window_up(App *app);
+void app_goto_window_down(App *app);
+void app_maximize_window(App *app);
+void app_equalize_windows(App *app);
 
 /* Workspace management */
 const char *app_get_workspace_root(App *app);

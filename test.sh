@@ -16,4 +16,4 @@ cmake --build "$BUILD" --target test_all -j"$(nproc)"
 echo ""
 echo "=== Running Tests ==="
 cd "$BUILD"
-ctest --output-on-failure --test-dir "$BUILD"
+./test_all

@@ -495,6 +495,61 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             mode->pending_len = 0;
             return;
         }
+        if (pk == 'i') {
+            /* Text object: i<a/w/(/)/[/]/{/}/</>/< /"/'/`/p> */
+            char obj = mode->pending_text_obj;  /* 'i' or 'a' */
+            bool inner = (obj == 'i');
+            char c = 0;
+            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
+            else if (key == GLFW_KEY_9) c = '(';
+            else if (key == GLFW_KEY_0) c = ')';
+            else if (key == GLFW_KEY_LEFT_BRACKET) c = (mods & GLFW_MOD_SHIFT) ? '{' : '[';
+            else if (key == GLFW_KEY_RIGHT_BRACKET) c = (mods & GLFW_MOD_SHIFT) ? '}' : ']';
+            else if (key == GLFW_KEY_COMMA) c = '<';
+            else if (key == GLFW_KEY_PERIOD) c = '>';
+            else if (key == GLFW_KEY_MINUS) c = '_';
+            else if (key == GLFW_KEY_BACKSLASH) c = '\\';
+            else if (key == GLFW_KEY_P) c = 'p';  /* paragraph */
+
+            if (c) {
+                /* Ensure cursor has a selection anchor */
+                Cursor *cur = &doc->cursors[0];
+                if (!cur->has_selection) cursor_select_start(cur);
+
+                switch (c) {
+                case 'w': inner ? document_select_inside_word(doc) : document_select_around_word(doc); break;
+                case '(': case ')': inner ? document_select_inside_paren(doc) : document_select_around_paren(doc); break;
+                case '[': case ']': inner ? document_select_inside_bracket(doc) : document_select_around_bracket(doc); break;
+                case '{': case '}': inner ? document_select_inside_curly(doc) : document_select_around_curly(doc); break;
+                case '<': inner ? document_select_inside_angle(doc) : document_select_around_angle(doc); break;
+                case '"': inner ? document_select_inside_quote(doc) : document_select_around_quote(doc); break;
+                case '`': inner ? document_select_inside_backtick(doc) : document_select_around_backtick(doc); break;
+                case 'p': inner ? document_select_inside_paragraph(doc) : document_select_around_paragraph(doc); break;
+                default: break;
+                }
+
+                /* Apply pending operator if any */
+                if (mode->pending_operator) {
+                    char op = mode->pending_operator;
+                    mode->pending_operator = 0;
+                    if (op == 'd') {
+                        document_delete_selection(doc);
+                    } else if (op == 'c') {
+                        document_delete_selection(doc);
+                        mode_set(mode, MODE_INSERT);
+                    } else if (op == 'y') {
+                        document_yank(doc);
+                        document_collapse_selection(doc);
+                    }
+                } else {
+                    /* No operator: enter select mode with the selection */
+                    mode_set(mode, MODE_SELECT);
+                }
+            } else {
+                mode->pending_operator = 0;
+            }
+            return;
+        }
         if (pk == '[') {
             /* [ bracket mode - navigate to previous */
             if (key == GLFW_KEY_D) {
@@ -508,6 +563,28 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                 extern void document_goto_first_diagnostic(Document *);
                 document_goto_first_diagnostic(doc);
                 return;
+            }
+            return;
+        }
+        if (pk == 'q') {
+            /* q<letter> - start recording macro to register */
+            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) {
+                int slot = key - GLFW_KEY_A;
+                macro_start_record(&doc->macros, slot);
+            }
+            return;
+        }
+        if (pk == '@') {
+            /* @<letter> - replay macro */
+            if (mode->pending_len == 1 && mode->pending_keys[0] == '@') {
+                /* @@ - replay last macro: find last recorded */
+                macro_replay(&doc->macros, -1);
+                mode->pending_len = 0;
+                return;
+            }
+            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) {
+                int slot = key - GLFW_KEY_A;
+                macro_replay(&doc->macros, slot);
             }
             return;
         }
@@ -556,13 +633,6 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             if (key == GLFW_KEY_B) {
                 /* Space b - buffer picker */
                 panel_buffer_picker_open(app);
-                mode->pending_len = 0;
-                return;
-            }
-            if (key == GLFW_KEY_O) {
-                /* Space o - file picker at $HOME */
-                extern void panel_file_browser_open_at_home(App *);
-                panel_file_browser_open_at_home(app);
                 mode->pending_len = 0;
                 return;
             }
@@ -619,12 +689,6 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                   mode->pending_len = 0;
                   return;
               }
-              if (key == GLFW_KEY_R) {
-                  /* Space r - rename symbol */
-                  panel_rename_open(app);
-                  mode->pending_len = 0;
-                  return;
-              }
               if (key == GLFW_KEY_A) {
                   /* Space a - code actions */
                   panel_code_actions_open(app);
@@ -632,55 +696,50 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                   return;
               }
               if (key == GLFW_KEY_Y) {
-                  /* Space y - yank selection to clipboard */
-                  if (doc->cursors[0].has_selection) {
-                      int start_row, start_col, end_row, end_col;
-                      cursor_normalize(&doc->cursors[0], &start_row, &start_col, &end_row, &end_col);
-                      
-                      /* Get text from selection and copy to clipboard */
-                      char buffer[4096] = {0};
-                      int pos = 0;
-                      
-                      for (int r = start_row; r <= end_row && pos < 4095; r++) {
-                          const char *line = buffer_line_ptr(&doc->buffer, r);
-                          if (!line) continue;
-                          
-                          int col_start = (r == start_row) ? start_col : 0;
-                          int col_end = (r == end_row) ? end_col : (int)strlen(line);
-                          
-                          for (int c = col_start; c < col_end && pos < 4095; c++) {
-                              if (c < (int)strlen(line)) {
-                                  buffer[pos++] = line[c];
-                              }
-                          }
-                          
-                          if (r < end_row && pos < 4095) {
-                              buffer[pos++] = '\n';
-                          }
-                      }
-                      
-                      app_set_clipboard(app, buffer);
+                  /* Space y - yank selection to system clipboard */
+                  if (mods & GLFW_MOD_SHIFT) {
+                      /* Space Y - yank main selection to system clipboard */
+                      document_yank_main_to_system_clipboard(doc);
+                  } else {
+                      document_yank_to_system_clipboard(doc);
                   }
                   mode->pending_len = 0;
                   return;
               }
               if (key == GLFW_KEY_P) {
-                  /* Space p - paste after cursor */
-                  const char *clipboard = app_get_clipboard(app);
-                  if (clipboard) {
-                      document_move_cursor(doc, 0, 1);  /* Move cursor to after current position */
-                      document_insert_text(doc, clipboard);
+                  if (mods & GLFW_MOD_SHIFT) {
+                      /* Space P - paste before from system clipboard */
+                      document_paste_before_from_system_clipboard(doc);
+                  } else {
+                      /* Space p - paste from system clipboard after cursor */
+                      document_paste_from_system_clipboard(doc);
                   }
                   mode->pending_len = 0;
                   return;
               }
-             mode->pending_len = 0;
-             return;
+              if (key == GLFW_KEY_O) {
+                  /* Space o - file picker at $HOME */
+                  extern void panel_file_browser_open_at_home(App *);
+                  panel_file_browser_open_at_home(app);
+                  mode->pending_len = 0;
+                  return;
+              }
+              if (key == GLFW_KEY_R) {
+                  if (mods & GLFW_MOD_SHIFT) {
+                      /* Space R - replace selection with system clipboard */
+                      document_replace_selection_from_system_clipboard(doc);
+                  } else {
+                      /* Space r - rename symbol */
+                      panel_rename_open(app);
+                  }
+                  mode->pending_len = 0;
+                  return;
+              }
+              mode->pending_len = 0;
+              return;
         }
         return;
     }
-
-    /* g pending (gg = go to top, ge = go to end, etc.) */
     if (mode->g_pending) {
         mode->g_pending = false;
         if (key == GLFW_KEY_G)
@@ -844,6 +903,12 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             document_jumplist_push(doc, cur->row, cur->col);
             return;
         }
+        case GLFW_KEY_6:
+            /* Ctrl-^ - go to alternate file */
+            if (mods & GLFW_MOD_SHIFT) {
+                document_goto_alternate(doc);
+            }
+            return;
         default: break;
         }
     }
@@ -1144,22 +1209,6 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         }
         break;
 
-    /* d - Delete selection only */
-    case GLFW_KEY_D:
-        document_delete_selection(doc);
-        break;
-
-    /* c - Change selection: delete and enter insert mode */
-    case GLFW_KEY_C:
-        document_delete_selection(doc);
-        mode_set(mode, MODE_INSERT);
-        break;
-
-    /* y - Yank selection only */
-    case GLFW_KEY_Y:
-        document_yank(doc);
-        break;
-
     /* J - Join lines inside selection */
     case GLFW_KEY_J:
         document_join_lines_selection(doc);
@@ -1186,6 +1235,28 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
 
     /* Keys that conflict with switch cases handled here */
     switch (key) {
+    case GLFW_KEY_D:
+        if (doc->cursors[0].has_selection) {
+            document_delete_selection(doc);
+        } else {
+            mode->pending_operator = 'd';
+        }
+        break;
+    case GLFW_KEY_C:
+        if (doc->cursors[0].has_selection) {
+            document_delete_selection(doc);
+            mode_set(mode, MODE_INSERT);
+        } else {
+            mode->pending_operator = 'c';
+        }
+        break;
+    case GLFW_KEY_Y:
+        if (doc->cursors[0].has_selection) {
+            document_yank(doc);
+        } else {
+            mode->pending_operator = 'y';
+        }
+        break;
     case GLFW_KEY_R:
         if (mods & GLFW_MOD_SHIFT)
             document_replace_selection_yanked(doc);
@@ -1210,6 +1281,14 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
     case GLFW_KEY_T:
         mode->pending_key = (mods & GLFW_MOD_SHIFT) ? 'T' : 't';
         break;
+    case GLFW_KEY_I:
+        mode->pending_text_obj = 'i';
+        mode->pending_key = 'i';
+        break;
+    case GLFW_KEY_A:
+        mode->pending_text_obj = 'a';
+        mode->pending_key = 'i';
+        break;
     case GLFW_KEY_Z:
         if (mods & GLFW_MOD_SHIFT) {
             /* Z - sticky view mode */
@@ -1233,7 +1312,43 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
     case GLFW_KEY_7:
         document_align_selections(doc);
         break;
+    case GLFW_KEY_Q:
+        /* q - toggle macro recording */
+        if (macro_is_recording(&doc->macros)) {
+            macro_stop_record(&doc->macros);
+        } else {
+            mode->pending_key = 'q';
+        }
+        break;
+    case GLFW_KEY_2:
+        /* @ - replay macro */
+        if (mods & GLFW_MOD_SHIFT) {
+            mode->pending_key = '@';
+        } else {
+            /* @@ - replay last macro (handled via pending) */
+            mode->pending_key = '@';
+            mode->pending_keys[0] = '@';
+            mode->pending_len = 1;
+        }
+        break;
     default: break;
+    }
+
+    /* Ctrl-Shift-C - block comment toggle (handled before normal switch) */
+    if ((mods & GLFW_MOD_CONTROL) && (mods & GLFW_MOD_SHIFT) && key == GLFW_KEY_C) {
+        /* Use language settings for block comment */
+        const LanguageSettings *ls = language_settings_get(doc->language_id);
+        if (ls && ls->comment_open && ls->comment_open[0]) {
+            document_comment_toggle_block(doc, ls->comment_open, ls->comment_close);
+        } else {
+            document_comment_toggle_block(doc, "/*", "*/");
+        }
+        return;
+    }
+
+    /* Record key if macro is recording */
+    if (macro_is_recording(&doc->macros)) {
+        macro_record_key(&doc->macros, key);
     }
 }
 
@@ -1514,6 +1629,18 @@ static void handle_command_key(App *app, int key, int action, int mods) {
         document_sort_selection(doc);
     } else if (strcmp(cmd_buf, "fmt") == 0 || strcmp(cmd_buf, "format") == 0) {
         document_format_selection(doc);
+    } else if (strncmp(cmd_buf, "reflow ", 7) == 0) {
+        int width = atoi(cmd_buf + 7);
+        if (width > 0) document_reflow(doc, width);
+    } else if (strcmp(cmd_buf, "retab") == 0 || strcmp(cmd_buf, "retab!") == 0) {
+        /* Convert all indentation to tabs using configured tab width */
+        const LanguageSettings *ls = language_settings_get(doc->language_id);
+        int tw = ls ? ls->tab_width : 4;
+        document_indent_style_to_tabs(doc, tw);
+    } else if (strcmp(cmd_buf, "expandtab") == 0 || strcmp(cmd_buf, "expandtab!") == 0) {
+        const LanguageSettings *ls = language_settings_get(doc->language_id);
+        int sw = ls ? ls->tab_width : 4;
+        document_indent_style_to_spaces(doc, sw);
     } else if (strcmp(cmd_buf, "lsp-stop") == 0) {
         lsp_manager_stop_all((LSPManager *)app_get_lsp_manager(app));
     } else if (strcmp(cmd_buf, "lsp-restart") == 0) {
@@ -1706,6 +1833,50 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             }
             return;
         }
+        if (pk == 'i') {
+            /* Text object in select mode: extends selection */
+            char obj = mode->pending_text_obj;
+            bool inner = (obj == 'i');
+            char c = 0;
+            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
+            else if (key == GLFW_KEY_9) c = '(';
+            else if (key == GLFW_KEY_0) c = ')';
+            else if (key == GLFW_KEY_LEFT_BRACKET) c = (mods & GLFW_MOD_SHIFT) ? '{' : '[';
+            else if (key == GLFW_KEY_RIGHT_BRACKET) c = (mods & GLFW_MOD_SHIFT) ? '}' : ']';
+            else if (key == GLFW_KEY_COMMA) c = '<';
+            else if (key == GLFW_KEY_PERIOD) c = '>';
+            else if (key == GLFW_KEY_MINUS) c = '_';
+            else if (key == GLFW_KEY_P) c = 'p';
+
+            if (c) {
+                Cursor *cur = &doc->cursors[0];
+                if (!cur->has_selection) cursor_select_start(cur);
+                switch (c) {
+                case 'w': inner ? document_select_inside_word(doc) : document_select_around_word(doc); break;
+                case '(': case ')': inner ? document_select_inside_paren(doc) : document_select_around_paren(doc); break;
+                case '[': case ']': inner ? document_select_inside_bracket(doc) : document_select_around_bracket(doc); break;
+                case '{': case '}': inner ? document_select_inside_curly(doc) : document_select_around_curly(doc); break;
+                case '<': inner ? document_select_inside_angle(doc) : document_select_around_angle(doc); break;
+                case '"': inner ? document_select_inside_quote(doc) : document_select_around_quote(doc); break;
+                case '`': inner ? document_select_inside_backtick(doc) : document_select_around_backtick(doc); break;
+                case 'p': inner ? document_select_inside_paragraph(doc) : document_select_around_paragraph(doc); break;
+                default: break;
+                }
+            }
+            return;
+        }
+        return;
+    }
+
+    /* i/a - text objects in select mode */
+    if (key == GLFW_KEY_I && !(mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+        mode->pending_text_obj = 'i';
+        mode->pending_key = 'i';
+        return;
+    }
+    if (key == GLFW_KEY_A && !(mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+        mode->pending_text_obj = 'a';
+        mode->pending_key = 'i';
         return;
     }
 

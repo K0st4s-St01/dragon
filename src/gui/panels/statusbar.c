@@ -54,6 +54,13 @@ void panel_statusbar(Gui *g, App *app, Document *doc, ModeState *mode) {
     font_draw(&g->font, r, mn, 10, y + 4,
               t->accent[0], t->accent[1], t->accent[2], t->accent[3]);
 
+    /* Macro recording indicator */
+    if (macro_is_recording(&doc->macros)) {
+        float rec_x = 10 + font_text_width(&g->font, mn) + 10;
+        font_draw(&g->font, r, "[REC]", rec_x, y + 4,
+                  t->error[0], t->error[1], t->error[2], t->error[3]);
+    }
+
     /* File name */
     const char *fname = doc->filepath ? doc->filepath : "[No Name]";
     float file_x = 10 + font_text_width(&g->font, mn) + 20;

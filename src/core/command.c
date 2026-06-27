@@ -254,3 +254,146 @@ void cmd_workspace_diagnostics(App *app) {
     extern void panel_workspace_diagnostics_open(App *);
     panel_workspace_diagnostics_open(app);
 }
+
+/* New commands */
+
+void cmd_goto_alternate(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_goto_alternate(doc);
+}
+
+void cmd_goto_last_mod(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_goto_last_modification(doc);
+}
+
+void cmd_jumplist_backward(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_jumplist_backward(doc);
+}
+
+void cmd_jumplist_forward(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_jumplist_forward(doc);
+}
+
+void cmd_select_iw(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    Cursor *cur = &doc->cursors[0];
+    if (!cur->has_selection) cursor_select_start(cur);
+    document_select_inside_word(doc);
+}
+
+void cmd_select_aw(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    Cursor *cur = &doc->cursors[0];
+    if (!cur->has_selection) cursor_select_start(cur);
+    document_select_around_word(doc);
+}
+
+void cmd_select_iparen(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    Cursor *cur = &doc->cursors[0];
+    if (!cur->has_selection) cursor_select_start(cur);
+    document_select_inside_paren(doc);
+}
+
+void cmd_select_icurly(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    Cursor *cur = &doc->cursors[0];
+    if (!cur->has_selection) cursor_select_start(cur);
+    document_select_inside_curly(doc);
+}
+
+void cmd_comment_toggle(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_comment_toggle(doc);
+}
+
+void cmd_comment_block(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    const LanguageSettings *ls = language_settings_get(doc->language_id);
+    if (ls && ls->comment_open && ls->comment_open[0])
+        document_comment_toggle_block(doc, ls->comment_open, ls->comment_close);
+    else
+        document_comment_toggle_block(doc, "/*", "*/");
+}
+
+void cmd_reflow(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_reflow(doc, 80);
+}
+
+void cmd_retab(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    const LanguageSettings *ls = language_settings_get(doc->language_id);
+    int tw = ls ? ls->tab_width : 4;
+    document_indent_style_to_tabs(doc, tw);
+}
+
+void cmd_expandtab(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    const LanguageSettings *ls = language_settings_get(doc->language_id);
+    int sw = ls ? ls->tab_width : 4;
+    document_indent_style_to_spaces(doc, sw);
+}
+
+void cmd_sort(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_sort_selection(doc);
+}
+
+void cmd_format(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_format_selection(doc);
+}
+
+void cmd_yank_clipboard(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_yank_to_system_clipboard(doc);
+}
+
+void cmd_yank_primary_clipboard(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_yank_main_to_system_clipboard(doc);
+}
+
+void cmd_paste_clipboard(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_paste_from_system_clipboard(doc);
+}
+
+void cmd_paste_before_clipboard(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_paste_before_from_system_clipboard(doc);
+}
+
+void cmd_replace_clipboard(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    document_replace_selection_from_system_clipboard(doc);
+}
+
+void cmd_macro_record(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    if (macro_is_recording(&doc->macros))
+        macro_stop_record(&doc->macros);
+    else
+        macro_start_record(&doc->macros, 0);
+}
+
+void cmd_macro_replay(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    macro_replay(&doc->macros, 0);
+}
+
+void cmd_split_v(App *app) { app_split_vertical(app); }
+void cmd_split_h(App *app) { app_split_horizontal(app); }
+void cmd_close_split(App *app) { app_close_split(app); }
+void cmd_win_left(App *app) { app_goto_window_left(app); }
+void cmd_win_right(App *app) { app_goto_window_right(app); }
+void cmd_win_up(App *app) { app_goto_window_up(app); }
+void cmd_win_down(App *app) { app_goto_window_down(app); }
+void cmd_win_maximize(App *app) { app_maximize_window(app); }
+void cmd_win_equalize(App *app) { app_equalize_windows(app); }
+void cmd_win_next(App *app) { app_next_window(app); }
+void cmd_win_prev(App *app) { app_prev_window(app); }

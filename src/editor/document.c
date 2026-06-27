@@ -152,6 +152,8 @@ void document_init(Document *doc) {
     doc->diagnostics = NULL;
     doc->syntax_dirty = true;
     doc->ts_attempted = false;
+    macro_init(&doc->macros);
+    doc->alt_filepath = NULL;
 }
 
 void document_free(Document *doc) {
@@ -173,6 +175,8 @@ void document_free(Document *doc) {
     if (doc->diagnostics) {
         lsp_free_diagnostics((LSPDiagnostics *)doc->diagnostics);
     }
+    macro_free(&doc->macros);
+    free(doc->alt_filepath);
     memset(doc, 0, sizeof(*doc));
 }
 
@@ -3190,6 +3194,14 @@ void document_update_syntax_from_lsp(Document *doc, void *lsp_manager) {
         return;
     }
     
+    /* Only process if it's a semantic tokens response, not diagnostics */
+    if (strstr(response, "textDocument/publishDiagnostics")) {
+        /* It's a diagnostics notification, skip it (will be handled by app_update_diagnostics) */
+        free(response);
+        free(uri);
+        return;
+    }
+    
     /* Parse and update syntax */
     syntax_update_from_lsp(&doc->syntax, response);
     
@@ -3566,4 +3578,959 @@ void document_apply_workspace_edit(Document *doc, const LSPWorkspaceEdit *edit) 
     
     /* Sync viewport to cursor after all edits */
     document_sync_viewport_to_cursor(doc);
+}
+
+/* ================================================================
+ * TEXT OBJECTS
+ * ================================================================ */
+
+static int find_matching_bracket_forward(const char *text, size_t len, size_t pos, char open, char close) {
+    int depth = 0;
+    for (size_t i = pos; i < len; i++) {
+        if (text[i] == open) depth++;
+        else if (text[i] == close) { depth--; if (depth == 0) return (int)i; }
+    }
+    return -1;
+}
+
+static int find_matching_bracket_backward(const char *text, size_t pos, char open, char close) {
+    int depth = 0;
+    for (int i = (int)pos; i >= 0; i--) {
+        if (text[i] == close) depth++;
+        else if (text[i] == open) { depth--; if (depth == 0) return i; }
+    }
+    return -1;
+}
+
+static bool is_word_char(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+           (c >= '0' && c <= '9') || c == '_';
+}
+
+static bool is_space(char c) {
+    return c == ' ' || c == '\t';
+}
+
+static bool is_newline(char c) {
+    return c == '\n' || c == '\r';
+}
+
+static void find_word_bounds(const char *text, size_t len, size_t pos, size_t *start, size_t *end) {
+    if (pos >= len) { *start = pos; *end = pos; return; }
+    *start = pos;
+    *end = pos + 1;
+    while (*start > 0 && is_word_char(text[*start - 1])) (*start)--;
+    while (*end < len && is_word_char(text[*end])) (*end)++;
+}
+
+static void find_non_space(const char *text, size_t len, size_t *pos, int dir) {
+    while (*pos < len) {
+        if (!is_space(text[*pos]) && !is_newline(text[*pos])) break;
+        *pos += dir > 0 ? 1 : -1;
+        if (dir > 0 && *pos >= len) break;
+        if (dir < 0 && *pos >= len) *pos = 0;
+    }
+}
+
+void document_select_inside_word(Document *doc) {
+    Cursor *cur = &doc->cursors[0];
+    const char *text = doc->buffer.text;
+    size_t len = doc->buffer.len;
+    size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
+    if (pos >= len) return;
+    size_t start, end;
+    find_word_bounds(text, len, pos, &start, &end);
+    int sr, sc, er, ec;
+    buffer_row_col_from_pos(&doc->buffer, start, &sr, &sc);
+    buffer_row_col_from_pos(&doc->buffer, end, &er, &ec);
+    cursor_move_to(cur, sr, sc);
+    cur->anchor_row = er;
+    cur->anchor_col = ec;
+    cur->has_selection = true;
+}
+
+void document_select_around_word(Document *doc) {
+    Cursor *cur = &doc->cursors[0];
+    const char *text = doc->buffer.text;
+    size_t len = doc->buffer.len;
+    size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
+    if (pos >= len) return;
+    size_t start, end;
+    find_word_bounds(text, len, pos, &start, &end);
+    if (start > 0) start--;
+    if (end < len) end++;
+    int sr, sc, er, ec;
+    buffer_row_col_from_pos(&doc->buffer, start, &sr, &sc);
+    buffer_row_col_from_pos(&doc->buffer, end, &er, &ec);
+    cursor_move_to(cur, sr, sc);
+    cur->anchor_row = er;
+    cur->anchor_col = ec;
+    cur->has_selection = true;
+}
+
+static void select_bracket_object(Document *doc, char open, char close, bool around) {
+    Cursor *cur = &doc->cursors[0];
+    const char *text = doc->buffer.text;
+    size_t len = doc->buffer.len;
+    size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
+    if (pos >= len) return;
+
+    /* Try to find the opening bracket at or before cursor */
+    int open_pos = -1;
+    if (pos < len && text[pos] == open) open_pos = (int)pos;
+    else if (pos > 0) {
+        for (int i = (int)pos - 1; i >= 0; i--) {
+            if (text[i] == open || text[i] == close) {
+                if (text[i] == open) open_pos = i;
+                break;
+            }
+        }
+    }
+    if (open_pos < 0) return;
+
+    int close_pos = find_matching_bracket_forward(text, len, open_pos, open, close);
+    if (close_pos < 0) return;
+
+    size_t sel_start = around ? open_pos : open_pos + 1;
+    size_t sel_end = around ? close_pos + 1 : close_pos;
+
+    int sr, sc, er, ec;
+    buffer_row_col_from_pos(&doc->buffer, sel_start, &sr, &sc);
+    buffer_row_col_from_pos(&doc->buffer, sel_end, &er, &ec);
+    cursor_move_to(cur, sr, sc);
+    cur->anchor_row = er;
+    cur->anchor_col = ec;
+    cur->has_selection = true;
+}
+
+void document_select_inside_paren(Document *doc) { select_bracket_object(doc, '(', ')', false); }
+void document_select_around_paren(Document *doc) { select_bracket_object(doc, '(', ')', true); }
+void document_select_inside_bracket(Document *doc) { select_bracket_object(doc, '[', ']', false); }
+void document_select_around_bracket(Document *doc) { select_bracket_object(doc, '[', ']', true); }
+void document_select_inside_curly(Document *doc) { select_bracket_object(doc, '{', '}', false); }
+void document_select_around_curly(Document *doc) { select_bracket_object(doc, '{', '}', true); }
+void document_select_inside_angle(Document *doc) { select_bracket_object(doc, '<', '>', false); }
+void document_select_around_angle(Document *doc) { select_bracket_object(doc, '<', '>', true); }
+
+static void select_quote_object(Document *doc, char quote, bool around) {
+    Cursor *cur = &doc->cursors[0];
+    const char *text = doc->buffer.text;
+    size_t len = doc->buffer.len;
+    size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
+    if (pos >= len) return;
+
+    /* Find the opening quote at or before cursor */
+    int open_pos = -1;
+    if (pos < len && text[pos] == quote) open_pos = (int)pos;
+    else {
+        for (int i = (int)pos; i >= 0; i--) {
+            if (text[i] == quote) { open_pos = i; break; }
+        }
+    }
+    if (open_pos < 0) return;
+
+    /* Find the closing quote after the opening */
+    int close_pos = -1;
+    for (size_t i = open_pos + 1; i < len; i++) {
+        if (text[i] == quote && (i == 0 || text[i-1] != '\\')) {
+            close_pos = (int)i;
+            break;
+        }
+    }
+    if (close_pos < 0) return;
+
+    size_t sel_start = around ? open_pos : open_pos + 1;
+    size_t sel_end = around ? close_pos + 1 : close_pos;
+
+    int sr, sc, er, ec;
+    buffer_row_col_from_pos(&doc->buffer, sel_start, &sr, &sc);
+    buffer_row_col_from_pos(&doc->buffer, sel_end, &er, &ec);
+    cursor_move_to(cur, sr, sc);
+    cur->anchor_row = er;
+    cur->anchor_col = ec;
+    cur->has_selection = true;
+}
+
+void document_select_inside_quote(Document *doc) { select_quote_object(doc, '"', false); }
+void document_select_around_quote(Document *doc) { select_quote_object(doc, '"', true); }
+void document_select_inside_backtick(Document *doc) { select_quote_object(doc, '`', false); }
+void document_select_around_backtick(Document *doc) { select_quote_object(doc, '`', true); }
+
+void document_select_inside_paragraph(Document *doc) {
+    Cursor *cur = &doc->cursors[0];
+    const char *text = doc->buffer.text;
+    size_t len = doc->buffer.len;
+    size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
+    if (pos >= len) return;
+
+    /* Find paragraph start (first non-empty line or start of file) */
+    size_t para_start = pos;
+    /* Go back to find start of current paragraph */
+    while (para_start > 0) {
+        /* If we hit two newlines, stop - we're at paragraph boundary */
+        if (text[para_start - 1] == '\n') {
+            /* Check if the line before is empty */
+            size_t check = para_start - 1;
+            while (check > 0 && text[check - 1] == '\n') check--;
+            if (check == 0 || (check > 0 && text[check - 1] == '\n')) {
+                /* Check if current line is non-empty */
+                if (para_start < len && text[para_start] != '\n') break;
+            }
+        }
+        para_start--;
+    }
+    /* Skip to first non-newline */
+    while (para_start < len && text[para_start] == '\n') para_start++;
+
+    /* Find paragraph end */
+    size_t para_end = para_start;
+    while (para_end < len && text[para_end] != '\n') para_end++;
+    /* Skip trailing newlines but keep one */
+    size_t temp = para_end;
+    while (temp < len && text[temp] == '\n') temp++;
+    if (temp > para_end + 1) para_end = temp - 1;
+    else para_end = temp;
+
+    int sr, sc, er, ec;
+    buffer_row_col_from_pos(&doc->buffer, para_start, &sr, &sc);
+    buffer_row_col_from_pos(&doc->buffer, para_end, &er, &ec);
+    cursor_move_to(cur, sr, sc);
+    cur->anchor_row = er;
+    cur->anchor_col = ec;
+    cur->has_selection = true;
+}
+
+void document_select_around_paragraph(Document *doc) {
+    Cursor *cur = &doc->cursors[0];
+    const char *text = doc->buffer.text;
+    size_t len = doc->buffer.len;
+    size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
+    if (pos >= len) return;
+
+    /* Find paragraph boundaries */
+    size_t para_start = pos;
+    while (para_start > 0 && text[para_start - 1] != '\n') para_start--;
+    while (para_start > 0 && text[para_start - 1] == '\n') para_start--;
+
+    size_t para_end = pos;
+    while (para_end < len && text[para_end] != '\n') para_end++;
+    while (para_end < len && text[para_end] == '\n') para_end++;
+
+    int sr, sc, er, ec;
+    buffer_row_col_from_pos(&doc->buffer, para_start, &sr, &sc);
+    buffer_row_col_from_pos(&doc->buffer, para_end, &er, &ec);
+    cursor_move_to(cur, sr, sc);
+    cur->anchor_row = er;
+    cur->anchor_col = ec;
+    cur->has_selection = true;
+}
+
+/* ================================================================
+ * MACROS
+ * ================================================================ */
+
+void macro_init(MacroState *ms) {
+    if (!ms) return;
+    memset(ms, 0, sizeof(MacroState));
+    ms->active_slot = -1;
+    ms->last_replayed = -1;
+}
+
+void macro_free(MacroState *ms) {
+    if (!ms) return;
+    memset(ms, 0, sizeof(MacroState));
+    ms->active_slot = -1;
+}
+
+bool macro_start_record(MacroState *ms, int slot) {
+    if (!ms || slot < 0 || slot >= MACRO_SLOTS) return false;
+    if (ms->active_slot >= 0) return false; /* already recording */
+    ms->active_slot = slot;
+    ms->slots[slot].len = 0;
+    ms->slots[slot].recording = true;
+    return true;
+}
+
+void macro_stop_record(MacroState *ms) {
+    if (!ms || ms->active_slot < 0) return;
+    ms->slots[ms->active_slot].recording = false;
+    ms->active_slot = -1;
+}
+
+bool macro_is_recording(const MacroState *ms) {
+    return ms && ms->active_slot >= 0;
+}
+
+void macro_record_key(MacroState *ms, int key) {
+    if (!ms || ms->active_slot < 0) return;
+    MacroSlot *slot = &ms->slots[ms->active_slot];
+    if (slot->len < MACRO_MAX_KEYS) {
+        slot->keys[slot->len++] = key;
+    }
+}
+
+bool macro_replay(MacroState *ms, int slot) {
+    if (!ms || slot < 0 || slot >= MACRO_SLOTS) return false;
+    if (ms->slots[slot].len == 0) return false;
+    ms->last_replayed = slot;
+    return true;
+}
+
+/* ================================================================
+ * REFLOW / INDENT STYLE
+ * ================================================================ */
+
+void document_reflow(Document *doc, int text_width) {
+    if (!doc || text_width < 1) return;
+    Cursor *cur = &doc->cursors[0];
+    int sr, sc, er, ec;
+    if (cur->has_selection) {
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+    } else {
+        sr = cur->row;
+        sc = 0;
+        er = (int)buffer_line_count(&doc->buffer) - 1;
+        ec = (int)buffer_line_len(&doc->buffer, er);
+    }
+
+    /* Extract selected text */
+    size_t start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
+    size_t end = buffer_pos_from_row_col(&doc->buffer, er, ec);
+    if (start >= end || end > doc->buffer.len) return;
+
+    char *text = malloc(end - start + 1);
+    memcpy(text, doc->buffer.text + start, end - start);
+    text[end - start] = '\0';
+
+    /* Word-wrap the text */
+    Buffer result;
+    buffer_init(&result);
+
+    int col = 0;
+    size_t word_start = 0;
+    bool in_word = false;
+
+    for (size_t i = 0; i <= end - start; i++) {
+        char c = (i < end - start) ? text[i] : '\n';
+        if (c == '\n') {
+            if (in_word) {
+                size_t word_len = i - word_start;
+                if (col > 0 && col + (int)word_len + 1 > text_width) {
+                    buffer_append(&result, "\n", 1);
+                    col = 0;
+                }
+                if (col > 0) buffer_append(&result, " ", 1);
+                buffer_append(&result, text + word_start, word_len);
+                col += (int)word_len;
+                in_word = false;
+            }
+            if (col > 0) {
+                buffer_append(&result, "\n", 1);
+                col = 0;
+            }
+        } else if (is_space(c)) {
+            if (in_word) {
+                size_t word_len = i - word_start;
+                if (col > 0 && col + (int)word_len + 1 > text_width) {
+                    buffer_append(&result, "\n", 1);
+                    col = 0;
+                }
+                if (col > 0) buffer_append(&result, " ", 1);
+                buffer_append(&result, text + word_start, word_len);
+                col += (int)word_len;
+                in_word = false;
+            }
+        } else {
+            if (!in_word) {
+                word_start = i;
+                in_word = true;
+            }
+        }
+    }
+
+    /* Replace the region */
+    buffer_delete(&doc->buffer, start, end - start);
+    buffer_insert(&doc->buffer, start, result.text, result.len);
+
+    /* Update cursor */
+    int new_row, new_col;
+    buffer_row_col_from_pos(&doc->buffer, start + result.len, &new_row, &new_col);
+    cursor_move_to(cur, new_row, new_col);
+    cursor_clear_selection(cur);
+    document_mark_dirty(doc);
+    buffer_free(&result);
+    free(text);
+}
+
+void document_indent_style_to_tabs(Document *doc, int tab_width) {
+    if (!doc || tab_width < 1) return;
+    const char *text = doc->buffer.text;
+    size_t len = doc->buffer.len;
+
+    Buffer result;
+    buffer_init(&result);
+
+    size_t i = 0;
+    while (i < len) {
+        /* Count leading spaces */
+        int spaces = 0;
+        size_t line_start = i;
+        while (i < len && text[i] == ' ') {
+            spaces++;
+            i++;
+        }
+        /* Convert groups of spaces to tabs */
+        int tabs = spaces / tab_width;
+        int remaining = spaces % tab_width;
+        for (int t = 0; t < tabs; t++) buffer_append(&result, "\t", 1);
+        for (int s = 0; s < remaining; s++) buffer_append(&result, " ", 1);
+        /* Copy rest of line */
+        while (i < len && text[i] != '\n') {
+            buffer_append(&result, &text[i], 1);
+            i++;
+        }
+        if (i < len) {
+            buffer_append(&result, &text[i], 1); /* newline */
+            i++;
+        }
+    }
+
+    buffer_delete(&doc->buffer, 0, len);
+    buffer_insert(&doc->buffer, 0, result.text, result.len);
+    document_mark_dirty(doc);
+    buffer_free(&result);
+}
+
+void document_indent_style_to_spaces(Document *doc, int space_width) {
+    if (!doc || space_width < 1) return;
+    const char *text = doc->buffer.text;
+    size_t len = doc->buffer.len;
+
+    Buffer result;
+    buffer_init(&result);
+
+    size_t i = 0;
+    while (i < len) {
+        /* Count leading tabs */
+        int tabs = 0;
+        while (i < len && text[i] == '\t') {
+            tabs++;
+            i++;
+        }
+        /* Convert tabs to spaces */
+        for (int t = 0; t < tabs * space_width; t++)
+            buffer_append(&result, " ", 1);
+        /* Copy rest of line */
+        while (i < len && text[i] != '\n') {
+            buffer_append(&result, &text[i], 1);
+            i++;
+        }
+        if (i < len) {
+            buffer_append(&result, &text[i], 1);
+            i++;
+        }
+    }
+
+    buffer_delete(&doc->buffer, 0, len);
+    buffer_insert(&doc->buffer, 0, result.text, result.len);
+    document_mark_dirty(doc);
+    buffer_free(&result);
+}
+
+/* ================================================================
+ * ALTERNATE FILE
+ * ================================================================ */
+
+void document_set_alternate(Document *doc, const char *path) {
+    if (!doc) return;
+    free(doc->alt_filepath);
+    doc->alt_filepath = path ? strdup(path) : NULL;
+}
+
+const char *document_get_alternate(const Document *doc) {
+    return doc ? doc->alt_filepath : NULL;
+}
+
+void document_goto_alternate(Document *doc) {
+    if (!doc || !doc->alt_filepath) return;
+    document_open(doc, doc->alt_filepath);
+}
+
+/* ================================================================
+ * BLOCK COMMENT / LINE COMMENT
+ * ================================================================ */
+
+void document_comment_toggle_block(Document *doc, const char *open, const char *close) {
+    if (!doc || !open || !close) return;
+    Cursor *cur = &doc->cursors[0];
+    int sr, sc, er, ec;
+    if (cur->has_selection) {
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+    } else {
+        sr = cur->row;
+        sc = 0;
+        er = sr;
+        ec = (int)buffer_line_len(&doc->buffer, sr);
+    }
+
+    size_t start = buffer_pos_from_row_col(&doc->buffer, sr, 0);
+    size_t end = buffer_pos_from_row_col(&doc->buffer, er, ec);
+    size_t open_len = strlen(open);
+    size_t close_len = strlen(close);
+
+    /* Check if already block-commented */
+    bool already_commented = false;
+    if (start + open_len + close_len <= doc->buffer.len) {
+        if (memcmp(doc->buffer.text + start, open, open_len) == 0) {
+            /* Find close marker */
+            for (size_t i = start + open_len; i + close_len <= end; i++) {
+                if (memcmp(doc->buffer.text + i, close, close_len) == 0) {
+                    already_commented = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (already_commented) {
+        /* Remove block comment: remove close first (higher offset), then open */
+        for (size_t i = start + open_len; i + close_len <= end; i++) {
+            if (memcmp(doc->buffer.text + i, close, close_len) == 0) {
+                buffer_delete(&doc->buffer, i, close_len);
+                end -= close_len;
+                break;
+            }
+        }
+        buffer_delete(&doc->buffer, start, open_len);
+    } else {
+        /* Add block comment: insert open at start, close at end */
+        buffer_insert(&doc->buffer, start, open, open_len);
+        buffer_insert(&doc->buffer, end + open_len, close, close_len);
+    }
+
+    document_mark_dirty(doc);
+}
+
+void document_comment_toggle_line(Document *doc, const char *prefix) {
+    if (!doc || !prefix) return;
+    Cursor *cur = &doc->cursors[0];
+    size_t prefix_len = strlen(prefix);
+
+    /* For each line in selection (or current line) */
+    int sr, sc, er, ec;
+    if (cur->has_selection) {
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+    } else {
+        sr = cur->row;
+        er = sr;
+    }
+
+    for (int r = sr; r <= er; r++) {
+        size_t line_start = buffer_pos_from_row_col(&doc->buffer, r, 0);
+        size_t line_len = buffer_line_len(&doc->buffer, r);
+
+        /* Find first non-whitespace */
+        size_t indent_pos = line_start;
+        while (indent_pos < line_start + line_len &&
+               (doc->buffer.text[indent_pos] == ' ' || doc->buffer.text[indent_pos] == '\t'))
+            indent_pos++;
+
+        /* Check if already commented */
+        if (indent_pos + prefix_len <= doc->buffer.len &&
+            memcmp(doc->buffer.text + indent_pos, prefix, prefix_len) == 0) {
+            /* Remove comment prefix */
+            buffer_delete(&doc->buffer, indent_pos, prefix_len);
+        } else {
+            /* Add comment prefix at indent */
+            buffer_insert(&doc->buffer, indent_pos, prefix, prefix_len);
+        }
+    }
+
+    document_mark_dirty(doc);
+}
+
+/* ================================================================
+ * SYSTEM CLIPBOARD
+ * ================================================================ */
+
+bool document_yank_to_system_clipboard(Document *doc) {
+    if (!doc) return false;
+    Cursor *cur = &doc->cursors[0];
+    if (!cur->has_selection) return false;
+
+    int sr, sc, er, ec;
+    cursor_normalize(cur, &sr, &sc, &er, &ec);
+    size_t start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
+    size_t end = buffer_pos_from_row_col(&doc->buffer, er, ec);
+    if (start >= end) return false;
+
+    size_t len = end - start;
+    char *text = malloc(len + 1);
+    memcpy(text, doc->buffer.text + start, len);
+    text[len] = '\0';
+
+    /* Use xclip to copy to clipboard */
+    FILE *pipe = popen("xclip -selection clipboard 2>/dev/null || xsel --clipboard --input 2>/dev/null", "w");
+    if (!pipe) { free(text); return false; }
+    fwrite(text, 1, len, pipe);
+    pclose(pipe);
+    free(text);
+    return true;
+}
+
+bool document_paste_from_system_clipboard(Document *doc) {
+    if (!doc) return false;
+    Cursor *cur = &doc->cursors[0];
+
+    FILE *pipe = popen("xclip -selection clipboard -o 2>/dev/null || xsel --clipboard --output 2>/dev/null", "r");
+    if (!pipe) return false;
+
+    Buffer clip;
+    buffer_init(&clip);
+    char chunk[4096];
+    size_t n;
+    while ((n = fread(chunk, 1, sizeof(chunk), pipe)) > 0)
+        buffer_append(&clip, chunk, n);
+    pclose(pipe);
+
+    if (clip.len == 0) { buffer_free(&clip); return false; }
+
+    /* Remove trailing newline if present (linewise paste) */
+    while (clip.len > 0 && (clip.text[clip.len - 1] == '\n' || clip.text[clip.len - 1] == '\r'))
+        clip.len--;
+
+    if (clip.len == 0) { buffer_free(&clip); return false; }
+
+    size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
+    buffer_insert(&doc->buffer, pos, clip.text, clip.len);
+    cur->col += (int)clip.len;
+    cursor_clear_selection(cur);
+    document_mark_dirty(doc);
+    buffer_free(&clip);
+    return true;
+}
+
+bool document_paste_before_from_system_clipboard(Document *doc) {
+    if (!doc) return false;
+    Cursor *cur = &doc->cursors[0];
+
+    FILE *pipe = popen("xclip -selection clipboard -o 2>/dev/null || xsel --clipboard --output 2>/dev/null", "r");
+    if (!pipe) return false;
+
+    Buffer clip;
+    buffer_init(&clip);
+    char chunk[4096];
+    size_t n;
+    while ((n = fread(chunk, 1, sizeof(chunk), pipe)) > 0)
+        buffer_append(&clip, chunk, n);
+    pclose(pipe);
+
+    if (clip.len == 0) { buffer_free(&clip); return false; }
+
+    while (clip.len > 0 && (clip.text[clip.len - 1] == '\n' || clip.text[clip.len - 1] == '\r'))
+        clip.len--;
+
+    if (clip.len == 0) { buffer_free(&clip); return false; }
+
+    size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
+    buffer_insert(&doc->buffer, pos, clip.text, clip.len);
+    cursor_clear_selection(cur);
+    document_mark_dirty(doc);
+    buffer_free(&clip);
+    return true;
+}
+
+bool document_replace_selection_from_system_clipboard(Document *doc) {
+    if (!doc) return false;
+    Cursor *cur = &doc->cursors[0];
+    if (!cur->has_selection) return false;
+
+    int sr, sc, er, ec;
+    cursor_normalize(cur, &sr, &sc, &er, &ec);
+    size_t start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
+    size_t end = buffer_pos_from_row_col(&doc->buffer, er, ec);
+
+    FILE *pipe = popen("xclip -selection clipboard -o 2>/dev/null || xsel --clipboard --output 2>/dev/null", "r");
+    if (!pipe) return false;
+
+    Buffer clip;
+    buffer_init(&clip);
+    char chunk[4096];
+    size_t n;
+    while ((n = fread(chunk, 1, sizeof(chunk), pipe)) > 0)
+        buffer_append(&clip, chunk, n);
+    pclose(pipe);
+
+    if (clip.len == 0) { buffer_free(&clip); return false; }
+
+    buffer_delete(&doc->buffer, start, end - start);
+    buffer_insert(&doc->buffer, start, clip.text, clip.len);
+    cursor_move_to(cur, sr, sc);
+    cursor_clear_selection(cur);
+    document_mark_dirty(doc);
+    buffer_free(&clip);
+    return true;
+}
+
+bool document_yank_main_to_system_clipboard(Document *doc) {
+    if (!doc) return false;
+    Cursor *cur = &doc->cursors[0];
+
+    /* If no selection, yank the current line */
+    int sr, sc, er, ec;
+    if (cur->has_selection) {
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+    } else {
+        sr = cur->row;
+        sc = 0;
+        er = sr;
+        ec = (int)buffer_line_len(&doc->buffer, sr);
+    }
+
+    size_t start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
+    size_t end = buffer_pos_from_row_col(&doc->buffer, er, ec);
+    if (start >= end) return false;
+
+    size_t len = end - start;
+    char *text = malloc(len + 1);
+    memcpy(text, doc->buffer.text + start, len);
+    text[len] = '\0';
+
+    FILE *pipe = popen("xclip -selection clipboard 2>/dev/null || xsel --clipboard --input 2>/dev/null", "w");
+    if (!pipe) { free(text); return false; }
+    fwrite(text, 1, len, pipe);
+    pclose(pipe);
+    free(text);
+    return true;
+}
+
+/* ================================================================
+ * WINDOW / SPLIT MANAGEMENT
+ * ================================================================ */
+
+void window_manager_init(WindowManager *wm) {
+    if (!wm) return;
+    memset(wm, 0, sizeof(WindowManager));
+    wm->count = 1;
+    wm->active = 0;
+    wm->windows[0].doc_index = 0;
+    wm->windows[0].x = 0;
+    wm->windows[0].y = 0;
+    wm->windows[0].width = 100;
+    wm->windows[0].height = 40;
+    wm->windows[0].visible = true;
+    wm->windows[0].parent = -1;
+}
+
+int window_split_vertical(WindowManager *wm, int doc_index) {
+    if (!wm || wm->count >= MAX_WINDOWS) return -1;
+    int idx = wm->count;
+    Window *parent = &wm->windows[wm->active];
+    Window *w = &wm->windows[idx];
+    memset(w, 0, sizeof(Window));
+    w->doc_index = doc_index;
+    w->x = parent->x + parent->width / 2;
+    w->y = parent->y;
+    w->width = parent->width / 2;
+    w->height = parent->height;
+    w->visible = true;
+    w->parent = wm->active;
+    w->is_horizontal = false;
+    parent->width = parent->width / 2;
+    parent->active_child = idx;
+    wm->count++;
+    return idx;
+}
+
+int window_split_horizontal(WindowManager *wm, int doc_index) {
+    if (!wm || wm->count >= MAX_WINDOWS) return -1;
+    int idx = wm->count;
+    Window *parent = &wm->windows[wm->active];
+    Window *w = &wm->windows[idx];
+    memset(w, 0, sizeof(Window));
+    w->doc_index = doc_index;
+    w->x = parent->x;
+    w->y = parent->y + parent->height / 2;
+    w->width = parent->width;
+    w->height = parent->height / 2;
+    w->visible = true;
+    w->parent = wm->active;
+    w->is_horizontal = true;
+    parent->height = parent->height / 2;
+    parent->active_child = idx;
+    wm->count++;
+    return idx;
+}
+
+void window_close(WindowManager *wm) {
+    if (!wm || wm->count <= 1) return;
+    int idx = wm->active;
+    Window *w = &wm->windows[idx];
+    w->visible = false;
+    wm->count--;
+    /* Find a visible window to activate */
+    for (int i = 0; i < MAX_WINDOWS; i++) {
+        if (wm->windows[i].visible) {
+            wm->active = i;
+            return;
+        }
+    }
+}
+
+void window_next(WindowManager *wm) {
+    if (!wm || wm->count <= 1) return;
+    int start = wm->active;
+    do {
+        wm->active = (wm->active + 1) % wm->count;
+    } while (wm->active != start && !wm->windows[wm->active].visible);
+}
+
+void window_prev(WindowManager *wm) {
+    if (!wm || wm->count <= 1) return;
+    int start = wm->active;
+    do {
+        wm->active = (wm->active - 1 + wm->count) % wm->count;
+    } while (wm->active != start && !wm->windows[wm->active].visible);
+}
+
+void window_goto_left(WindowManager *wm) {
+    if (!wm) return;
+    Window *w = &wm->windows[wm->active];
+    int best = -1;
+    for (int i = 0; i < MAX_WINDOWS; i++) {
+        if (i == wm->active || !wm->windows[i].visible) continue;
+        Window *s = &wm->windows[i];
+        if (s->y == w->y && s->x < w->x) {
+            if (best < 0 || s->x > wm->windows[best].x)
+                best = i;
+        }
+    }
+    if (best >= 0) wm->active = best;
+}
+
+void window_goto_right(WindowManager *wm) {
+    if (!wm) return;
+    Window *w = &wm->windows[wm->active];
+    int best = -1;
+    for (int i = 0; i < MAX_WINDOWS; i++) {
+        if (i == wm->active || !wm->windows[i].visible) continue;
+        Window *s = &wm->windows[i];
+        if (s->y == w->y && s->x > w->x) {
+            if (best < 0 || s->x < wm->windows[best].x)
+                best = i;
+        }
+    }
+    if (best >= 0) wm->active = best;
+}
+
+void window_goto_up(WindowManager *wm) {
+    if (!wm) return;
+    Window *w = &wm->windows[wm->active];
+    int best = -1;
+    for (int i = 0; i < MAX_WINDOWS; i++) {
+        if (i == wm->active || !wm->windows[i].visible) continue;
+        Window *s = &wm->windows[i];
+        if (s->x == w->x && s->y < w->y) {
+            if (best < 0 || s->y > wm->windows[best].y)
+                best = i;
+        }
+    }
+    if (best >= 0) wm->active = best;
+}
+
+void window_goto_down(WindowManager *wm) {
+    if (!wm) return;
+    Window *w = &wm->windows[wm->active];
+    int best = -1;
+    for (int i = 0; i < MAX_WINDOWS; i++) {
+        if (i == wm->active || !wm->windows[i].visible) continue;
+        Window *s = &wm->windows[i];
+        if (s->x == w->x && s->y > w->y) {
+            if (best < 0 || s->y < wm->windows[best].y)
+                best = i;
+        }
+    }
+    if (best >= 0) wm->active = best;
+}
+
+void window_maximize(WindowManager *wm) {
+    if (!wm) return;
+    Window *w = &wm->windows[wm->active];
+    w->x = 0; w->y = 0;
+    /* Parent dimensions would come from App; use defaults */
+    w->width = 100; w->height = 40;
+}
+
+void window_equalize(WindowManager *wm) {
+    if (!wm) return;
+    /* Count visible children of root */
+    int count = 0;
+    for (int i = 0; i < wm->count; i++) {
+        if (wm->windows[i].visible && wm->windows[i].parent == 0)
+            count++;
+    }
+    if (count == 0) return;
+    int w = 100 / count;
+    int idx = 0;
+    for (int i = 0; i < wm->count; i++) {
+        if (wm->windows[i].visible && wm->windows[i].parent == 0) {
+            wm->windows[i].x = idx * w;
+            wm->windows[i].width = w;
+            wm->windows[i].y = 0;
+            wm->windows[i].height = 40;
+            idx++;
+        }
+    }
+}
+
+/* ================================================================
+ * PER-LANGUAGE SETTINGS
+ * ================================================================ */
+
+static const LanguageSettings language_settings_table[] = {
+    { "c",           8, true,  "/*", "*/", "//",  true },
+    { "cpp",         8, true,  "/*", "*/", "//",  true },
+    { "objc",        8, true,  "/*", "*/", "//",  true },
+    { "objcpp",      8, true,  "/*", "*/", "//",  true },
+    { "rust",        4, false, "/*", "*/", "//",  true },
+    { "python",      4, false, NULL, NULL, "#",   true },
+    { "go",          4, false, "/*", "*/", "//",  true },
+    { "javascript",  2, false, "/*", "*/", "//",  true },
+    { "typescript",  2, false, "/*", "*/", "//",  true },
+    { "java",        4, false, "/*", "*/", "//",  true },
+    { "html",        4, false, "<!--","-->", NULL, false },
+    { "css",         4, false, "/*", "*/", NULL,  false },
+    { "json",        2, false, NULL, NULL, NULL,  false },
+    { "yaml",        2, false, NULL, NULL, "#",   false },
+    { "toml",        4, false, NULL, NULL, "#",   false },
+    { "markdown",    4, false, NULL, NULL, NULL,  false },
+    { "sh",          4, false, NULL, NULL, "#",   true },
+    { "bash",        4, false, NULL, NULL, "#",   true },
+    { "zig",         4, false, "///", "///", "//", true },
+    { NULL, 0, false, NULL, NULL, NULL, false }
+};
+
+const LanguageSettings *language_settings_get(const char *language_id) {
+    if (!language_id) return NULL;
+    for (int i = 0; language_settings_table[i].language; i++) {
+        if (strcmp(language_settings_table[i].language, language_id) == 0)
+            return &language_settings_table[i];
+    }
+    return NULL;
+}
+
+void language_settings_detect(Document *doc, LanguageSettings *out) {
+    if (!doc || !out) return;
+    const LanguageSettings *ls = language_settings_get(doc->language_id);
+    if (ls) {
+        *out = *ls;
+    } else {
+        out->language = doc->language_id;
+        out->tab_width = 4;
+        out->use_tabs = false;
+        out->comment_open = NULL;
+        out->comment_close = NULL;
+        out->line_comment = NULL;
+        out->auto_format = false;
+    }
 }

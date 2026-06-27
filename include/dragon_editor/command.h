@@ -58,4 +58,39 @@ void     cmd_lsp_restart(App *app);
 void     cmd_workspace_symbols(App *app);
 void     cmd_workspace_diagnostics(App *app);
 
+/* New commands */
+void     cmd_goto_alternate(App *app);
+void     cmd_goto_last_mod(App *app);
+void     cmd_jumplist_backward(App *app);
+void     cmd_jumplist_forward(App *app);
+void     cmd_select_iw(App *app);
+void     cmd_select_aw(App *app);
+void     cmd_select_iparen(App *app);
+void     cmd_select_icurly(App *app);
+void     cmd_comment_toggle(App *app);
+void     cmd_comment_block(App *app);
+void     cmd_reflow(App *app);
+void     cmd_retab(App *app);
+void     cmd_expandtab(App *app);
+void     cmd_sort(App *app);
+void     cmd_format(App *app);
+void     cmd_yank_clipboard(App *app);
+void     cmd_yank_primary_clipboard(App *app);
+void     cmd_paste_clipboard(App *app);
+void     cmd_paste_before_clipboard(App *app);
+void     cmd_replace_clipboard(App *app);
+void     cmd_macro_record(App *app);
+void     cmd_macro_replay(App *app);
+void     cmd_split_v(App *app);
+void     cmd_split_h(App *app);
+void     cmd_close_split(App *app);
+void     cmd_win_left(App *app);
+void     cmd_win_right(App *app);
+void     cmd_win_up(App *app);
+void     cmd_win_down(App *app);
+void     cmd_win_maximize(App *app);
+void     cmd_win_equalize(App *app);
+void     cmd_win_next(App *app);
+void     cmd_win_prev(App *app);
+
 #endif

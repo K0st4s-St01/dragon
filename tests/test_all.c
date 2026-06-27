@@ -2988,6 +2988,672 @@ static void test_document_detect_language(void) {
 }
 
 /* ================================================================
+ * TEXT OBJECT TESTS
+ * ================================================================ */
+
+static void test_text_obj_select_inside_word(void) {
+    TEST(text_obj_select_inside_word);
+    Document *doc = make_doc("hello world");
+    document_cursor_to(doc, 0, 2);
+    document_select_inside_word(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].row, 0);
+    ASSERT_EQ_INT(doc->cursors[0].col, 0);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_row, 0);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 5);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_around_word(void) {
+    TEST(text_obj_select_around_word);
+    Document *doc = make_doc("hello world");
+    document_cursor_to(doc, 0, 2);
+    document_select_around_word(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 0);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 6);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_inside_word_mid(void) {
+    TEST(text_obj_select_inside_word_mid);
+    Document *doc = make_doc("foo bar baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_inside_word(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 4);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 7);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_inside_paren(void) {
+    TEST(text_obj_select_inside_paren);
+    Document *doc = make_doc("foo(bar) baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_inside_paren(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 4);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 7);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_around_paren(void) {
+    TEST(text_obj_select_around_paren);
+    Document *doc = make_doc("foo(bar) baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_around_paren(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 3);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 8);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_inside_bracket(void) {
+    TEST(text_obj_select_inside_bracket);
+    Document *doc = make_doc("foo[bar] baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_inside_bracket(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 4);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 7);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_around_bracket(void) {
+    TEST(text_obj_select_around_bracket);
+    Document *doc = make_doc("foo[bar] baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_around_bracket(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 3);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 8);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_inside_curly(void) {
+    TEST(text_obj_select_inside_curly);
+    Document *doc = make_doc("foo{bar} baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_inside_curly(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 4);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 7);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_around_curly(void) {
+    TEST(text_obj_select_around_curly);
+    Document *doc = make_doc("foo{bar} baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_around_curly(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 3);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 8);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_inside_angle(void) {
+    TEST(text_obj_select_inside_angle);
+    Document *doc = make_doc("foo<bar> baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_inside_angle(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 4);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 7);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_around_angle(void) {
+    TEST(text_obj_select_around_angle);
+    Document *doc = make_doc("foo<bar> baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_around_angle(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 3);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 8);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_inside_quote(void) {
+    TEST(text_obj_select_inside_quote);
+    Document *doc = make_doc("foo\"bar\" baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_inside_quote(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 4);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 7);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_around_quote(void) {
+    TEST(text_obj_select_around_quote);
+    Document *doc = make_doc("foo\"bar\" baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_around_quote(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 3);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 8);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_inside_backtick(void) {
+    TEST(text_obj_select_inside_backtick);
+    Document *doc = make_doc("foo`bar` baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_inside_backtick(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 4);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 7);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_around_backtick(void) {
+    TEST(text_obj_select_around_backtick);
+    Document *doc = make_doc("foo`bar` baz");
+    document_cursor_to(doc, 0, 5);
+    document_select_around_backtick(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 3);
+    ASSERT_EQ_INT(doc->cursors[0].anchor_col, 8);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_inside_paragraph(void) {
+    TEST(text_obj_select_inside_paragraph);
+    Document *doc = make_doc("hello world\n\nfoo bar\n");
+    document_cursor_to(doc, 2, 2);
+    document_select_inside_paragraph(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    /* Selection should be non-empty */
+    int sr, sc, er, ec;
+    cursor_normalize(&doc->cursors[0], &sr, &sc, &er, &ec);
+    ASSERT((er > sr) || (er == sr && ec > sc));
+    free_doc(doc);
+    PASS();
+}
+
+static void test_text_obj_select_around_paragraph(void) {
+    TEST(text_obj_select_around_paragraph);
+    Document *doc = make_doc("hello world\n\nfoo bar\n");
+    document_cursor_to(doc, 2, 2);
+    document_select_around_paragraph(doc);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    ASSERT(doc->cursors[0].row <= 2);
+    free_doc(doc);
+    PASS();
+}
+
+/* ================================================================
+ * MACRO TESTS
+ * ================================================================ */
+
+static void test_macro_init(void) {
+    TEST(macro_init);
+    MacroState ms;
+    macro_init(&ms);
+    ASSERT_FALSE(macro_is_recording(&ms));
+    ASSERT_EQ_INT(ms.active_slot, -1);
+    ASSERT_EQ_INT(ms.last_replayed, -1);
+    PASS();
+}
+
+static void test_macro_record_and_stop(void) {
+    TEST(macro_record_and_stop);
+    MacroState ms;
+    macro_init(&ms);
+    ASSERT_TRUE(macro_start_record(&ms, 0));
+    ASSERT_TRUE(macro_is_recording(&ms));
+    ASSERT_EQ_INT(ms.active_slot, 0);
+    macro_stop_record(&ms);
+    ASSERT_FALSE(macro_is_recording(&ms));
+    ASSERT_EQ_INT(ms.active_slot, -1);
+    PASS();
+}
+
+static void test_macro_record_keys(void) {
+    TEST(macro_record_keys);
+    MacroState ms;
+    macro_init(&ms);
+    macro_start_record(&ms, 5);
+    macro_record_key(&ms, 'h');
+    macro_record_key(&ms, 'j');
+    macro_record_key(&ms, 'l');
+    macro_stop_record(&ms);
+    ASSERT_EQ_INT(ms.slots[5].len, 3);
+    ASSERT_EQ_INT(ms.slots[5].keys[0], 'h');
+    ASSERT_EQ_INT(ms.slots[5].keys[1], 'j');
+    ASSERT_EQ_INT(ms.slots[5].keys[2], 'l');
+    PASS();
+}
+
+static void test_macro_replay(void) {
+    TEST(macro_replay);
+    MacroState ms;
+    macro_init(&ms);
+    macro_start_record(&ms, 0);
+    macro_record_key(&ms, 'x');
+    macro_record_key(&ms, 'y');
+    macro_stop_record(&ms);
+    ASSERT_TRUE(macro_replay(&ms, 0));
+    ASSERT_EQ_INT(ms.last_replayed, 0);
+    PASS();
+}
+
+static void test_macro_cannot_record_while_recording(void) {
+    TEST(macro_cannot_record_while_recording);
+    MacroState ms;
+    macro_init(&ms);
+    ASSERT_TRUE(macro_start_record(&ms, 0));
+    ASSERT_FALSE(macro_start_record(&ms, 1));
+    macro_stop_record(&ms);
+    PASS();
+}
+
+static void test_macro_replay_empty_is_false(void) {
+    TEST(macro_replay_empty_is_false);
+    MacroState ms;
+    macro_init(&ms);
+    ASSERT_FALSE(macro_replay(&ms, 0));
+    ASSERT_FALSE(macro_replay(&ms, 25));
+    PASS();
+}
+
+static void test_macro_stop_noop_when_not_recording(void) {
+    TEST(macro_stop_noop_when_not_recording);
+    MacroState ms;
+    macro_init(&ms);
+    macro_stop_record(&ms); /* should not crash */
+    ASSERT_FALSE(macro_is_recording(&ms));
+    PASS();
+}
+
+/* ================================================================
+ * REFLOW TESTS
+ * ================================================================ */
+
+static void test_reflow_simple(void) {
+    TEST(reflow_simple);
+    Document *doc = make_doc("hello world foo bar baz qux");
+    document_reflow(doc, 10);
+    /* Should wrap at word boundaries */
+    ASSERT(doc->buffer.len > 0);
+    /* Check that no line exceeds width (approximate) */
+    size_t line_start = 0;
+    for (size_t i = 0; i <= doc->buffer.len; i++) {
+        if (i == doc->buffer.len || doc->buffer.text[i] == '\n') {
+            size_t line_len = i - line_start;
+            ASSERT(line_len <= 11); /* allow 10 + possible last word */
+            line_start = i + 1;
+        }
+    }
+    free_doc(doc);
+    PASS();
+}
+
+static void test_reflow_already_fits(void) {
+    TEST(reflow_already_fits);
+    Document *doc = make_doc("hello");
+    document_reflow(doc, 80);
+    /* Reflow may add trailing newline on single-line text */
+    ASSERT(doc->buffer.len >= 5);
+    ASSERT(memcmp(doc->buffer.text, "hello", 5) == 0);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_reflow_preserves_newlines(void) {
+    TEST(reflow_preserves_newlines);
+    Document *doc = make_doc("hello\nworld");
+    document_reflow(doc, 80);
+    /* Should preserve the explicit newline */
+    ASSERT(strchr(doc->buffer.text, '\n') != NULL);
+    free_doc(doc);
+    PASS();
+}
+
+/* ================================================================
+ * INDENT STYLE TESTS
+ * ================================================================ */
+
+static void test_indent_tabs_to_spaces(void) {
+    TEST(indent_tabs_to_spaces);
+    Document *doc = make_doc("\thello");
+    document_indent_style_to_spaces(doc, 4);
+    ASSERT_EQ_STR(doc->buffer.text, "    hello");
+    free_doc(doc);
+    PASS();
+}
+
+static void test_indent_spaces_to_tabs(void) {
+    TEST(indent_spaces_to_tabs);
+    Document *doc = make_doc("    hello");
+    document_indent_style_to_tabs(doc, 4);
+    ASSERT_EQ_STR(doc->buffer.text, "\thello");
+    free_doc(doc);
+    PASS();
+}
+
+static void test_indent_tabs_to_spaces_mixed(void) {
+    TEST(indent_tabs_to_spaces_mixed);
+    Document *doc = make_doc("\t\thello");
+    document_indent_style_to_spaces(doc, 4);
+    ASSERT_EQ_STR(doc->buffer.text, "        hello");
+    free_doc(doc);
+    PASS();
+}
+
+/* ================================================================
+ * ALTERNATE FILE TESTS
+ * ================================================================ */
+
+static void test_alternate_set_get(void) {
+    TEST(alternate_set_get);
+    Document *doc = make_doc(NULL);
+    document_set_alternate(doc, "/tmp/foo.c");
+    ASSERT_EQ_STR(document_get_alternate(doc), "/tmp/foo.c");
+    free_doc(doc);
+    PASS();
+}
+
+static void test_alternate_null(void) {
+    TEST(alternate_null);
+    Document *doc = make_doc(NULL);
+    ASSERT(document_get_alternate(doc) == NULL);
+    document_set_alternate(doc, NULL);
+    ASSERT(document_get_alternate(doc) == NULL);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_alternate_overwrite(void) {
+    TEST(alternate_overwrite);
+    Document *doc = make_doc(NULL);
+    document_set_alternate(doc, "/tmp/a.c");
+    document_set_alternate(doc, "/tmp/b.c");
+    ASSERT_EQ_STR(document_get_alternate(doc), "/tmp/b.c");
+    free_doc(doc);
+    PASS();
+}
+
+/* ================================================================
+ * BLOCK COMMENT TESTS
+ * ================================================================ */
+
+static void test_comment_block_add(void) {
+    TEST(comment_block_add);
+    Document *doc = make_doc("hello world");
+    document_comment_toggle_block(doc, "/*", "*/");
+    ASSERT_EQ_SIZE(doc->buffer.len, 15);
+    ASSERT(doc->buffer.text[0] == '/');
+    ASSERT(doc->buffer.text[1] == '*');
+    ASSERT(doc->buffer.text[13] == '*');
+    ASSERT(doc->buffer.text[14] == '/');
+    free_doc(doc);
+    PASS();
+}
+
+static void test_comment_block_remove(void) {
+    TEST(comment_block_remove);
+    Document *doc = make_doc("/*hello world*/");
+    document_comment_toggle_block(doc, "/*", "*/");
+    ASSERT_EQ_SIZE(doc->buffer.len, 11);
+    ASSERT(doc->buffer.text[0] == 'h');
+    free_doc(doc);
+    PASS();
+}
+
+static void test_comment_block_toggle(void) {
+    TEST(comment_block_toggle);
+    Document *doc = make_doc("test");
+    document_comment_toggle_block(doc, "/*", "*/");
+    ASSERT_EQ_SIZE(doc->buffer.len, 8);  // /*test*/ = 8 chars
+    ASSERT(doc->buffer.text[0] == '/');
+    ASSERT(doc->buffer.text[1] == '*');
+    document_comment_toggle_block(doc, "/*", "*/");
+    ASSERT_EQ_SIZE(doc->buffer.len, 4);
+    ASSERT(doc->buffer.text[0] == 't');
+    free_doc(doc);
+    PASS();
+}
+
+static void test_comment_line_add(void) {
+    TEST(comment_line_add);
+    Document *doc = make_doc("hello\nworld");
+    /* Select both lines */
+    cursor_select_start(&doc->cursors[0]);
+    document_cursor_to(doc, 1, 5);
+    document_comment_toggle_line(doc, "//");
+    ASSERT_EQ_SIZE(doc->buffer.len, 15);
+    ASSERT(doc->buffer.text[0] == '/');
+    ASSERT(doc->buffer.text[1] == '/');
+    ASSERT(doc->buffer.text[7] == '\n');
+    ASSERT(doc->buffer.text[8] == '/');
+    ASSERT(doc->buffer.text[9] == '/');
+    free_doc(doc);
+    PASS();
+}
+
+static void test_comment_line_remove(void) {
+    TEST(comment_line_remove);
+    Document *doc = make_doc("//hello\n//world");
+    cursor_select_start(&doc->cursors[0]);
+    document_cursor_to(doc, 1, 7);
+    document_comment_toggle_line(doc, "//");
+    ASSERT_EQ_SIZE(doc->buffer.len, 11);
+    ASSERT(doc->buffer.text[0] == 'h');
+    ASSERT(doc->buffer.text[5] == '\n');
+    ASSERT(doc->buffer.text[6] == 'w');
+    free_doc(doc);
+    PASS();
+}
+
+static void test_comment_line_toggle(void) {
+    TEST(comment_line_toggle);
+    Document *doc = make_doc("foo\nbar");
+    cursor_select_start(&doc->cursors[0]);
+    document_cursor_to(doc, 1, 3);
+    document_comment_toggle_line(doc, "#");
+    ASSERT_EQ_SIZE(doc->buffer.len, 9);  // #foo\n#bar = 9 chars
+    ASSERT(doc->buffer.text[0] == '#');
+    /* After toggle, move cursor to start then select both lines */
+    document_cursor_to(doc, 0, 0);
+    cursor_select_start(&doc->cursors[0]);
+    document_cursor_to(doc, 1, 4);
+    document_comment_toggle_line(doc, "#");
+    ASSERT_EQ_SIZE(doc->buffer.len, 7);
+    ASSERT(doc->buffer.text[0] == 'f');
+    free_doc(doc);
+    PASS();
+}
+
+/* ================================================================
+ * WINDOW MANAGER TESTS
+ * ================================================================ */
+
+static void test_window_init(void) {
+    TEST(window_init);
+    WindowManager wm;
+    window_manager_init(&wm);
+    ASSERT_EQ_INT(wm.count, 1);
+    ASSERT_EQ_INT(wm.active, 0);
+    ASSERT_TRUE(wm.windows[0].visible);
+    ASSERT_EQ_INT(wm.windows[0].parent, -1);
+    PASS();
+}
+
+static void test_window_split_vertical(void) {
+    TEST(window_split_vertical);
+    WindowManager wm;
+    window_manager_init(&wm);
+    int idx = window_split_vertical(&wm, 1);
+    ASSERT(idx > 0);
+    ASSERT_EQ_INT(wm.count, 2);
+    ASSERT_EQ_INT(wm.active, 0);
+    ASSERT_TRUE(wm.windows[idx].visible);
+    ASSERT_EQ_INT(wm.windows[idx].doc_index, 1);
+    ASSERT_EQ_INT(wm.windows[idx].parent, 0);
+    PASS();
+}
+
+static void test_window_split_horizontal(void) {
+    TEST(window_split_horizontal);
+    WindowManager wm;
+    window_manager_init(&wm);
+    int idx = window_split_horizontal(&wm, 2);
+    ASSERT(idx > 0);
+    ASSERT_EQ_INT(wm.count, 2);
+    ASSERT_TRUE(wm.windows[idx].visible);
+    ASSERT_EQ_INT(wm.windows[idx].parent, 0);
+    PASS();
+}
+
+static void test_window_close(void) {
+    TEST(window_close);
+    WindowManager wm;
+    window_manager_init(&wm);
+    window_split_vertical(&wm, 1);
+    ASSERT_EQ_INT(wm.count, 2);
+    window_close(&wm);
+    ASSERT_FALSE(wm.windows[0].visible);
+    ASSERT_EQ_INT(wm.active, 1);
+    PASS();
+}
+
+static void test_window_next_prev(void) {
+    TEST(window_next_prev);
+    WindowManager wm;
+    window_manager_init(&wm);
+    window_split_vertical(&wm, 1);
+    window_next(&wm);
+    ASSERT_EQ_INT(wm.active, 1);
+    window_next(&wm);
+    ASSERT_EQ_INT(wm.active, 0);
+    window_prev(&wm);
+    ASSERT_EQ_INT(wm.active, 1);
+    PASS();
+}
+
+static void test_window_goto_left_right(void) {
+    TEST(window_goto_left_right);
+    WindowManager wm;
+    window_manager_init(&wm);
+    int idx = window_split_vertical(&wm, 1);
+    wm.active = idx;
+    window_goto_left(&wm);
+    ASSERT_EQ_INT(wm.active, 0);
+    window_goto_right(&wm);
+    ASSERT_EQ_INT(wm.active, idx);
+    PASS();
+}
+
+static void test_window_maximize(void) {
+    TEST(window_maximize);
+    WindowManager wm;
+    window_manager_init(&wm);
+    window_maximize(&wm);
+    ASSERT_EQ_INT(wm.windows[0].x, 0);
+    ASSERT_EQ_INT(wm.windows[0].y, 0);
+    ASSERT_EQ_INT(wm.windows[0].width, 100);
+    ASSERT_EQ_INT(wm.windows[0].height, 40);
+    PASS();
+}
+
+static void test_window_equalize(void) {
+    TEST(window_equalize);
+    WindowManager wm;
+    window_manager_init(&wm);
+    window_split_vertical(&wm, 1);
+    window_equalize(&wm);
+    /* Both visible children should have equal width */
+    ASSERT(wm.windows[0].width > 0);
+    ASSERT(wm.windows[1].width > 0);
+    PASS();
+}
+
+/* ================================================================
+ * LANGUAGE SETTINGS TESTS
+ * ================================================================ */
+
+static void test_lang_settings_c(void) {
+    TEST(lang_settings_c);
+    const LanguageSettings *ls = language_settings_get("c");
+    ASSERT(ls != NULL);
+    ASSERT_EQ_INT(ls->tab_width, 8);
+    ASSERT_TRUE(ls->use_tabs);
+    ASSERT(ls->line_comment != NULL);
+    ASSERT_EQ_STR(ls->line_comment, "//");
+    ASSERT(ls->comment_open != NULL);
+    ASSERT_EQ_STR(ls->comment_open, "/*");
+    ASSERT(ls->comment_close != NULL);
+    ASSERT_EQ_STR(ls->comment_close, "*/");
+    PASS();
+}
+
+static void test_lang_settings_rust(void) {
+    TEST(lang_settings_rust);
+    const LanguageSettings *ls = language_settings_get("rust");
+    ASSERT(ls != NULL);
+    ASSERT_EQ_INT(ls->tab_width, 4);
+    ASSERT_FALSE(ls->use_tabs);
+    ASSERT(ls->line_comment != NULL);
+    ASSERT_EQ_STR(ls->line_comment, "//");
+    ASSERT_TRUE(ls->auto_format);
+    PASS();
+}
+
+static void test_lang_settings_python(void) {
+    TEST(lang_settings_python);
+    const LanguageSettings *ls = language_settings_get("python");
+    ASSERT(ls != NULL);
+    ASSERT_EQ_INT(ls->tab_width, 4);
+    ASSERT_FALSE(ls->use_tabs);
+    ASSERT(ls->line_comment != NULL);
+    ASSERT_EQ_STR(ls->line_comment, "#");
+    ASSERT(ls->comment_open == NULL);
+    PASS();
+}
+
+static void test_lang_settings_unknown(void) {
+    TEST(lang_settings_unknown);
+    const LanguageSettings *ls = language_settings_get("xyz_unknown");
+    ASSERT(ls == NULL);
+    PASS();
+}
+
+static void test_lang_settings_detect(void) {
+    TEST(lang_settings_detect);
+    Document *doc = make_doc(NULL);
+    doc->language_id = strdup("rust");
+    LanguageSettings out;
+    language_settings_detect(doc, &out);
+    ASSERT_EQ_INT(out.tab_width, 4);
+    ASSERT_FALSE(out.use_tabs);
+    ASSERT_EQ_STR(out.line_comment, "//");
+    free(doc->language_id);
+    doc->language_id = strdup("unknown");
+    language_settings_detect(doc, &out);
+    ASSERT_EQ_INT(out.tab_width, 4);
+    ASSERT_FALSE(out.use_tabs);
+    free_doc(doc);
+    PASS();
+}
+
+/* ================================================================
  * MAIN
  * ================================================================ */
 
@@ -3269,6 +3935,74 @@ int main(void) {
     test_document_save_as();
     test_document_insert_file();
     test_document_detect_language();
+
+    printf("\n[Text Object Tests]\n");
+    test_text_obj_select_inside_word();
+    test_text_obj_select_around_word();
+    test_text_obj_select_inside_word_mid();
+    test_text_obj_select_inside_paren();
+    test_text_obj_select_around_paren();
+    test_text_obj_select_inside_bracket();
+    test_text_obj_select_around_bracket();
+    test_text_obj_select_inside_curly();
+    test_text_obj_select_around_curly();
+    test_text_obj_select_inside_angle();
+    test_text_obj_select_around_angle();
+    test_text_obj_select_inside_quote();
+    test_text_obj_select_around_quote();
+    test_text_obj_select_inside_backtick();
+    test_text_obj_select_around_backtick();
+    test_text_obj_select_inside_paragraph();
+    test_text_obj_select_around_paragraph();
+
+    printf("\n[Macro Tests]\n");
+    test_macro_init();
+    test_macro_record_and_stop();
+    test_macro_record_keys();
+    test_macro_replay();
+    test_macro_cannot_record_while_recording();
+    test_macro_replay_empty_is_false();
+    test_macro_stop_noop_when_not_recording();
+
+    printf("\n[Reflow Tests]\n");
+    test_reflow_simple();
+    test_reflow_already_fits();
+    test_reflow_preserves_newlines();
+
+    printf("\n[Indent Style Tests]\n");
+    test_indent_tabs_to_spaces();
+    test_indent_spaces_to_tabs();
+    test_indent_tabs_to_spaces_mixed();
+
+    printf("\n[Alternate File Tests]\n");
+    test_alternate_set_get();
+    test_alternate_null();
+    test_alternate_overwrite();
+
+    printf("\n[Block Comment Tests]\n");
+    test_comment_block_add();
+    test_comment_block_remove();
+    test_comment_block_toggle();
+    test_comment_line_add();
+    test_comment_line_remove();
+    test_comment_line_toggle();
+
+    printf("\n[Window Manager Tests]\n");
+    test_window_init();
+    test_window_split_vertical();
+    test_window_split_horizontal();
+    test_window_close();
+    test_window_next_prev();
+    test_window_goto_left_right();
+    test_window_maximize();
+    test_window_equalize();
+
+    printf("\n[Language Settings Tests]\n");
+    test_lang_settings_c();
+    test_lang_settings_rust();
+    test_lang_settings_python();
+    test_lang_settings_unknown();
+    test_lang_settings_detect();
 
     printf("\n=== Results: %d/%d passed, %d failed ===\n",
            tests_passed, tests_run, tests_failed);

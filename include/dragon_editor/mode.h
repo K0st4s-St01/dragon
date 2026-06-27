@@ -35,6 +35,9 @@ typedef struct {
     bool  view_mode_sticky;  /* Z - sticky view mode stays active */
     bool  select_mode_initialized;  /* True if selection was started when entering select mode */
     bool  suppress_next_char;  /* Suppress next character input if mode changed this frame */
+    /* Text object / operator pending state */
+    char  pending_operator;   /* 'd', 'c', 'y', or 0 */
+    char  pending_text_obj;   /* 'i' or 'a' */
 } ModeState;
 
 void mode_init(ModeState *ms);

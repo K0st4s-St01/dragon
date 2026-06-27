@@ -8,6 +8,22 @@
 #include "lsp.h"
 #include <stdbool.h>
 
+/* Macros */
+#define MACRO_MAX_KEYS 1024
+#define MACRO_SLOTS 26
+
+typedef struct {
+    int keys[MACRO_MAX_KEYS];
+    int len;
+    bool recording;
+} MacroSlot;
+
+typedef struct {
+    MacroSlot slots[MACRO_SLOTS];
+    int active_slot;     /* -1 when not recording */
+    int last_replayed;   /* slot index of last replayed macro, for @@ */
+} MacroState;
+
 typedef struct {
     char *uri;
     int line;
@@ -41,6 +57,8 @@ typedef struct {
     void *diagnostics;  /* LSPDiagnostics* from LSP publish diagnostics */
     bool  ts_parsed;    /* True if tree-sitter has parsed this document */
     bool  ts_attempted; /* True if tree-sitter was tried for current content */
+    MacroState macros;  /* Macro recording/playback state */
+    char  *alt_filepath; /* Alternate (previous) file path for ga */
 } Document;
 
 void document_init(Document *doc);
@@ -222,6 +240,100 @@ void document_select_treesitter_sibling(Document *doc, void *ts_manager, int dir
 void document_select_treesitter_all_siblings(Document *doc, void *ts_manager);
 void document_select_treesitter_all_children(Document *doc, void *ts_manager);
 void document_move_to_treesitter_parent_edge(Document *doc, void *ts_manager, bool end_edge);
+
+/* Text objects: select inside/around */
+void document_select_inside_word(Document *doc);
+void document_select_around_word(Document *doc);
+void document_select_inside_paren(Document *doc);
+void document_select_around_paren(Document *doc);
+void document_select_inside_bracket(Document *doc);
+void document_select_around_bracket(Document *doc);
+void document_select_inside_curly(Document *doc);
+void document_select_around_curly(Document *doc);
+void document_select_inside_angle(Document *doc);
+void document_select_around_angle(Document *doc);
+void document_select_inside_quote(Document *doc);
+void document_select_around_quote(Document *doc);
+void document_select_inside_backtick(Document *doc);
+void document_select_around_backtick(Document *doc);
+void document_select_inside_paragraph(Document *doc);
+void document_select_around_paragraph(Document *doc);
+
+/* Macros */
+void macro_init(MacroState *ms);
+void macro_free(MacroState *ms);
+bool macro_start_record(MacroState *ms, int slot);
+void macro_stop_record(MacroState *ms);
+bool macro_is_recording(const MacroState *ms);
+void macro_record_key(MacroState *ms, int key);
+bool macro_replay(MacroState *ms, int slot);
+
+/* Reflow / indent style */
+void document_reflow(Document *doc, int text_width);
+void document_indent_style_to_tabs(Document *doc, int tab_width);
+void document_indent_style_to_spaces(Document *doc, int space_width);
+
+/* Block comment */
+void document_comment_toggle_block(Document *doc, const char *open, const char *close);
+void document_comment_toggle_line(Document *doc, const char *prefix);
+
+/* System clipboard */
+bool document_yank_to_system_clipboard(Document *doc);
+bool document_paste_from_system_clipboard(Document *doc);
+bool document_paste_before_from_system_clipboard(Document *doc);
+bool document_replace_selection_from_system_clipboard(Document *doc);
+bool document_yank_main_to_system_clipboard(Document *doc);
+
+/* Alternate file */
+void document_set_alternate(Document *doc, const char *path);
+const char *document_get_alternate(const Document *doc);
+void document_goto_alternate(Document *doc);
+
+/* Window / split management */
+#define MAX_WINDOWS 16
+
+typedef struct {
+    int doc_index;          /* Index into document array */
+    int x, y, width, height; /* Viewport geometry */
+    int scroll_y, scroll_x;
+    bool visible;
+    int parent;             /* Index of parent split (-1 for root) */
+    bool is_horizontal;     /* true = split horizontally (side by side) */
+    int active_child;       /* Active child window index */
+} Window;
+
+typedef struct {
+    Window windows[MAX_WINDOWS];
+    int count;
+    int active;             /* Index of active window */
+} WindowManager;
+
+void window_manager_init(WindowManager *wm);
+int window_split_vertical(WindowManager *wm, int doc_index);
+int window_split_horizontal(WindowManager *wm, int doc_index);
+void window_close(WindowManager *wm);
+void window_next(WindowManager *wm);
+void window_prev(WindowManager *wm);
+void window_goto_left(WindowManager *wm);
+void window_goto_right(WindowManager *wm);
+void window_goto_up(WindowManager *wm);
+void window_goto_down(WindowManager *wm);
+void window_maximize(WindowManager *wm);
+void window_equalize(WindowManager *wm);
+
+/* Per-language settings */
+typedef struct {
+    const char *language;
+    int tab_width;
+    bool use_tabs;          /* true = tabs, false = spaces */
+    const char *comment_open;   /* e.g. slash-star for C */
+    const char *comment_close;  /* e.g. star-slash for C */
+    const char *line_comment;   /* e.g. "//" for C */
+    bool auto_format;
+} LanguageSettings;
+
+const LanguageSettings *language_settings_get(const char *language_id);
+void language_settings_detect(Document *doc, LanguageSettings *out);
 
 /* LSP text editing */
 void document_apply_text_edit(Document *doc, const LSPTextEdit *edit);

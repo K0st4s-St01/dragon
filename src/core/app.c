@@ -37,6 +37,7 @@ struct App {
     TreeSitterManager *ts_manager;
     int         syntax_update_timer;  /* Frame counter for throttled updates */
     Config     *config;
+    WindowManager window_mgr;
 };
 
 static void framebuffer_cb(GLFWwindow *win, int w, int h) {
@@ -64,14 +65,95 @@ static char *app_filepath_to_uri(const char *filepath) {
     return uri;
 }
 
+/* Normalize a URI path for comparison: strip file:// prefix, remove . and .. */
+static void normalize_uri_path(const char *uri, char *out, size_t out_size) {
+    if (!uri || !out || out_size == 0) { if (out && out_size > 0) out[0] = '\0'; return; }
+    
+    /* Strip file:// prefix */
+    const char *path = uri;
+    if (strncmp(path, "file://", 7) == 0) path += 7;
+    
+    /* Simple normalization: copy char by char, handle . and .. */
+    size_t j = 0;
+    const char *seg_start = path;
+    
+    /* Skip leading slash, we'll add it back */
+    if (*path == '/') { path++; seg_start = path; }
+    
+    /* Copy path and normalize segments */
+    char buf[2048];
+    size_t buf_len = 0;
+    buf[0] = '/';
+    buf_len = 1;
+    
+    const char *p = path;
+    while (*p && buf_len < sizeof(buf) - 1) {
+        if (*p == '/') {
+            /* End of segment */
+            size_t seg_len = (size_t)(p - seg_start);
+            if (seg_len == 1 && seg_start[0] == '.') {
+                /* Skip single dot */
+            } else if (seg_len == 2 && seg_start[0] == '.' && seg_start[1] == '.') {
+                /* Go up one level */
+                if (buf_len > 1) {
+                    buf_len--;  /* remove trailing slash */
+                    while (buf_len > 1 && buf[buf_len - 1] != '/')
+                        buf_len--;
+                }
+            } else {
+                memcpy(buf + buf_len, seg_start, seg_len);
+                buf_len += seg_len;
+                buf[buf_len++] = '/';
+            }
+            seg_start = p + 1;
+        }
+        p++;
+    }
+    
+    /* Handle last segment */
+    size_t seg_len = (size_t)(p - seg_start);
+    if (seg_len == 1 && seg_start[0] == '.') {
+        /* Skip */
+    } else if (seg_len == 2 && seg_start[0] == '.' && seg_start[1] == '.') {
+        if (buf_len > 1) {
+            buf_len--;
+            while (buf_len > 1 && buf[buf_len - 1] != '/')
+                buf_len--;
+        }
+    } else {
+        memcpy(buf + buf_len, seg_start, seg_len);
+        buf_len += seg_len;
+    }
+    
+    /* Remove trailing slash if not root */
+    if (buf_len > 1 && buf[buf_len - 1] == '/')
+        buf_len--;
+    
+    buf[buf_len] = '\0';
+    
+    /* Copy to output, truncating if needed */
+    size_t copy_len = buf_len < out_size - 1 ? buf_len : out_size - 1;
+    memcpy(out, buf, copy_len);
+    out[copy_len] = '\0';
+}
+
 static Document *app_find_doc_by_uri(App *app, const char *uri) {
     if (!app || !uri || !*uri) return NULL;
+    
+    char norm_uri[2048];
+    normalize_uri_path(uri, norm_uri, sizeof(norm_uri));
+    
     for (int i = 0; i < app->doc_count; i++) {
         Document *doc = &app->documents[i];
-        char *doc_uri = app_filepath_to_uri(doc->filepath);
-        bool matches = doc_uri && strcmp(doc_uri, uri) == 0;
-        free(doc_uri);
-        if (matches)
+        if (!doc->filepath) continue;
+        
+        char norm_doc_path[2048];
+        /* Normalize the doc filepath as if it were a URI path */
+        char doc_uri_buf[2048];
+        snprintf(doc_uri_buf, sizeof(doc_uri_buf), "file://%s", doc->filepath);
+        normalize_uri_path(doc_uri_buf, norm_doc_path, sizeof(norm_doc_path));
+        
+        if (strcmp(norm_uri, norm_doc_path) == 0)
             return doc;
     }
     return NULL;
@@ -110,11 +192,8 @@ static void app_update_diagnostics_from_lsp(App *app) {
             LSPDiagnostics *diagnostics = lsp_parse_publish_diagnostics_notification(response);
             if (diagnostics) {
                 app_store_diagnostics(app, diagnostics);
-            } else {
-                lsp_client_unread_response(client, response);
-                free(response);
-                break;
             }
+            /* Skip non-diagnostic responses (semantic tokens, etc.) */
             free(response);
         }
     }
@@ -185,6 +264,7 @@ App *app_create(int width, int height, const char *title) {
     lsp_manager_init(&app->lsp_manager);
     lsp_config_load_defaults(&app->lsp_manager);
     app->ts_manager = treesitter_manager_new();
+    window_manager_init(&app->window_mgr);
     
     /* Initialize workspace to current directory */
     app->workspace_root = getcwd(NULL, 0);
@@ -285,8 +365,12 @@ void app_quit(App *app) {
 }
 
 void app_open_file(App *app, const char *path) {
-    document_open(&app->documents[app->current_doc], path);
-    document_notify_lsp_open(&app->documents[app->current_doc], &app->lsp_manager);
+    Document *cur = &app->documents[app->current_doc];
+    /* Set alternate file to current file before switching */
+    if (cur->filepath)
+        document_set_alternate(cur, cur->filepath);
+    document_open(cur, path);
+    document_notify_lsp_open(cur, &app->lsp_manager);
 }
 
 /* Buffer management */
@@ -300,6 +384,9 @@ int app_get_current_buffer_index(App *app) {
 
 void app_switch_to_buffer(App *app, int index) {
     if (index >= 0 && index < app->doc_count) {
+        Document *cur = &app->documents[app->current_doc];
+        if (cur->filepath)
+            document_set_alternate(cur, cur->filepath);
         app->current_doc = index;
     }
 }
@@ -349,4 +436,53 @@ void app_set_workspace_root(App *app, const char *path) {
     app->workspace_root = strdup(path);
     free(app->lsp_manager.workspace_root);
     app->lsp_manager.workspace_root = strdup(path);
+}
+
+/* Window/split management */
+WindowManager *app_get_window_manager(App *app) {
+    return &app->window_mgr;
+}
+
+void app_split_vertical(App *app) {
+    window_split_vertical(&app->window_mgr, app->window_mgr.active);
+}
+
+void app_split_horizontal(App *app) {
+    window_split_horizontal(&app->window_mgr, app->window_mgr.active);
+}
+
+void app_close_split(App *app) {
+    window_close(&app->window_mgr);
+}
+
+void app_next_window(App *app) {
+    window_next(&app->window_mgr);
+}
+
+void app_prev_window(App *app) {
+    window_prev(&app->window_mgr);
+}
+
+void app_goto_window_left(App *app) {
+    window_goto_left(&app->window_mgr);
+}
+
+void app_goto_window_right(App *app) {
+    window_goto_right(&app->window_mgr);
+}
+
+void app_goto_window_up(App *app) {
+    window_goto_up(&app->window_mgr);
+}
+
+void app_goto_window_down(App *app) {
+    window_goto_down(&app->window_mgr);
+}
+
+void app_maximize_window(App *app) {
+    window_maximize(&app->window_mgr);
+}
+
+void app_equalize_windows(App *app) {
+    window_equalize(&app->window_mgr);
 }

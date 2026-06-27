@@ -1145,20 +1145,13 @@ LSPDiagnostics *lsp_parse_publish_diagnostics_notification(const char *response)
     /* Parse: {"method":"textDocument/publishDiagnostics","params":{"uri":"...","diagnostics":[...]}} */
     const char *diagnostics_start = strstr(response, "\"diagnostics\"");
     if (!diagnostics_start) {
-        LSPDiagnostics *diag = malloc(sizeof(LSPDiagnostics));
-        if (diag) {
-            memset(diag, 0, sizeof(*diag));
-            const char *params_start = NULL;
-            const char *params_end = NULL;
-            if (json_object_after_key_range(response, response + strlen(response),
-                                            "params", &params_start, &params_end)) {
-                diag->uri = json_string_in_range(params_start, params_end, "uri");
-            }
-        }
-        return diag;
+        /* No diagnostics array found - not a valid diagnostics notification */
+        return NULL;
     }
 
     const char *array = strchr(diagnostics_start, '[');
+    if (!array) return NULL;
+    
     LSPDiagnostics *diag = lsp_parse_diagnostics_array(array);
     if (diag) {
         const char *params_start = NULL;
