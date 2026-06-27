@@ -7,6 +7,7 @@
 #include "dragon_editor/app.h"
 #include "dragon_editor/syntax.h"
 #include "dragon_editor/lsp.h"
+#include "dragon_editor/config.h"
 
 #include "panel_statusbar.h"
 #include "panel_file_browser.h"
@@ -90,6 +91,27 @@ static void get_syntax_color(Theme *t, SyntaxType type,
     }
 }
 
+/* Calculate display column position accounting for tabs */
+static int display_col(const char *line, int col, int tab_width) {
+    int display = 0;
+    for (int i = 0; i < col && line[i]; i++) {
+        if (line[i] == '\t') {
+            display = ((display / tab_width) + 1) * tab_width;
+        } else {
+            display++;
+        }
+    }
+    return display;
+}
+
+/* Get display width of a character */
+static int char_display_width(char c, int display_col, int tab_width) {
+    if (c == '\t') {
+        return ((display_col / tab_width) + 1) * tab_width - display_col;
+    }
+    return 1;
+}
+
 static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
     Renderer *r = app_get_renderer(app);
     Theme *t = theme_get();
@@ -135,8 +157,11 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
                 int sel_start = (line_num == sr) ? sc : 0;
                 int sel_end = (line_num == er) ? ec : len;
                 if (sel_end > len) sel_end = len;
-                float x1 = text_x + sel_start * g->font.glyph_w;
-                float x2 = text_x + sel_end * g->font.glyph_w;
+                const char *sel_line = buffer_line_ptr(&doc->buffer, line_num);
+                int sel_dcol_start = display_col(sel_line, sel_start, 4);
+                int sel_dcol_end = display_col(sel_line, sel_end, 4);
+                float x1 = text_x + sel_dcol_start * g->font.glyph_w;
+                float x2 = text_x + sel_dcol_end * g->font.glyph_w;
                 renderer_draw_rect(r, x1, y, x2-x1, line_h,
                                    t->selection_bg[0], t->selection_bg[1],
                                    t->selection_bg[2], t->selection_bg[3]);
@@ -184,27 +209,47 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
         while (line_len > 0 && (line[line_len-1] == '\n' || line[line_len-1] == '\r'))
             line_len--;
 
+        int tab_width = 4;
+        
         /* Render text with syntax highlighting */
         if (line_len > 0) {
-            for (int col = 0; col < line_len; col++) {
+            int col = 0;
+            while (col < line_len) {
                 SyntaxType syntax_type = syntax_get_type_at(&doc->syntax, line_num, col);
                 float sr, sg, sb, sa;
                 get_syntax_color(t, syntax_type, &sr, &sg, &sb, &sa);
                 
-                char ch[2] = {line[col], '\0'};
-                float x = text_x + col * g->font.glyph_w;
-                font_draw(&g->font, r, ch, x, y + 2, sr, sg, sb, sa);
+                int dcol = display_col(line, col, tab_width);
+                int cw = char_display_width(line[col], dcol, tab_width);
+                
+                if (line[col] == '\t') {
+                    /* Draw tab as whitespace spanning tab width */
+                    float x1 = text_x + dcol * g->font.glyph_w;
+                    float x2 = text_x + (dcol + cw) * g->font.glyph_w;
+                    renderer_draw_rect(r, x1, y + 2, x2 - x1, line_h - 4,
+                                      t->gutter_fg[0] * 0.3f, t->gutter_fg[1] * 0.3f,
+                                      t->gutter_fg[2] * 0.3f, 0.2f);
+                } else {
+                    char ch[2] = {line[col], '\0'};
+                    float x = text_x + dcol * g->font.glyph_w;
+                    font_draw(&g->font, r, ch, x, y + 2, sr, sg, sb, sa);
+                }
+                
+                col++;
             }
         }
     }
 
     /* Cursors */
     if (mode_is(mode, MODE_INSERT) || mode_is(mode, MODE_NORMAL)) {
+        int tab_width = 4;
         for (int ci = 0; ci < doc->cursor_count; ci++) {
             Cursor *c = &doc->cursors[ci];
             int csr = c->row - first_line;
             if (csr >= 0 && csr < visible_lines) {
-                float cx = text_x + c->col * g->font.glyph_w;
+                const char *cur_line = buffer_line_ptr(&doc->buffer, c->row);
+                int cur_dcol = display_col(cur_line, c->col, tab_width);
+                float cx = text_x + cur_dcol * g->font.glyph_w;
                 float cy = text_y + (float)csr * line_h;
                 float cw = mode_is(mode, MODE_INSERT) ? 2.0f : g->font.glyph_w;
                 float ch = line_h;
