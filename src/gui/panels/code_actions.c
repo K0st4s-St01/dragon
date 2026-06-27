@@ -15,11 +15,14 @@ static int code_actions_scroll = 0;
 
 typedef struct {
     char *title;
+    char *kind;
+    void *edit;  /* LSPWorkspaceEdit* */
 } CodeAction;
 
 static CodeAction *code_actions = NULL;
 static int code_actions_count = 0;
 static int code_actions_capacity = 0;
+static LSPClient *code_actions_pending_client = NULL;
 
 void panel_code_actions_open(App *app) {
     Document *doc = (Document *)app_get_doc(app);
@@ -58,17 +61,9 @@ void panel_code_actions_open(App *app) {
                 end_col = sel_end_col;
             }
             
-            lsp_client_send_code_action_request(client, file_uri, start_line, start_col, end_line, end_col);
-            /* Note: Response handling will be done in app update loop */
+             lsp_client_send_code_action_request(client, file_uri, start_line, start_col, end_line, end_col);
+             code_actions_pending_client = client;
         }
-    }
-    
-    /* For now, show placeholder while waiting for LSP response */
-    if (code_actions_count == 0) {
-        code_actions_capacity = 4;
-        code_actions = (CodeAction *)malloc(code_actions_capacity * sizeof(CodeAction));
-        code_actions[0].title = strdup("(Loading code actions...)");
-        code_actions_count = 1;
     }
     
     code_actions_open = true;
@@ -77,6 +72,20 @@ void panel_code_actions_open(App *app) {
 void panel_code_actions_close(App *app) {
     (void)app;
     code_actions_open = false;
+    code_actions_pending_client = NULL;
+    
+    /* Free code actions */
+    for (int i = 0; i < code_actions_count; i++) {
+        free(code_actions[i].title);
+        free(code_actions[i].kind);
+        if (code_actions[i].edit) {
+            lsp_free_workspace_edit((LSPWorkspaceEdit *)code_actions[i].edit);
+        }
+    }
+    free(code_actions);
+    code_actions = NULL;
+    code_actions_count = 0;
+    code_actions_capacity = 0;
 }
 
 bool panel_code_actions_is_open(void) {
@@ -106,12 +115,19 @@ void panel_code_actions_key(App *app, int key) {
             }
         }
         break;
-    case GLFW_KEY_ENTER:
-        if (code_actions_selected >= 0 && code_actions_selected < code_actions_count) {
-            /* TODO: Apply the selected code action */
-            panel_code_actions_close(app);
-        }
-        break;
+     case GLFW_KEY_ENTER:
+         if (code_actions_selected >= 0 && code_actions_selected < code_actions_count) {
+             /* Apply the selected code action's edit if available */
+             if (code_actions[code_actions_selected].edit) {
+                 Document *doc = (Document *)app_get_doc(app);
+                 if (doc) {
+                     LSPWorkspaceEdit *edit = (LSPWorkspaceEdit *)code_actions[code_actions_selected].edit;
+                     document_apply_workspace_edit(doc, edit);
+                 }
+             }
+             panel_code_actions_close(app);
+         }
+         break;
     case GLFW_KEY_ESCAPE:
         panel_code_actions_close(app);
         break;
@@ -122,7 +138,61 @@ void panel_code_actions_key(App *app, int key) {
 
 void panel_code_actions_render(Gui *g, App *app) {
     if (!code_actions_open || !g) return;
-    if (code_actions_count == 0) return;
+    
+    /* Poll for LSP response if we have a pending request */
+    if (code_actions_pending_client && code_actions_count == 0) {
+        char *response = lsp_client_read_response(code_actions_pending_client);
+        if (response) {
+            /* Parse the code actions response */
+            LSPCodeActions *actions = lsp_parse_code_actions_response(response);
+            if (actions && actions->count > 0) {
+                /* Store actions for display */
+                code_actions_count = actions->count;
+                code_actions_capacity = actions->count;
+                code_actions = (CodeAction *)malloc(code_actions_capacity * sizeof(CodeAction));
+                
+                for (int i = 0; i < actions->count; i++) {
+                    code_actions[i].title = actions->actions[i].title;
+                    code_actions[i].kind = actions->actions[i].kind;
+                    code_actions[i].edit = actions->actions[i].edit;
+                    /* Prevent double-free by clearing the actions struct */
+                    actions->actions[i].title = NULL;
+                    actions->actions[i].kind = NULL;
+                    actions->actions[i].edit = NULL;
+                }
+            }
+            
+            if (actions) lsp_free_code_actions(actions);
+            free(response);
+            code_actions_pending_client = NULL;
+        }
+    }
+    
+    /* Show loading state while waiting */
+    if (code_actions_count == 0) {
+        Theme *theme = theme_get();
+        Renderer *r = app_get_renderer(app);
+        int w = app_get_width(app);
+        int h = app_get_height(app);
+        
+        float pw = 400.0f;
+        float ph = 80.0f;
+        float px = (float)w / 2 - pw / 2;
+        float py = (float)h / 2 - ph / 2;
+        
+        renderer_draw_rect(r, 0, 0, (float)w, (float)h, 0.0f, 0.0f, 0.0f, 0.5f);
+        renderer_draw_rect(r, px, py, pw, ph,
+                           theme->menu_bg[0], theme->menu_bg[1], theme->menu_bg[2], theme->menu_bg[3]);
+        renderer_draw_rect(r, px, py, pw, 2, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+        renderer_draw_rect(r, px, py+ph-2, pw, 2, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+        renderer_draw_rect(r, px, py, 2, ph, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+        renderer_draw_rect(r, px+pw-2, py, 2, ph, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+        
+        const char *status = code_actions_pending_client ? "Loading code actions..." : "No code actions available";
+        font_draw(&g->font, r, status, px + 14, py + 25,
+                  theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+        return;
+    }
     
     Theme *theme = theme_get();
     Renderer *r = app_get_renderer(app);

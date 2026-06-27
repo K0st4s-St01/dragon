@@ -8,10 +8,19 @@ void lsp_config_load_defaults(LSPManager *manager) {
     const char *clangd_args[] = {
         "--log=off",
         "--clang-tidy",
-        "--header-insertion=never"
+        "--header-insertion=never",
+        "--function-arg-placeholders",
+        "--enable-config"
     };
-    lsp_manager_add_server(manager, "c", "clangd", clangd_args, 3);
-    lsp_manager_add_server(manager, "cpp", "clangd", clangd_args, 3);
+    lsp_manager_add_server(manager, "c", "clangd", clangd_args, 5);
+    lsp_manager_add_server(manager, "cpp", "clangd", clangd_args, 5);
+    
+    /* Objective-C/Objective-C++ - using clangd */
+    lsp_manager_add_server(manager, "objc", "clangd", clangd_args, 5);
+    lsp_manager_add_server(manager, "objcpp", "clangd", clangd_args, 5);
+    
+    /* CUDA - using clangd */
+    lsp_manager_add_server(manager, "cuda", "clangd", clangd_args, 5);
     
     /* Rust - using rust-analyzer */
     const char *rust_args[] = {};

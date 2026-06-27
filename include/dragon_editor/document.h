@@ -5,6 +5,7 @@
 #include "cursor.h"
 #include "history.h"
 #include "syntax.h"
+#include "lsp.h"
 #include <stdbool.h>
 
 typedef struct {
@@ -204,5 +205,9 @@ void document_goto_last_diagnostic(Document *doc);
 
 /* Treesitter integration */
 void document_parse_treesitter(Document *doc, void *ts_manager);
+
+/* LSP text editing */
+void document_apply_text_edit(Document *doc, const LSPTextEdit *edit);
+void document_apply_workspace_edit(Document *doc, const LSPWorkspaceEdit *edit);
 
 #endif

@@ -32,6 +32,11 @@ typedef struct {
         float number[4];
         float comment[4];
         float function_color[4];
+        float type_color[4];
+        float variable_color[4];
+        float macro_color[4];
+        float operator_color[4];
+        float namespace_color[4];
     } theme;
     
     /* LSP settings */

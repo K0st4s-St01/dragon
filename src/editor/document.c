@@ -211,10 +211,9 @@ void document_move_cursor(Document *doc, int dr, int dc) {
         }
     }
     
-    /* Clamp column to current line */
+    /* Clamp column to current line (allow positioning at end of line) */
     size_t max_col = buffer_line_len(&doc->buffer, cur->row);
-    if (max_col > 0 && cur->col >= (int)max_col)
-        cur->col = (int)max_col - 1;
+    if (cur->col > (int)max_col) cur->col = (int)max_col;
     if (cur->col < 0) cur->col = 0;
     
     /* Keep cursor visible in viewport */
@@ -2477,6 +2476,10 @@ void document_detect_language(Document *doc) {
     if (strcmp(ext, "c") == 0) lang_id = "c";
     else if (strcmp(ext, "h") == 0) lang_id = "c";
     else if (strcmp(ext, "cpp") == 0 || strcmp(ext, "cc") == 0 || strcmp(ext, "cxx") == 0) lang_id = "cpp";
+    else if (strcmp(ext, "hpp") == 0 || strcmp(ext, "hh") == 0 || strcmp(ext, "hxx") == 0) lang_id = "cpp";
+    else if (strcmp(ext, "m") == 0) lang_id = "objc";  /* Objective-C */
+    else if (strcmp(ext, "mm") == 0) lang_id = "objcpp";  /* Objective-C++ */
+    else if (strcmp(ext, "cu") == 0) lang_id = "cuda";  /* CUDA */
     else if (strcmp(ext, "rs") == 0) lang_id = "rust";
     else if (strcmp(ext, "py") == 0) lang_id = "python";
     else if (strcmp(ext, "go") == 0) lang_id = "go";
@@ -3072,4 +3075,61 @@ void document_goto_last_diagnostic(Document *doc) {
     if (!items) return;
     
     document_cursor_to(doc, items[diags->count - 1].start_line, items[diags->count - 1].start_col);
+}
+
+void document_apply_text_edit(Document *doc, const LSPTextEdit *edit) {
+    if (!doc || !edit) return;
+    
+    int start_line = edit->range.start.line;
+    int start_col = edit->range.start.character;
+    int end_line = edit->range.end.line;
+    int end_col = edit->range.end.character;
+    
+    size_t total_lines = buffer_line_count(&doc->buffer);
+    
+    /* Clamp to valid range */
+    if (start_line < 0) start_line = 0;
+    if (start_line >= (int)total_lines) start_line = total_lines - 1;
+    if (start_col < 0) start_col = 0;
+    if (end_line < 0) end_line = 0;
+    if (end_line >= (int)total_lines) end_line = total_lines - 1;
+    
+    /* Move cursor to start of range */
+    document_cursor_to(doc, start_line, start_col);
+    
+    /* Delete the text in the range */
+    if (start_line != end_line || start_col != end_col) {
+        int lines_to_delete = end_line - start_line;
+        for (int i = 0; i < lines_to_delete; i++) {
+            document_delete_char(doc);
+            if (buffer_line_count(&doc->buffer) > 1) {
+                document_delete_char(doc);  /* Delete newline */
+            }
+        }
+        
+        /* Delete remaining characters on the end line */
+        int remaining_chars = end_col - start_col;
+        for (int i = 0; i < remaining_chars && i < 1024; i++) {
+            document_delete_char(doc);
+        }
+    }
+    
+    /* Insert new text */
+    if (edit->new_text && edit->new_text[0] != '\0') {
+        document_insert_text(doc, edit->new_text);
+    }
+    
+    doc->dirty = true;
+}
+
+void document_apply_workspace_edit(Document *doc, const LSPWorkspaceEdit *edit) {
+    if (!doc || !edit || edit->count == 0) return;
+    
+    /* Apply edits in reverse order to preserve positions */
+    for (int i = edit->count - 1; i >= 0; i--) {
+        document_apply_text_edit(doc, &edit->changes[i]);
+    }
+    
+    /* Sync viewport to cursor after all edits */
+    document_sync_viewport_to_cursor(doc);
 }

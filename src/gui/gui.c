@@ -64,6 +64,21 @@ static void get_syntax_color(Theme *t, SyntaxType type,
     case SYNTAX_FUNCTION:
         *r = t->function_color[0]; *g = t->function_color[1]; *b = t->function_color[2]; *a = t->function_color[3];
         break;
+    case SYNTAX_TYPE:
+        *r = t->type_color[0]; *g = t->type_color[1]; *b = t->type_color[2]; *a = t->type_color[3];
+        break;
+    case SYNTAX_VARIABLE:
+        *r = t->variable_color[0]; *g = t->variable_color[1]; *b = t->variable_color[2]; *a = t->variable_color[3];
+        break;
+    case SYNTAX_MACRO:
+        *r = t->macro_color[0]; *g = t->macro_color[1]; *b = t->macro_color[2]; *a = t->macro_color[3];
+        break;
+    case SYNTAX_OPERATOR:
+        *r = t->operator_color[0]; *g = t->operator_color[1]; *b = t->operator_color[2]; *a = t->operator_color[3];
+        break;
+    case SYNTAX_NAMESPACE:
+        *r = t->namespace_color[0]; *g = t->namespace_color[1]; *b = t->namespace_color[2]; *a = t->namespace_color[3];
+        break;
     case SYNTAX_ERROR:
         *r = t->error[0]; *g = t->error[1]; *b = t->error[2]; *a = t->error[3];
         break;

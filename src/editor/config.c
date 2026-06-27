@@ -95,6 +95,21 @@ Config *config_default(void) {
     cfg->theme.function_color[0] = 0.0f; cfg->theme.function_color[1] = 1.0f; cfg->theme.function_color[2] = 1.0f;
     cfg->theme.function_color[3] = 1.0f;
     
+    cfg->theme.type_color[0] = 0.0f; cfg->theme.type_color[1] = 1.0f; cfg->theme.type_color[2] = 1.0f;
+    cfg->theme.type_color[3] = 1.0f;
+    
+    cfg->theme.variable_color[0] = 1.0f; cfg->theme.variable_color[1] = 0.75f; cfg->theme.variable_color[2] = 0.0f;
+    cfg->theme.variable_color[3] = 1.0f;
+    
+    cfg->theme.macro_color[0] = 1.0f; cfg->theme.macro_color[1] = 0.0f; cfg->theme.macro_color[2] = 0.75f;
+    cfg->theme.macro_color[3] = 1.0f;
+    
+    cfg->theme.operator_color[0] = 1.0f; cfg->theme.operator_color[1] = 1.0f; cfg->theme.operator_color[2] = 0.0f;
+    cfg->theme.operator_color[3] = 1.0f;
+    
+    cfg->theme.namespace_color[0] = 0.0f; cfg->theme.namespace_color[1] = 1.0f; cfg->theme.namespace_color[2] = 0.5f;
+    cfg->theme.namespace_color[3] = 1.0f;
+    
     /* LSP defaults */
     cfg->lsp.auto_format = 0;
     cfg->lsp.auto_hover = 1;
@@ -169,9 +184,14 @@ Config *config_load(void) {
         parse_color(theme, "keyword", cfg->theme.keyword);
         parse_color(theme, "string", cfg->theme.string);
         parse_color(theme, "number", cfg->theme.number);
-        parse_color(theme, "comment", cfg->theme.comment);
-        parse_color(theme, "function_color", cfg->theme.function_color);
-        fprintf(stderr, "Config: Theme colors loaded from config file\n");
+         parse_color(theme, "comment", cfg->theme.comment);
+         parse_color(theme, "function_color", cfg->theme.function_color);
+         parse_color(theme, "type_color", cfg->theme.type_color);
+         parse_color(theme, "variable_color", cfg->theme.variable_color);
+         parse_color(theme, "macro_color", cfg->theme.macro_color);
+         parse_color(theme, "operator_color", cfg->theme.operator_color);
+         parse_color(theme, "namespace_color", cfg->theme.namespace_color);
+         fprintf(stderr, "Config: Theme colors loaded from config file\n");
     }
     
     /* Parse lsp section */

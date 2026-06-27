@@ -54,10 +54,21 @@ static const char* treesitter_get_language_name(const char *file_extension) {
     /* Remove leading dot if present */
     if (file_extension[0] == '.') file_extension++;
     
+    /* C/C++ - map all variants to C grammar (TreeSitter C parser handles C++) */
     if (strcmp(file_extension, "c") == 0) return "c";
     if (strcmp(file_extension, "h") == 0) return "c";
     if (strcmp(file_extension, "cpp") == 0 || strcmp(file_extension, "cc") == 0 || 
         strcmp(file_extension, "cxx") == 0) return "c";
+    if (strcmp(file_extension, "hpp") == 0 || strcmp(file_extension, "hh") == 0 || 
+        strcmp(file_extension, "hxx") == 0) return "c";
+    
+    /* Objective-C/C++ - use C grammar for now */
+    if (strcmp(file_extension, "m") == 0) return "c";
+    if (strcmp(file_extension, "mm") == 0) return "c";
+    
+    /* CUDA - use C grammar (compatible syntax) */
+    if (strcmp(file_extension, "cu") == 0) return "c";
+    
     if (strcmp(file_extension, "py") == 0) return "python";
     if (strcmp(file_extension, "js") == 0 || strcmp(file_extension, "mjs") == 0) return "javascript";
     if (strcmp(file_extension, "ts") == 0) return "typescript";

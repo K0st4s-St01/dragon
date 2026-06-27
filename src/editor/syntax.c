@@ -128,32 +128,32 @@ void syntax_update_from_lsp(SyntaxHighlighting *sh, const char *response) {
             cur_col += delta_start;
         }
         
-        /* Map token type to syntax type */
-        SyntaxType type = SYNTAX_NORMAL;
-        switch (token_type) {
-        case 0: type = SYNTAX_NORMAL; break;    /* namespace */
-        case 1: type = SYNTAX_TYPE; break;      /* type */
-        case 2: type = SYNTAX_TYPE; break;      /* class */
-        case 3: type = SYNTAX_FUNCTION; break;  /* enum */
-        case 4: type = SYNTAX_FUNCTION; break;  /* interface */
-        case 5: type = SYNTAX_FUNCTION; break;  /* struct */
-        case 6: type = SYNTAX_TYPE; break;      /* typeParameter */
-        case 7: type = SYNTAX_NORMAL; break;    /* parameter */
-        case 8: type = SYNTAX_NORMAL; break;    /* variable */
-        case 9: type = SYNTAX_NORMAL; break;    /* property */
-        case 10: type = SYNTAX_NORMAL; break;   /* enumMember */
-        case 11: type = SYNTAX_FUNCTION; break; /* event */
-        case 12: type = SYNTAX_FUNCTION; break; /* function */
-        case 13: type = SYNTAX_FUNCTION; break; /* method */
-        case 14: type = SYNTAX_NORMAL; break;   /* macro */
-        case 15: type = SYNTAX_KEYWORD; break;  /* keyword */
-        case 16: type = SYNTAX_COMMENT; break;  /* comment */
-        case 17: type = SYNTAX_STRING; break;   /* string */
-        case 18: type = SYNTAX_NUMBER; break;   /* number */
-        case 19: type = SYNTAX_NORMAL; break;   /* regexp */
-        case 20: type = SYNTAX_NORMAL; break;   /* operator */
-        default: type = SYNTAX_NORMAL;
-        }
+         /* Map token type to syntax type */
+         SyntaxType type = SYNTAX_NORMAL;
+         switch (token_type) {
+         case 0: type = SYNTAX_NAMESPACE; break;  /* namespace */
+         case 1: type = SYNTAX_TYPE; break;       /* type */
+         case 2: type = SYNTAX_TYPE; break;       /* class */
+         case 3: type = SYNTAX_TYPE; break;       /* enum */
+         case 4: type = SYNTAX_TYPE; break;       /* interface */
+         case 5: type = SYNTAX_TYPE; break;       /* struct */
+         case 6: type = SYNTAX_TYPE; break;       /* typeParameter */
+         case 7: type = SYNTAX_VARIABLE; break;   /* parameter */
+         case 8: type = SYNTAX_VARIABLE; break;   /* variable */
+         case 9: type = SYNTAX_VARIABLE; break;   /* property */
+         case 10: type = SYNTAX_VARIABLE; break;  /* enumMember */
+         case 11: type = SYNTAX_FUNCTION; break;  /* event */
+         case 12: type = SYNTAX_FUNCTION; break;  /* function */
+         case 13: type = SYNTAX_FUNCTION; break;  /* method */
+         case 14: type = SYNTAX_MACRO; break;     /* macro */
+         case 15: type = SYNTAX_KEYWORD; break;   /* keyword */
+         case 16: type = SYNTAX_COMMENT; break;   /* comment */
+         case 17: type = SYNTAX_STRING; break;    /* string */
+         case 18: type = SYNTAX_NUMBER; break;    /* number */
+         case 19: type = SYNTAX_NORMAL; break;    /* regexp */
+         case 20: type = SYNTAX_OPERATOR; break;  /* operator */
+         default: type = SYNTAX_NORMAL;
+         }
         
         /* Add token */
         if (length > 0) {

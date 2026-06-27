@@ -19,7 +19,7 @@ typedef struct {
 
 static SpaceCommand commands[] = {
     /* File operations */
-    {"f", "File picker (workspace root)", false},
+    {"f", "File picker (workspace root)", true},
     {"F", "File picker (current dir)", true},
     {"b", "Buffer picker", true},
     {"j", "Jumplist picker", true},
@@ -31,12 +31,12 @@ static SpaceCommand commands[] = {
     
     /* LSP features */
     {"k", "Hover documentation", true},
-    {"s", "Document symbols", false},
+    {"s", "Document symbols", true},
     {"S", "Workspace symbols", false},
     {"d", "Document diagnostics", true},
     {"D", "Workspace diagnostics", false},
-    {"r", "Rename symbol", false},
-    {"a", "Code actions", false},
+    {"r", "Rename symbol", true},
+    {"a", "Code actions", true},
     {"h", "Highlight references", false},
     
     /* Editing */
@@ -44,10 +44,10 @@ static SpaceCommand commands[] = {
     {"C", "Block comment", false},
     
     /* Clipboard */
-    {"y", "Yank to clipboard", false},
+    {"y", "Yank to clipboard", true},
     {"Y", "Yank primary selection", false},
-    {"p", "Paste after", false},
-    {"P", "Paste before", false},
+    {"p", "Paste after", true},
+    {"P", "Paste before", true},
     {"R", "Replace with clipboard", false},
     
     /* Modes */

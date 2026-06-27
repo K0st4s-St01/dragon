@@ -539,6 +539,49 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                   mode->pending_len = 0;
                   return;
               }
+              if (key == GLFW_KEY_Y) {
+                  /* Space y - yank selection to clipboard */
+                  if (doc->cursors[0].has_selection) {
+                      int start_row, start_col, end_row, end_col;
+                      cursor_normalize(&doc->cursors[0], &start_row, &start_col, &end_row, &end_col);
+                      
+                      /* Get text from selection and copy to clipboard */
+                      char buffer[4096] = {0};
+                      int pos = 0;
+                      
+                      for (int r = start_row; r <= end_row && pos < 4095; r++) {
+                          const char *line = buffer_line_ptr(&doc->buffer, r);
+                          if (!line) continue;
+                          
+                          int col_start = (r == start_row) ? start_col : 0;
+                          int col_end = (r == end_row) ? end_col : (int)strlen(line);
+                          
+                          for (int c = col_start; c < col_end && pos < 4095; c++) {
+                              if (c < (int)strlen(line)) {
+                                  buffer[pos++] = line[c];
+                              }
+                          }
+                          
+                          if (r < end_row && pos < 4095) {
+                              buffer[pos++] = '\n';
+                          }
+                      }
+                      
+                      app_set_clipboard(app, buffer);
+                  }
+                  mode->pending_len = 0;
+                  return;
+              }
+              if (key == GLFW_KEY_P) {
+                  /* Space p - paste after cursor */
+                  const char *clipboard = app_get_clipboard(app);
+                  if (clipboard) {
+                      document_move_cursor(doc, 0, 1);  /* Move cursor to after current position */
+                      document_insert_text(doc, clipboard);
+                  }
+                  mode->pending_len = 0;
+                  return;
+              }
              mode->pending_len = 0;
              return;
         }

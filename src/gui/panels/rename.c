@@ -16,6 +16,9 @@ static int rename_line = 0;
 static int rename_col = 0;
 static char rename_file_uri[1024] = {0};
 static char *rename_language_id = NULL;
+static LSPClient *rename_pending_client = NULL;  /* Track pending LSP request */
+static char rename_status[256] = {0};  /* Status message for the user */
+static double rename_status_time = 0;  /* Time when status was set */
 
 void panel_rename_open(App *app) {
     Document *doc = (Document *)app_get_doc(app);
@@ -62,7 +65,11 @@ void panel_rename_key(App *app, int key) {
                 LSPClient *client = lsp_manager_get_client(lsp_manager, rename_language_id);
                 if (client) {
                     lsp_client_send_rename_request(client, rename_file_uri, rename_line, rename_col, rename_buffer);
-                    /* Note: Response handling will be done in app update loop */
+                    rename_pending_client = client;
+                    snprintf(rename_status, sizeof(rename_status), "Renaming to '%s'...", rename_buffer);
+                    rename_status_time = 0;  /* Will be set by render function */
+                    /* Keep panel open while waiting for response */
+                    return;
                 }
             }
             panel_rename_close(app);
@@ -91,13 +98,46 @@ void panel_rename_key(App *app, int key) {
 void panel_rename_render(Gui *g, App *app) {
     if (!rename_open || !g) return;
     
+    /* Poll for LSP response if we have a pending request */
+    if (rename_pending_client) {
+        char *response = lsp_client_read_response(rename_pending_client);
+        if (response) {
+            /* Parse the rename response */
+            LSPWorkspaceEdit *edit = lsp_parse_rename_response(response);
+            if (edit && edit->count > 0) {
+                /* Apply the edits to the document */
+                Document *doc = (Document *)app_get_doc(app);
+                if (doc) {
+                    document_apply_workspace_edit(doc, edit);
+                    snprintf(rename_status, sizeof(rename_status), "Renamed successfully! (%d locations)", edit->count);
+                }
+                lsp_free_workspace_edit(edit);
+            } else {
+                snprintf(rename_status, sizeof(rename_status), "Rename completed (no changes)");
+            }
+            
+            free(response);
+            rename_pending_client = NULL;
+            rename_status_time = 3.0;  /* Show message for 3 seconds */
+        }
+    }
+    
+    /* Auto-close after status is shown */
+    if (rename_status_time > 0) {
+        rename_status_time -= (double)app_get_dt(app);
+        if (rename_status_time <= 0 && rename_pending_client == NULL) {
+            panel_rename_close(app);
+            return;
+        }
+    }
+    
     Theme *theme = theme_get();
     Renderer *r = app_get_renderer(app);
     int w = app_get_width(app);
     int h = app_get_height(app);
     
     float pw = 400.0f;
-    float ph = 100.0f;
+    float ph = (rename_pending_client || rename_status[0]) ? 130.0f : 100.0f;
     float px = (float)w / 2 - pw / 2;
     float py = (float)h / 2 - ph / 2;
     
@@ -116,19 +156,32 @@ void panel_rename_render(Gui *g, App *app) {
     renderer_draw_rect(r, px+pw-2, py, 2, ph, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
     
     /* Title */
-    font_draw(&g->font, r, "Rename Symbol", px + 14, py + 10,
-              theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+    if (rename_pending_client) {
+        font_draw(&g->font, r, "Waiting for LSP...", px + 14, py + 10,
+                  theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+    } else {
+        font_draw(&g->font, r, "Rename Symbol", px + 14, py + 10,
+                  theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+    }
     
     /* Input field background */
     renderer_draw_rect(r, px + 10, py + 35, pw - 20, 25,
                        0.1f, 0.1f, 0.1f, 0.8f);
     
-    /* Draw text input and cursor */
-    font_draw(&g->font, r, rename_buffer, px + 15, py + 40,
-              theme->menu_fg[0], theme->menu_fg[1], theme->menu_fg[2], 1.0f);
+    /* Draw text input and cursor (only if not waiting) */
+    if (!rename_pending_client) {
+        font_draw(&g->font, r, rename_buffer, px + 15, py + 40,
+                  theme->menu_fg[0], theme->menu_fg[1], theme->menu_fg[2], 1.0f);
+        
+        /* Draw cursor */
+        float cursor_x = px + 15 + rename_cursor * 8; /* Estimate character width */
+        renderer_draw_rect(r, cursor_x, py + 40, 2, 15,
+                           theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+    }
     
-    /* Draw cursor */
-    float cursor_x = px + 15 + rename_cursor * 8; /* Estimate character width */
-    renderer_draw_rect(r, cursor_x, py + 40, 2, 15,
-                       theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+    /* Draw status message if available */
+    if (rename_status[0] != '\0') {
+        font_draw(&g->font, r, rename_status, px + 15, py + 70,
+                  theme->menu_fg[0], theme->menu_fg[1], theme->menu_fg[2], 1.0f);
+    }
 }

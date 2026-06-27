@@ -23,6 +23,11 @@ static Theme current_theme = {
     .number        = {0.00f, 1.00f, 1.00f, 1.0f},        /* Pure bright cyan numbers */
     .comment       = {0.50f, 0.00f, 0.50f, 1.0f},        /* Dark purple comments - evil */
     .function_color = {0.00f, 1.00f, 0.00f, 1.0f},       /* Pure bright lime green functions */
+    .type_color    = {0.00f, 1.00f, 1.00f, 1.0f},        /* Pure bright cyan types */
+    .variable_color = {1.00f, 0.75f, 0.00f, 1.0f},       /* Bright orange variables */
+    .macro_color   = {1.00f, 0.00f, 0.75f, 1.0f},        /* Bright magenta/pink macros */
+    .operator_color = {1.00f, 1.00f, 0.00f, 1.0f},       /* Bright yellow operators */
+    .namespace_color = {0.00f, 1.00f, 0.50f, 1.0f},      /* Bright cyan-green namespaces */
 };
 
 Theme *theme_default(void) {
@@ -64,6 +69,11 @@ void theme_apply_config(const void *config_ptr) {
             float number[4];
             float comment[4];
             float function_color[4];
+            float type_color[4];
+            float variable_color[4];
+            float macro_color[4];
+            float operator_color[4];
+            float namespace_color[4];
         } theme;
         struct {
             int auto_format;
@@ -93,6 +103,11 @@ void theme_apply_config(const void *config_ptr) {
     memcpy(current_theme.keyword, cfg->theme.keyword, sizeof(float) * 4);
     memcpy(current_theme.string, cfg->theme.string, sizeof(float) * 4);
     memcpy(current_theme.number, cfg->theme.number, sizeof(float) * 4);
-    memcpy(current_theme.comment, cfg->theme.comment, sizeof(float) * 4);
-    memcpy(current_theme.function_color, cfg->theme.function_color, sizeof(float) * 4);
+     memcpy(current_theme.comment, cfg->theme.comment, sizeof(float) * 4);
+     memcpy(current_theme.function_color, cfg->theme.function_color, sizeof(float) * 4);
+     memcpy(current_theme.type_color, cfg->theme.type_color, sizeof(float) * 4);
+     memcpy(current_theme.variable_color, cfg->theme.variable_color, sizeof(float) * 4);
+     memcpy(current_theme.macro_color, cfg->theme.macro_color, sizeof(float) * 4);
+     memcpy(current_theme.operator_color, cfg->theme.operator_color, sizeof(float) * 4);
+     memcpy(current_theme.namespace_color, cfg->theme.namespace_color, sizeof(float) * 4);
 }

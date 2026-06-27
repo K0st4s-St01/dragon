@@ -15,6 +15,10 @@ typedef enum {
     SYNTAX_TYPE,
     SYNTAX_ERROR,
     SYNTAX_WARNING,
+    SYNTAX_VARIABLE,
+    SYNTAX_MACRO,
+    SYNTAX_OPERATOR,
+    SYNTAX_NAMESPACE,
 } SyntaxType;
 
 typedef struct {

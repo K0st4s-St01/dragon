@@ -830,19 +830,43 @@ LSPWorkspaceEdit *lsp_parse_rename_response(const char *response) {
     edit->changes = malloc(sizeof(LSPTextEdit) * 100);
     edit->count = 0;
     
-    /* Simple parser: find all "newText" values and corresponding ranges */
+    /* Parser: extract range and newText pairs */
     const char *p = changes_start;
-    while ((p = strstr(p, "\"newText\"")) && edit->count < 100) {
-        /* Find the quoted string value */
-        const char *colon = strchr(p, ':');
+    while (edit->count < 100) {
+        /* Find next range object */
+        const char *range_start = strstr(p, "\"range\"");
+        if (!range_start) break;
+        
+        const char *range_brace = strchr(range_start, '{');
+        if (!range_brace) break;
+        
+        /* Parse start position: "start":{"line":X,"character":Y} */
+        const char *start_pos = strstr(range_brace, "\"start\"");
+        if (!start_pos) break;
+        
+        int start_line = 0, start_char = 0;
+        sscanf(start_pos, "\"start\":{\"line\":%d,\"character\":%d", &start_line, &start_char);
+        
+        /* Parse end position: "end":{"line":X,"character":Y} */
+        const char *end_pos = strstr(range_brace, "\"end\"");
+        if (!end_pos) break;
+        
+        int end_line = 0, end_char = 0;
+        sscanf(end_pos, "\"end\":{\"line\":%d,\"character\":%d", &end_line, &end_char);
+        
+        /* Find newText after this range */
+        const char *newtext_ptr = strstr(range_brace, "\"newText\"");
+        if (!newtext_ptr) break;
+        
+        const char *colon = strchr(newtext_ptr, ':');
         if (!colon) break;
         
         const char *quote_start = strchr(colon, '"');
         if (!quote_start) break;
         quote_start++;
         
+        /* Find closing quote (handle escapes) */
         const char *quote_end = quote_start;
-        /* Simple unescaping - find closing quote */
         while (*quote_end && *quote_end != '"') {
             if (*quote_end == '\\') quote_end += 2;
             else quote_end++;
@@ -851,16 +875,16 @@ LSPWorkspaceEdit *lsp_parse_rename_response(const char *response) {
         if (*quote_end != '"') break;
         
         size_t text_len = quote_end - quote_start;
-        if (text_len > 0 && text_len < 512) {
+        if (text_len > 0 && text_len < 2048) {
             edit->changes[edit->count].new_text = malloc(text_len + 1);
             memcpy(edit->changes[edit->count].new_text, quote_start, text_len);
             edit->changes[edit->count].new_text[text_len] = '\0';
             
-            /* For simplicity, mark range as [0,0] to [0,0] - document will handle application */
-            edit->changes[edit->count].range.start.line = 0;
-            edit->changes[edit->count].range.start.character = 0;
-            edit->changes[edit->count].range.end.line = 0;
-            edit->changes[edit->count].range.end.character = 0;
+            /* Store range */
+            edit->changes[edit->count].range.start.line = start_line;
+            edit->changes[edit->count].range.start.character = start_char;
+            edit->changes[edit->count].range.end.line = end_line;
+            edit->changes[edit->count].range.end.character = end_char;
             
             edit->count++;
         }

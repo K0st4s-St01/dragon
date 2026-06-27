@@ -22,6 +22,11 @@ typedef struct {
     float number[4];
     float comment[4];
     float function_color[4];
+    float type_color[4];       /* class, struct, enum, typedef */
+    float variable_color[4];   /* variable, parameter */
+    float macro_color[4];      /* macro, define */
+    float operator_color[4];   /* operators */
+    float namespace_color[4];  /* namespace, module */
 } Theme;
 
 Theme *theme_default(void);
