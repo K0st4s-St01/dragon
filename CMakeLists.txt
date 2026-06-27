@@ -84,3 +84,29 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     ${GLFW3_CFLAGS_OTHER}
     -Wall -Wextra
 )
+
+# --- Tests ---
+enable_testing()
+
+set(TEST_SOURCES
+    src/editor/buffer.c
+    src/editor/cursor.c
+    src/editor/history.c
+    src/core/mode.c
+    src/editor/syntax.c
+)
+
+add_library(dragon_core STATIC ${TEST_SOURCES})
+target_include_directories(dragon_core PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/dragon_editor
+)
+
+add_executable(test_all tests/test_all.c)
+target_include_directories(test_all PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/dragon_editor
+)
+target_link_libraries(test_all PRIVATE dragon_core m)
+
+add_test(NAME unit_tests COMMAND test_all)

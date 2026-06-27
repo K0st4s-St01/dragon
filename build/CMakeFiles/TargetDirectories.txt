@@ -1,5 +1,8 @@
 /home/xator/dragon/build/CMakeFiles/glad.dir
 /home/xator/dragon/build/CMakeFiles/tomlc99.dir
 /home/xator/dragon/build/CMakeFiles/dragon_editor.dir
+/home/xator/dragon/build/CMakeFiles/dragon_core.dir
+/home/xator/dragon/build/CMakeFiles/test_all.dir
+/home/xator/dragon/build/CMakeFiles/test.dir
 /home/xator/dragon/build/CMakeFiles/edit_cache.dir
 /home/xator/dragon/build/CMakeFiles/rebuild_cache.dir

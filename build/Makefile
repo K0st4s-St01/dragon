@@ -65,6 +65,16 @@ CMAKE_BINARY_DIR = /home/xator/dragon/build
 #=============================================================================
 # Targets provided globally by CMake.
 
+# Special rule for the target test
+test:
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Running tests..."
+	/usr/bin/ctest $(ARGS)
+.PHONY : test
+
+# Special rule for the target test
+test/fast: test
+.PHONY : test/fast
+
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Running CMake cache editor..."
@@ -155,6 +165,32 @@ dragon_editor/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/build
 .PHONY : dragon_editor/fast
 
+#=============================================================================
+# Target rules for targets named dragon_core
+
+# Build rule for target.
+dragon_core: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 dragon_core
+.PHONY : dragon_core
+
+# fast build rule for target.
+dragon_core/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/build
+.PHONY : dragon_core/fast
+
+#=============================================================================
+# Target rules for targets named test_all
+
+# Build rule for target.
+test_all: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_all
+.PHONY : test_all
+
+# fast build rule for target.
+test_all/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_all.dir/build.make CMakeFiles/test_all.dir/build
+.PHONY : test_all/fast
+
 src/core/app.o: src/core/app.c.o
 .PHONY : src/core/app.o
 
@@ -233,6 +269,7 @@ src/core/mode.o: src/core/mode.c.o
 # target to build an object file
 src/core/mode.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/core/mode.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/core/mode.c.o
 .PHONY : src/core/mode.c.o
 
 src/core/mode.i: src/core/mode.c.i
@@ -241,6 +278,7 @@ src/core/mode.i: src/core/mode.c.i
 # target to preprocess a source file
 src/core/mode.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/core/mode.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/core/mode.c.i
 .PHONY : src/core/mode.c.i
 
 src/core/mode.s: src/core/mode.c.s
@@ -249,6 +287,7 @@ src/core/mode.s: src/core/mode.c.s
 # target to generate assembly for a file
 src/core/mode.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/core/mode.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/core/mode.c.s
 .PHONY : src/core/mode.c.s
 
 src/core/renderer.o: src/core/renderer.c.o
@@ -281,6 +320,7 @@ src/editor/buffer.o: src/editor/buffer.c.o
 # target to build an object file
 src/editor/buffer.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/buffer.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/buffer.c.o
 .PHONY : src/editor/buffer.c.o
 
 src/editor/buffer.i: src/editor/buffer.c.i
@@ -289,6 +329,7 @@ src/editor/buffer.i: src/editor/buffer.c.i
 # target to preprocess a source file
 src/editor/buffer.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/buffer.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/buffer.c.i
 .PHONY : src/editor/buffer.c.i
 
 src/editor/buffer.s: src/editor/buffer.c.s
@@ -297,6 +338,7 @@ src/editor/buffer.s: src/editor/buffer.c.s
 # target to generate assembly for a file
 src/editor/buffer.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/buffer.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/buffer.c.s
 .PHONY : src/editor/buffer.c.s
 
 src/editor/config.o: src/editor/config.c.o
@@ -329,6 +371,7 @@ src/editor/cursor.o: src/editor/cursor.c.o
 # target to build an object file
 src/editor/cursor.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/cursor.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/cursor.c.o
 .PHONY : src/editor/cursor.c.o
 
 src/editor/cursor.i: src/editor/cursor.c.i
@@ -337,6 +380,7 @@ src/editor/cursor.i: src/editor/cursor.c.i
 # target to preprocess a source file
 src/editor/cursor.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/cursor.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/cursor.c.i
 .PHONY : src/editor/cursor.c.i
 
 src/editor/cursor.s: src/editor/cursor.c.s
@@ -345,6 +389,7 @@ src/editor/cursor.s: src/editor/cursor.c.s
 # target to generate assembly for a file
 src/editor/cursor.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/cursor.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/cursor.c.s
 .PHONY : src/editor/cursor.c.s
 
 src/editor/document.o: src/editor/document.c.o
@@ -377,6 +422,7 @@ src/editor/history.o: src/editor/history.c.o
 # target to build an object file
 src/editor/history.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/history.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/history.c.o
 .PHONY : src/editor/history.c.o
 
 src/editor/history.i: src/editor/history.c.i
@@ -385,6 +431,7 @@ src/editor/history.i: src/editor/history.c.i
 # target to preprocess a source file
 src/editor/history.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/history.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/history.c.i
 .PHONY : src/editor/history.c.i
 
 src/editor/history.s: src/editor/history.c.s
@@ -393,6 +440,7 @@ src/editor/history.s: src/editor/history.c.s
 # target to generate assembly for a file
 src/editor/history.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/history.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/history.c.s
 .PHONY : src/editor/history.c.s
 
 src/editor/lsp.o: src/editor/lsp.c.o
@@ -449,6 +497,7 @@ src/editor/syntax.o: src/editor/syntax.c.o
 # target to build an object file
 src/editor/syntax.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/syntax.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/syntax.c.o
 .PHONY : src/editor/syntax.c.o
 
 src/editor/syntax.i: src/editor/syntax.c.i
@@ -457,6 +506,7 @@ src/editor/syntax.i: src/editor/syntax.c.i
 # target to preprocess a source file
 src/editor/syntax.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/syntax.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/syntax.c.i
 .PHONY : src/editor/syntax.c.i
 
 src/editor/syntax.s: src/editor/syntax.c.s
@@ -465,6 +515,7 @@ src/editor/syntax.s: src/editor/syntax.c.s
 # target to generate assembly for a file
 src/editor/syntax.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/syntax.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/editor/syntax.c.s
 .PHONY : src/editor/syntax.c.s
 
 src/editor/treesitter.o: src/editor/treesitter.c.o
@@ -1067,6 +1118,30 @@ src/main.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/main.c.s
 .PHONY : src/main.c.s
 
+tests/test_all.o: tests/test_all.c.o
+.PHONY : tests/test_all.o
+
+# target to build an object file
+tests/test_all.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_all.dir/build.make CMakeFiles/test_all.dir/tests/test_all.c.o
+.PHONY : tests/test_all.c.o
+
+tests/test_all.i: tests/test_all.c.i
+.PHONY : tests/test_all.i
+
+# target to preprocess a source file
+tests/test_all.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_all.dir/build.make CMakeFiles/test_all.dir/tests/test_all.c.i
+.PHONY : tests/test_all.c.i
+
+tests/test_all.s: tests/test_all.c.s
+.PHONY : tests/test_all.s
+
+# target to generate assembly for a file
+tests/test_all.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_all.dir/build.make CMakeFiles/test_all.dir/tests/test_all.c.s
+.PHONY : tests/test_all.c.s
+
 vendor/glad/src/glad.o: vendor/glad/src/glad.c.o
 .PHONY : vendor/glad/src/glad.o
 
@@ -1123,8 +1198,11 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... test"
+	@echo "... dragon_core"
 	@echo "... dragon_editor"
 	@echo "... glad"
+	@echo "... test_all"
 	@echo "... tomlc99"
 	@echo "... src/core/app.o"
 	@echo "... src/core/app.i"
@@ -1240,6 +1318,9 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... tests/test_all.o"
+	@echo "... tests/test_all.i"
+	@echo "... tests/test_all.s"
 	@echo "... vendor/glad/src/glad.o"
 	@echo "... vendor/glad/src/glad.i"
 	@echo "... vendor/glad/src/glad.s"
