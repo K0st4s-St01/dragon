@@ -1,7 +1,7 @@
 #include "dragon_editor/app.h"
 
 int main(int argc, char **argv) {
-    App *app = app_create(1280, 720, "Dragon Editor");
+    App *app = app_create(1920, 1080, "Dragon Editor");
     if (!app) return 1;
 
     if (argc > 1)

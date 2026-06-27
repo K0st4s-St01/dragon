@@ -4,7 +4,14 @@
 #include "buffer.h"
 #include "cursor.h"
 #include "history.h"
+#include "syntax.h"
 #include <stdbool.h>
+
+typedef struct {
+    char *uri;
+    int line;
+    int character;
+} LSPGotoResult;
 
 typedef struct {
     Buffer  buffer;
@@ -23,6 +30,12 @@ typedef struct {
     int     jumplist[256][2];
     int     jumplist_len;
     int     jumplist_pos;
+    char   *language_id;  /* Language identifier for LSP */
+    SyntaxHighlighting syntax;  /* Syntax highlighting tokens from LSP */
+    LSPGotoResult *goto_results;  /* Results from last LSP goto command */
+    int goto_result_count;
+    void *hover_result;  /* LSPHover* from LSP hover request */
+    void *diagnostics;  /* LSPDiagnostics* from LSP publish diagnostics */
 } Document;
 
 void document_init(Document *doc);
@@ -51,6 +64,7 @@ void document_select_all(Document *doc);
 
 void document_scroll_up(Document *doc);
 void document_scroll_down(Document *doc);
+void document_sync_viewport_to_cursor(Document *doc);
 
 void document_undo(Document *doc);
 void document_redo(Document *doc);
@@ -171,5 +185,24 @@ void document_pipe_to(Document *doc, const char *cmd);
 void document_insert_output(Document *doc, const char *cmd);
 void document_append_output(Document *doc, const char *cmd);
 void document_filter_selection(Document *doc, const char *cmd);
+
+/* Language detection and LSP */
+void document_detect_language(Document *doc);
+void document_lsp_goto_definition(Document *doc, void *lsp_manager);
+void document_lsp_goto_type_definition(Document *doc, void *lsp_manager);
+void document_lsp_goto_references(Document *doc, void *lsp_manager);
+void document_lsp_goto_implementation(Document *doc, void *lsp_manager);
+void document_lsp_hover(Document *doc, void *lsp_manager);
+void document_update_syntax_from_lsp(Document *doc, void *lsp_manager);
+void document_update_diagnostics_from_lsp(Document *doc, void *lsp_manager);
+
+/* Diagnostic navigation */
+void document_goto_next_diagnostic(Document *doc);
+void document_goto_prev_diagnostic(Document *doc);
+void document_goto_first_diagnostic(Document *doc);
+void document_goto_last_diagnostic(Document *doc);
+
+/* Treesitter integration */
+void document_parse_treesitter(Document *doc, void *ts_manager);
 
 #endif

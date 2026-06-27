@@ -7,6 +7,7 @@ typedef struct {
     int row, col;
     int anchor_row, anchor_col;
     bool has_selection;
+    int desired_col;  /* Column position to restore on vertical movement */
 } Cursor;
 
 void cursor_init(Cursor *c);

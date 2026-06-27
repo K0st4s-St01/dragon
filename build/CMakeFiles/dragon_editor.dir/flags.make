@@ -4,7 +4,7 @@
 # compile C with /usr/bin/cc
 C_DEFINES = 
 
-C_INCLUDES = -I/home/xator/Projects/dragon/include -I/home/xator/Projects/dragon/include/dragon_editor -I/home/xator/Projects/dragon/vendor/glad/include -I/home/xator/Projects/dragon/vendor/stb
+C_INCLUDES = -I/home/xator/Projects/dragon/include -I/home/xator/Projects/dragon/include/dragon_editor -I/home/xator/Projects/dragon/vendor/glad/include -I/home/xator/Projects/dragon/vendor/stb -I/usr/include/tree_sitter -I/home/xator/Projects/dragon/vendor/tomlc99
 
-C_FLAGS = -std=gnu11 -Wall -Wextra
+C_FLAGS = -O3 -DNDEBUG -std=gnu11 -Wall -Wextra
 

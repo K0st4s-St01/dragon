@@ -130,6 +130,19 @@ glad/fast:
 .PHONY : glad/fast
 
 #=============================================================================
+# Target rules for targets named tomlc99
+
+# Build rule for target.
+tomlc99: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tomlc99
+.PHONY : tomlc99
+
+# fast build rule for target.
+tomlc99/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tomlc99.dir/build.make CMakeFiles/tomlc99.dir/build
+.PHONY : tomlc99/fast
+
+#=============================================================================
 # Target rules for targets named dragon_editor
 
 # Build rule for target.
@@ -286,6 +299,30 @@ src/editor/buffer.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/buffer.c.s
 .PHONY : src/editor/buffer.c.s
 
+src/editor/config.o: src/editor/config.c.o
+.PHONY : src/editor/config.o
+
+# target to build an object file
+src/editor/config.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/config.c.o
+.PHONY : src/editor/config.c.o
+
+src/editor/config.i: src/editor/config.c.i
+.PHONY : src/editor/config.i
+
+# target to preprocess a source file
+src/editor/config.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/config.c.i
+.PHONY : src/editor/config.c.i
+
+src/editor/config.s: src/editor/config.c.s
+.PHONY : src/editor/config.s
+
+# target to generate assembly for a file
+src/editor/config.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/config.c.s
+.PHONY : src/editor/config.c.s
+
 src/editor/cursor.o: src/editor/cursor.c.o
 .PHONY : src/editor/cursor.o
 
@@ -358,6 +395,102 @@ src/editor/history.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/history.c.s
 .PHONY : src/editor/history.c.s
 
+src/editor/lsp.o: src/editor/lsp.c.o
+.PHONY : src/editor/lsp.o
+
+# target to build an object file
+src/editor/lsp.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/lsp.c.o
+.PHONY : src/editor/lsp.c.o
+
+src/editor/lsp.i: src/editor/lsp.c.i
+.PHONY : src/editor/lsp.i
+
+# target to preprocess a source file
+src/editor/lsp.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/lsp.c.i
+.PHONY : src/editor/lsp.c.i
+
+src/editor/lsp.s: src/editor/lsp.c.s
+.PHONY : src/editor/lsp.s
+
+# target to generate assembly for a file
+src/editor/lsp.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/lsp.c.s
+.PHONY : src/editor/lsp.c.s
+
+src/editor/lsp_config.o: src/editor/lsp_config.c.o
+.PHONY : src/editor/lsp_config.o
+
+# target to build an object file
+src/editor/lsp_config.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/lsp_config.c.o
+.PHONY : src/editor/lsp_config.c.o
+
+src/editor/lsp_config.i: src/editor/lsp_config.c.i
+.PHONY : src/editor/lsp_config.i
+
+# target to preprocess a source file
+src/editor/lsp_config.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/lsp_config.c.i
+.PHONY : src/editor/lsp_config.c.i
+
+src/editor/lsp_config.s: src/editor/lsp_config.c.s
+.PHONY : src/editor/lsp_config.s
+
+# target to generate assembly for a file
+src/editor/lsp_config.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/lsp_config.c.s
+.PHONY : src/editor/lsp_config.c.s
+
+src/editor/syntax.o: src/editor/syntax.c.o
+.PHONY : src/editor/syntax.o
+
+# target to build an object file
+src/editor/syntax.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/syntax.c.o
+.PHONY : src/editor/syntax.c.o
+
+src/editor/syntax.i: src/editor/syntax.c.i
+.PHONY : src/editor/syntax.i
+
+# target to preprocess a source file
+src/editor/syntax.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/syntax.c.i
+.PHONY : src/editor/syntax.c.i
+
+src/editor/syntax.s: src/editor/syntax.c.s
+.PHONY : src/editor/syntax.s
+
+# target to generate assembly for a file
+src/editor/syntax.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/syntax.c.s
+.PHONY : src/editor/syntax.c.s
+
+src/editor/treesitter.o: src/editor/treesitter.c.o
+.PHONY : src/editor/treesitter.o
+
+# target to build an object file
+src/editor/treesitter.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.o
+.PHONY : src/editor/treesitter.c.o
+
+src/editor/treesitter.i: src/editor/treesitter.c.i
+.PHONY : src/editor/treesitter.i
+
+# target to preprocess a source file
+src/editor/treesitter.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.i
+.PHONY : src/editor/treesitter.c.i
+
+src/editor/treesitter.s: src/editor/treesitter.c.s
+.PHONY : src/editor/treesitter.s
+
+# target to generate assembly for a file
+src/editor/treesitter.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.s
+.PHONY : src/editor/treesitter.c.s
+
 src/gui/gui.o: src/gui/gui.c.o
 .PHONY : src/gui/gui.o
 
@@ -429,6 +562,30 @@ src/gui/panels/buffer_picker.s: src/gui/panels/buffer_picker.c.s
 src/gui/panels/buffer_picker.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.s
 .PHONY : src/gui/panels/buffer_picker.c.s
+
+src/gui/panels/code_actions.o: src/gui/panels/code_actions.c.o
+.PHONY : src/gui/panels/code_actions.o
+
+# target to build an object file
+src/gui/panels/code_actions.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o
+.PHONY : src/gui/panels/code_actions.c.o
+
+src/gui/panels/code_actions.i: src/gui/panels/code_actions.c.i
+.PHONY : src/gui/panels/code_actions.i
+
+# target to preprocess a source file
+src/gui/panels/code_actions.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.i
+.PHONY : src/gui/panels/code_actions.c.i
+
+src/gui/panels/code_actions.s: src/gui/panels/code_actions.c.s
+.PHONY : src/gui/panels/code_actions.s
+
+# target to generate assembly for a file
+src/gui/panels/code_actions.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.s
+.PHONY : src/gui/panels/code_actions.c.s
 
 src/gui/panels/file_browser.o: src/gui/panels/file_browser.c.o
 .PHONY : src/gui/panels/file_browser.o
@@ -526,6 +683,78 @@ src/gui/panels/jumplist_picker.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/jumplist_picker.c.s
 .PHONY : src/gui/panels/jumplist_picker.c.s
 
+src/gui/panels/lsp_diagnostics_picker.o: src/gui/panels/lsp_diagnostics_picker.c.o
+.PHONY : src/gui/panels/lsp_diagnostics_picker.o
+
+# target to build an object file
+src/gui/panels/lsp_diagnostics_picker.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_diagnostics_picker.c.o
+.PHONY : src/gui/panels/lsp_diagnostics_picker.c.o
+
+src/gui/panels/lsp_diagnostics_picker.i: src/gui/panels/lsp_diagnostics_picker.c.i
+.PHONY : src/gui/panels/lsp_diagnostics_picker.i
+
+# target to preprocess a source file
+src/gui/panels/lsp_diagnostics_picker.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_diagnostics_picker.c.i
+.PHONY : src/gui/panels/lsp_diagnostics_picker.c.i
+
+src/gui/panels/lsp_diagnostics_picker.s: src/gui/panels/lsp_diagnostics_picker.c.s
+.PHONY : src/gui/panels/lsp_diagnostics_picker.s
+
+# target to generate assembly for a file
+src/gui/panels/lsp_diagnostics_picker.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_diagnostics_picker.c.s
+.PHONY : src/gui/panels/lsp_diagnostics_picker.c.s
+
+src/gui/panels/lsp_goto_picker.o: src/gui/panels/lsp_goto_picker.c.o
+.PHONY : src/gui/panels/lsp_goto_picker.o
+
+# target to build an object file
+src/gui/panels/lsp_goto_picker.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_goto_picker.c.o
+.PHONY : src/gui/panels/lsp_goto_picker.c.o
+
+src/gui/panels/lsp_goto_picker.i: src/gui/panels/lsp_goto_picker.c.i
+.PHONY : src/gui/panels/lsp_goto_picker.i
+
+# target to preprocess a source file
+src/gui/panels/lsp_goto_picker.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_goto_picker.c.i
+.PHONY : src/gui/panels/lsp_goto_picker.c.i
+
+src/gui/panels/lsp_goto_picker.s: src/gui/panels/lsp_goto_picker.c.s
+.PHONY : src/gui/panels/lsp_goto_picker.s
+
+# target to generate assembly for a file
+src/gui/panels/lsp_goto_picker.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_goto_picker.c.s
+.PHONY : src/gui/panels/lsp_goto_picker.c.s
+
+src/gui/panels/lsp_hover_panel.o: src/gui/panels/lsp_hover_panel.c.o
+.PHONY : src/gui/panels/lsp_hover_panel.o
+
+# target to build an object file
+src/gui/panels/lsp_hover_panel.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.o
+.PHONY : src/gui/panels/lsp_hover_panel.c.o
+
+src/gui/panels/lsp_hover_panel.i: src/gui/panels/lsp_hover_panel.c.i
+.PHONY : src/gui/panels/lsp_hover_panel.i
+
+# target to preprocess a source file
+src/gui/panels/lsp_hover_panel.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.i
+.PHONY : src/gui/panels/lsp_hover_panel.c.i
+
+src/gui/panels/lsp_hover_panel.s: src/gui/panels/lsp_hover_panel.c.s
+.PHONY : src/gui/panels/lsp_hover_panel.s
+
+# target to generate assembly for a file
+src/gui/panels/lsp_hover_panel.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.s
+.PHONY : src/gui/panels/lsp_hover_panel.c.s
+
 src/gui/panels/palette.o: src/gui/panels/palette.c.o
 .PHONY : src/gui/panels/palette.o
 
@@ -549,6 +778,30 @@ src/gui/panels/palette.s: src/gui/panels/palette.c.s
 src/gui/panels/palette.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.s
 .PHONY : src/gui/panels/palette.c.s
+
+src/gui/panels/rename.o: src/gui/panels/rename.c.o
+.PHONY : src/gui/panels/rename.o
+
+# target to build an object file
+src/gui/panels/rename.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.o
+.PHONY : src/gui/panels/rename.c.o
+
+src/gui/panels/rename.i: src/gui/panels/rename.c.i
+.PHONY : src/gui/panels/rename.i
+
+# target to preprocess a source file
+src/gui/panels/rename.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.i
+.PHONY : src/gui/panels/rename.c.i
+
+src/gui/panels/rename.s: src/gui/panels/rename.c.s
+.PHONY : src/gui/panels/rename.s
+
+# target to generate assembly for a file
+src/gui/panels/rename.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.s
+.PHONY : src/gui/panels/rename.c.s
 
 src/gui/panels/space_menu.o: src/gui/panels/space_menu.c.o
 .PHONY : src/gui/panels/space_menu.o
@@ -597,6 +850,30 @@ src/gui/panels/statusbar.s: src/gui/panels/statusbar.c.s
 src/gui/panels/statusbar.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.s
 .PHONY : src/gui/panels/statusbar.c.s
+
+src/gui/panels/symbols_picker.o: src/gui/panels/symbols_picker.c.o
+.PHONY : src/gui/panels/symbols_picker.o
+
+# target to build an object file
+src/gui/panels/symbols_picker.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.o
+.PHONY : src/gui/panels/symbols_picker.c.o
+
+src/gui/panels/symbols_picker.i: src/gui/panels/symbols_picker.c.i
+.PHONY : src/gui/panels/symbols_picker.i
+
+# target to preprocess a source file
+src/gui/panels/symbols_picker.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.i
+.PHONY : src/gui/panels/symbols_picker.c.i
+
+src/gui/panels/symbols_picker.s: src/gui/panels/symbols_picker.c.s
+.PHONY : src/gui/panels/symbols_picker.s
+
+# target to generate assembly for a file
+src/gui/panels/symbols_picker.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.s
+.PHONY : src/gui/panels/symbols_picker.c.s
 
 src/gui/text.o: src/gui/text.c.o
 .PHONY : src/gui/text.o
@@ -694,6 +971,30 @@ vendor/glad/src/glad.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/glad.dir/build.make CMakeFiles/glad.dir/vendor/glad/src/glad.c.s
 .PHONY : vendor/glad/src/glad.c.s
 
+vendor/tomlc99/toml.o: vendor/tomlc99/toml.c.o
+.PHONY : vendor/tomlc99/toml.o
+
+# target to build an object file
+vendor/tomlc99/toml.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tomlc99.dir/build.make CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o
+.PHONY : vendor/tomlc99/toml.c.o
+
+vendor/tomlc99/toml.i: vendor/tomlc99/toml.c.i
+.PHONY : vendor/tomlc99/toml.i
+
+# target to preprocess a source file
+vendor/tomlc99/toml.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tomlc99.dir/build.make CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.i
+.PHONY : vendor/tomlc99/toml.c.i
+
+vendor/tomlc99/toml.s: vendor/tomlc99/toml.c.s
+.PHONY : vendor/tomlc99/toml.s
+
+# target to generate assembly for a file
+vendor/tomlc99/toml.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/tomlc99.dir/build.make CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.s
+.PHONY : vendor/tomlc99/toml.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -704,6 +1005,7 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... dragon_editor"
 	@echo "... glad"
+	@echo "... tomlc99"
 	@echo "... src/core/app.o"
 	@echo "... src/core/app.i"
 	@echo "... src/core/app.s"
@@ -722,6 +1024,9 @@ help:
 	@echo "... src/editor/buffer.o"
 	@echo "... src/editor/buffer.i"
 	@echo "... src/editor/buffer.s"
+	@echo "... src/editor/config.o"
+	@echo "... src/editor/config.i"
+	@echo "... src/editor/config.s"
 	@echo "... src/editor/cursor.o"
 	@echo "... src/editor/cursor.i"
 	@echo "... src/editor/cursor.s"
@@ -731,6 +1036,18 @@ help:
 	@echo "... src/editor/history.o"
 	@echo "... src/editor/history.i"
 	@echo "... src/editor/history.s"
+	@echo "... src/editor/lsp.o"
+	@echo "... src/editor/lsp.i"
+	@echo "... src/editor/lsp.s"
+	@echo "... src/editor/lsp_config.o"
+	@echo "... src/editor/lsp_config.i"
+	@echo "... src/editor/lsp_config.s"
+	@echo "... src/editor/syntax.o"
+	@echo "... src/editor/syntax.i"
+	@echo "... src/editor/syntax.s"
+	@echo "... src/editor/treesitter.o"
+	@echo "... src/editor/treesitter.i"
+	@echo "... src/editor/treesitter.s"
 	@echo "... src/gui/gui.o"
 	@echo "... src/gui/gui.i"
 	@echo "... src/gui/gui.s"
@@ -740,6 +1057,9 @@ help:
 	@echo "... src/gui/panels/buffer_picker.o"
 	@echo "... src/gui/panels/buffer_picker.i"
 	@echo "... src/gui/panels/buffer_picker.s"
+	@echo "... src/gui/panels/code_actions.o"
+	@echo "... src/gui/panels/code_actions.i"
+	@echo "... src/gui/panels/code_actions.s"
 	@echo "... src/gui/panels/file_browser.o"
 	@echo "... src/gui/panels/file_browser.i"
 	@echo "... src/gui/panels/file_browser.s"
@@ -752,15 +1072,30 @@ help:
 	@echo "... src/gui/panels/jumplist_picker.o"
 	@echo "... src/gui/panels/jumplist_picker.i"
 	@echo "... src/gui/panels/jumplist_picker.s"
+	@echo "... src/gui/panels/lsp_diagnostics_picker.o"
+	@echo "... src/gui/panels/lsp_diagnostics_picker.i"
+	@echo "... src/gui/panels/lsp_diagnostics_picker.s"
+	@echo "... src/gui/panels/lsp_goto_picker.o"
+	@echo "... src/gui/panels/lsp_goto_picker.i"
+	@echo "... src/gui/panels/lsp_goto_picker.s"
+	@echo "... src/gui/panels/lsp_hover_panel.o"
+	@echo "... src/gui/panels/lsp_hover_panel.i"
+	@echo "... src/gui/panels/lsp_hover_panel.s"
 	@echo "... src/gui/panels/palette.o"
 	@echo "... src/gui/panels/palette.i"
 	@echo "... src/gui/panels/palette.s"
+	@echo "... src/gui/panels/rename.o"
+	@echo "... src/gui/panels/rename.i"
+	@echo "... src/gui/panels/rename.s"
 	@echo "... src/gui/panels/space_menu.o"
 	@echo "... src/gui/panels/space_menu.i"
 	@echo "... src/gui/panels/space_menu.s"
 	@echo "... src/gui/panels/statusbar.o"
 	@echo "... src/gui/panels/statusbar.i"
 	@echo "... src/gui/panels/statusbar.s"
+	@echo "... src/gui/panels/symbols_picker.o"
+	@echo "... src/gui/panels/symbols_picker.i"
+	@echo "... src/gui/panels/symbols_picker.s"
 	@echo "... src/gui/text.o"
 	@echo "... src/gui/text.i"
 	@echo "... src/gui/text.s"
@@ -773,6 +1108,9 @@ help:
 	@echo "... vendor/glad/src/glad.o"
 	@echo "... vendor/glad/src/glad.i"
 	@echo "... vendor/glad/src/glad.s"
+	@echo "... vendor/tomlc99/toml.o"
+	@echo "... vendor/tomlc99/toml.i"
+	@echo "... vendor/tomlc99/toml.s"
 .PHONY : help
 
 

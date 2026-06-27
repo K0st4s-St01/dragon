@@ -58,5 +58,6 @@ set(CMAKE_MAKEFILE_PRODUCTS
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/glad.dir/DependInfo.cmake"
+  "CMakeFiles/tomlc99.dir/DependInfo.cmake"
   "CMakeFiles/dragon_editor.dir/DependInfo.cmake"
   )

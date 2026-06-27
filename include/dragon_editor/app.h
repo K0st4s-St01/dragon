@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "renderer.h"
+#include "config.h"
 
 typedef struct App App;
 
@@ -33,5 +34,11 @@ bool app_close_buffer(App *app, int index);
 /* Workspace management */
 const char *app_get_workspace_root(App *app);
 void app_set_workspace_root(App *app, const char *path);
+
+/* LSP management */
+void *app_get_lsp_manager(App *app);
+
+/* Tree-Sitter management */
+void *app_get_treesitter_manager(App *app);
 
 #endif

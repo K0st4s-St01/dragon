@@ -27,4 +27,7 @@ typedef struct {
 Theme *theme_default(void);
 Theme *theme_get(void);
 
+/* Apply theme colors from config */
+void theme_apply_config(const void *config_ptr);
+
 #endif

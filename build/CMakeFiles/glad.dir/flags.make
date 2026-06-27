@@ -6,5 +6,5 @@ C_DEFINES =
 
 C_INCLUDES = -I/home/xator/Projects/dragon/vendor/glad/include
 
-C_FLAGS = -std=gnu11
+C_FLAGS = -O3 -DNDEBUG -std=gnu11
 

@@ -10,7 +10,13 @@
 #include "panel_about.h"
 #include "panel_buffer_picker.h"
 #include "panel_jumplist_picker.h"
+#include "panel_lsp_goto.h"
+#include "panel_lsp_hover.h"
+#include "panel_lsp_diagnostics.h"
 #include "panel_space_menu.h"
+#include "panel_symbols_picker.h"
+#include "panel_rename.h"
+#include "panel_code_actions.h"
 #include <GLFW/glfw3.h>
 #include <string.h>
 #include <stdlib.h>
@@ -47,6 +53,12 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
         if (panel_about_is_open()) { panel_about_close(app); return; }
         if (panel_buffer_picker_is_open()) { panel_buffer_picker_close(app); return; }
         if (panel_jumplist_picker_is_open()) { panel_jumplist_picker_close(app); return; }
+        if (panel_lsp_goto_is_open()) { panel_lsp_goto_close(app); return; }
+        if (panel_lsp_diagnostics_is_open()) { panel_lsp_diagnostics_close(app); return; }
+        if (panel_lsp_hover_is_open()) { panel_lsp_hover_close(app); return; }
+        if (panel_symbols_picker_is_open()) { panel_symbols_picker_close(app); return; }
+        if (panel_rename_is_open()) { panel_rename_close(app); return; }
+        if (panel_code_actions_is_open()) { panel_code_actions_close(app); return; }
         if (panel_space_menu_is_open()) { panel_space_menu_close(app); return; }
         if (mode_is(mode, MODE_COMMAND_PALETTE)) {
             panel_palette_close(app);
@@ -102,6 +114,42 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
         return;
     }
 
+    /* Route keys to LSP goto picker when open */
+    if (panel_lsp_goto_is_open()) {
+        panel_lsp_goto_key(app, key);
+        return;
+    }
+    
+    /* Route keys to LSP diagnostics picker when open */
+    if (panel_lsp_diagnostics_is_open()) {
+        panel_lsp_diagnostics_key(app, key);
+        return;
+    }
+    
+    /* Route keys to symbols picker when open */
+    if (panel_symbols_picker_is_open()) {
+        panel_symbols_picker_key(app, key);
+        return;
+    }
+    
+    /* Route keys to rename panel when open */
+    if (panel_rename_is_open()) {
+        panel_rename_key(app, key);
+        return;
+    }
+    
+    /* Route keys to code actions panel when open */
+    if (panel_code_actions_is_open()) {
+        panel_code_actions_key(app, key);
+        return;
+    }
+    
+    /* Route keys to space menu when open */
+    if (panel_space_menu_is_open()) {
+        panel_space_menu_key(app, key);
+        return;
+    }
+
     switch (mode_get(mode)) {
     case MODE_NORMAL:          handle_normal_key(app, key, action, mods); break;
     case MODE_INSERT:          handle_insert_key(app, key, action, mods); break;
@@ -114,6 +162,7 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
 
 void input_handle_char(App *app, unsigned int c) {
     ModeState *mode = (ModeState *)app_get_mode(app);
+    
     if (panel_palette_is_open()) {
         panel_palette_input(app, c);
         return;
@@ -123,6 +172,17 @@ void input_handle_char(App *app, unsigned int c) {
         panel_find_input(app, doc, c);
         return;
     }
+    if (panel_space_menu_is_open()) {
+        panel_space_menu_input(app, c);
+        return;
+    }
+    
+    /* Suppress character if mode was just changed (prevents 'i' from inserting 'i') */
+    if (mode->suppress_next_char) {
+        mode->suppress_next_char = false;
+        return;
+    }
+    
     if (mode_is(mode, MODE_INSERT)) {
         if (c >= 32 && c < 127) {
             Document *doc = (Document *)app_get_doc(app);
@@ -358,6 +418,38 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             mode->pending_len = 0;
             return;
         }
+        if (pk == '[') {
+            /* [ bracket mode - navigate to previous */
+            if (key == GLFW_KEY_D) {
+                /* [d - previous diagnostic */
+                extern void document_goto_prev_diagnostic(Document *);
+                document_goto_prev_diagnostic(doc);
+                return;
+            }
+            if (key == GLFW_KEY_D && (mods & GLFW_MOD_SHIFT)) {
+                /* [D - first diagnostic */
+                extern void document_goto_first_diagnostic(Document *);
+                document_goto_first_diagnostic(doc);
+                return;
+            }
+            return;
+        }
+        if (pk == ']') {
+            /* ] bracket mode - navigate to next */
+            if (key == GLFW_KEY_D) {
+                /* ]d - next diagnostic */
+                extern void document_goto_next_diagnostic(Document *);
+                document_goto_next_diagnostic(doc);
+                return;
+            }
+            if (key == GLFW_KEY_D && (mods & GLFW_MOD_SHIFT)) {
+                /* ]D - last diagnostic */
+                extern void document_goto_last_diagnostic(Document *);
+                document_goto_last_diagnostic(doc);
+                return;
+            }
+            return;
+        }
         if (pk == ' ') {
             /* Standalone modifier presses keep the menu open */
             if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT ||
@@ -410,13 +502,45 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                 mode->pending_len = 0;
                 return;
             }
-            if (key == GLFW_KEY_C) {
-                document_comment_toggle(doc);
-                mode->pending_len = 0;
-                return;
-            }
-            mode->pending_len = 0;
-            return;
+             if (key == GLFW_KEY_C) {
+                 document_comment_toggle(doc);
+                 mode->pending_len = 0;
+                 return;
+             }
+             if (key == GLFW_KEY_K) {
+                 /* Space k - hover documentation */
+                 extern void document_lsp_hover(Document *, void *);
+                 document_lsp_hover(doc, app_get_lsp_manager(app));
+                 panel_lsp_hover_open(app);
+                 mode->pending_len = 0;
+                 return;
+             }
+              if (key == GLFW_KEY_D) {
+                  /* Space d - diagnostics picker */
+                  panel_lsp_diagnostics_open(app);
+                  mode->pending_len = 0;
+                  return;
+              }
+              if (key == GLFW_KEY_S) {
+                  /* Space s - document symbols picker */
+                  panel_symbols_picker_open(app);
+                  mode->pending_len = 0;
+                  return;
+              }
+              if (key == GLFW_KEY_R) {
+                  /* Space r - rename symbol */
+                  panel_rename_open(app);
+                  mode->pending_len = 0;
+                  return;
+              }
+              if (key == GLFW_KEY_A) {
+                  /* Space a - code actions */
+                  panel_code_actions_open(app);
+                  mode->pending_len = 0;
+                  return;
+              }
+             mode->pending_len = 0;
+             return;
         }
         return;
     }
@@ -450,6 +574,30 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             app_next_buffer(app); /* gn - go to next buffer */
         else if (key == GLFW_KEY_P)
             app_prev_buffer(app); /* gp - go to previous buffer */
+        else if (key == GLFW_KEY_D) {
+            /* gd - go to definition (LSP) */
+            extern void document_lsp_goto_definition(Document *, void *);
+            document_lsp_goto_definition(doc, app_get_lsp_manager(app));
+            panel_lsp_goto_open(app);
+        }
+        else if (key == GLFW_KEY_Y) {
+            /* gy - go to type definition (LSP) */
+            extern void document_lsp_goto_type_definition(Document *, void *);
+            document_lsp_goto_type_definition(doc, app_get_lsp_manager(app));
+            panel_lsp_goto_open(app);
+        }
+        else if (key == GLFW_KEY_R) {
+            /* gr - go to references (LSP) */
+            extern void document_lsp_goto_references(Document *, void *);
+            document_lsp_goto_references(doc, app_get_lsp_manager(app));
+            panel_lsp_goto_open(app);
+        }
+        else if (key == GLFW_KEY_I) {
+            /* gi - go to implementation (LSP) */
+            extern void document_lsp_goto_implementation(Document *, void *);
+            document_lsp_goto_implementation(doc, app_get_lsp_manager(app));
+            panel_lsp_goto_open(app);
+        }
         else if (key == GLFW_KEY_PERIOD)
             document_goto_last_modification(doc); /* g. - go to last modification */
         else if (key == GLFW_KEY_BACKSLASH) {
@@ -641,6 +789,18 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
     /* Shift+G - Go to end of file */
     if (key == GLFW_KEY_G && (mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL)) {
         document_cursor_doc_end(doc);
+        return;
+    }
+
+    /* [ - Bracket mode (navigate to previous) */
+    if (key == GLFW_KEY_LEFT_BRACKET && !(mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+        mode->pending_key = '[';
+        return;
+    }
+
+    /* ] - Bracket mode (navigate to next) */
+    if (key == GLFW_KEY_RIGHT_BRACKET && !(mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+        mode->pending_key = ']';
         return;
     }
 
@@ -1206,10 +1366,11 @@ static void handle_select_key(App *app, int key, int action, int mods) {
         if (!cur->has_selection) cursor_select_start(cur);
     }
 
-    /* Ensure selection is started for all navigation in select mode */
-    {
+    /* Initialize selection only once when entering select mode */
+    if (!mode->select_mode_initialized) {
         Cursor *cur = &doc->cursors[0];
         if (!cur->has_selection) cursor_select_start(cur);
+        mode->select_mode_initialized = true;
     }
 
     /* g pending in select mode - goto motions extend the selection */

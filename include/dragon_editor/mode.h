@@ -34,6 +34,8 @@ typedef struct {
     char  last_motion_type;  /* 'f', 'F', 't', 'T', or 0 */
     char  last_motion_char;  /* character used in last motion */
     bool  view_mode_sticky;  /* Z - sticky view mode stays active */
+    bool  select_mode_initialized;  /* True if selection was started when entering select mode */
+    bool  suppress_next_char;  /* Suppress next character input if mode changed this frame */
 } ModeState;
 
 void mode_init(ModeState *ms);

@@ -1,7 +1,11 @@
 #include "dragon_editor/document.h"
+#include "dragon_editor/lsp.h"
+#include "dragon_editor/treesitter.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <ctype.h>
 
 #define MAX_CURSORS 64
 
@@ -12,13 +16,33 @@ void document_init(Document *doc) {
     cursor_init(&doc->cursors[0]);
     doc->viewport_lines = 40;
     history_init(&doc->history);
+    doc->language_id = NULL;
+    syntax_init(&doc->syntax, NULL);
+    doc->goto_results = NULL;
+    doc->goto_result_count = 0;
+    doc->hover_result = NULL;
+    doc->diagnostics = NULL;
 }
 
 void document_free(Document *doc) {
     buffer_free(&doc->buffer);
     history_free(&doc->history);
+    syntax_free(&doc->syntax);
     free(doc->filepath);
     free(doc->clipboard);
+    free(doc->language_id);
+    if (doc->goto_results) {
+        for (int i = 0; i < doc->goto_result_count; i++) {
+            free(doc->goto_results[i].uri);
+        }
+        free(doc->goto_results);
+    }
+    if (doc->hover_result) {
+        lsp_free_hover((LSPHover *)doc->hover_result);
+    }
+    if (doc->diagnostics) {
+        lsp_free_diagnostics((LSPDiagnostics *)doc->diagnostics);
+    }
     memset(doc, 0, sizeof(*doc));
 }
 
@@ -30,6 +54,41 @@ void document_open(Document *doc, const char *path) {
     doc->cursors[0] = (Cursor){0};
     doc->scroll_y = 0;
     history_clear(&doc->history);
+    document_detect_language(doc);
+    
+    /* Initialize syntax highlighting for the language */
+    syntax_free(&doc->syntax);
+    syntax_init(&doc->syntax, doc->language_id);
+    
+    /* Do initial basic syntax highlighting as fallback */
+    size_t total_lines = buffer_line_count(&doc->buffer);
+    if (total_lines > 0) {
+        /* Build document text */
+        size_t total_len = 0;
+        for (size_t i = 0; i < total_lines; i++) {
+            total_len += buffer_line_len(&doc->buffer, i);
+        }
+        
+        if (total_len > 0) {
+            char *buffer_text = (char *)malloc(total_len + 1);
+            if (buffer_text) {
+                size_t pos = 0;
+                for (size_t i = 0; i < total_lines; i++) {
+                    const char *line = buffer_line_ptr(&doc->buffer, i);
+                    size_t line_len = buffer_line_len(&doc->buffer, i);
+                    memcpy(buffer_text + pos, line, line_len);
+                    pos += line_len;
+                }
+                buffer_text[total_len] = '\0';
+                
+                /* Apply basic syntax highlighting */
+                extern void syntax_highlight_basic(SyntaxHighlighting *, const char *, size_t);
+                syntax_highlight_basic(&doc->syntax, buffer_text, total_len);
+                
+                free(buffer_text);
+            }
+        }
+    }
 }
 
 void document_save(Document *doc) {
@@ -131,9 +190,17 @@ void document_insert_text(Document *doc, const char *text) {
 
 void document_move_cursor(Document *doc, int dr, int dc) {
     Cursor *cur = &doc->cursors[0];
+    size_t max_lines = buffer_line_count(&doc->buffer);
+    
     cur->row += dr;
     cur->col += dc;
+    
+    /* Clamp row to valid range */
     if (cur->row < 0) cur->row = 0;
+    if (cur->row >= (int)max_lines) cur->row = (int)max_lines - 1;
+    if (cur->row < 0) cur->row = 0;  /* Handle empty buffer */
+    
+    /* Handle column wrapping at line boundaries */
     if (cur->col < 0) {
         if (cur->row > 0) {
             cur->row--;
@@ -143,10 +210,15 @@ void document_move_cursor(Document *doc, int dr, int dc) {
             cur->col = 0;
         }
     }
+    
+    /* Clamp column to current line */
     size_t max_col = buffer_line_len(&doc->buffer, cur->row);
     if (max_col > 0 && cur->col >= (int)max_col)
         cur->col = (int)max_col - 1;
     if (cur->col < 0) cur->col = 0;
+    
+    /* Keep cursor visible in viewport */
+    document_sync_viewport_to_cursor(doc);
 }
 
 void document_cursor_to(Document *doc, int row, int max_row) {
@@ -157,6 +229,7 @@ void document_cursor_to(Document *doc, int row, int max_row) {
     size_t len = buffer_line_len(&doc->buffer, cur->row);
     if (cur->col >= (int)len) cur->col = (int)len - 1;
     if (cur->col < 0) cur->col = 0;
+    document_sync_viewport_to_cursor(doc);
 }
 
 void document_cursor_home(Document *doc) {
@@ -171,15 +244,18 @@ void document_cursor_end(Document *doc) {
 
 void document_cursor_page_up(Document *doc) {
     document_move_cursor(doc, -doc->viewport_lines, 0);
+    document_sync_viewport_to_cursor(doc);
 }
 
 void document_cursor_page_down(Document *doc) {
     document_move_cursor(doc, doc->viewport_lines, 0);
+    document_sync_viewport_to_cursor(doc);
 }
 
 void document_cursor_doc_start(Document *doc) {
     doc->cursors[0].row = 0;
     doc->cursors[0].col = 0;
+    document_sync_viewport_to_cursor(doc);
 }
 
 void document_cursor_doc_end(Document *doc) {
@@ -188,6 +264,7 @@ void document_cursor_doc_end(Document *doc) {
     cur->row = (int)lines - 1;
     if (cur->row < 0) cur->row = 0;
     document_cursor_end(doc);
+    document_sync_viewport_to_cursor(doc);
 }
 
 void document_select_word(Document *doc) {
@@ -221,6 +298,25 @@ void document_scroll_up(Document *doc) {
 
 void document_scroll_down(Document *doc) {
     doc->scroll_y++;
+}
+
+/* Ensure cursor is visible in viewport */
+void document_sync_viewport_to_cursor(Document *doc) {
+    Cursor *cur = &doc->cursors[0];
+    
+    /* If cursor is above visible area, scroll up */
+    if (cur->row < doc->scroll_y) {
+        doc->scroll_y = cur->row;
+    }
+    
+    /* If cursor is below visible area, scroll down */
+    int visible_bottom = doc->scroll_y + doc->viewport_lines - 1;
+    if (cur->row > visible_bottom) {
+        doc->scroll_y = cur->row - doc->viewport_lines + 1;
+    }
+    
+    /* Ensure scroll_y doesn't go negative */
+    if (doc->scroll_y < 0) doc->scroll_y = 0;
 }
 
 void document_undo(Document *doc) {
@@ -2361,4 +2457,619 @@ void document_filter_selection(Document *doc, const char *cmd) {
     }
     
     free(output);
+}
+
+/* Language detection based on file extension */
+void document_detect_language(Document *doc) {
+    free(doc->language_id);
+    doc->language_id = NULL;
+    
+    if (!doc->filepath) return;
+    
+    /* Get file extension */
+    const char *ext = strrchr(doc->filepath, '.');
+    if (!ext) return;
+    
+    ext++;  /* Skip the dot */
+    
+    /* Map extensions to language IDs */
+    const char *lang_id = NULL;
+    if (strcmp(ext, "c") == 0) lang_id = "c";
+    else if (strcmp(ext, "h") == 0) lang_id = "c";
+    else if (strcmp(ext, "cpp") == 0 || strcmp(ext, "cc") == 0 || strcmp(ext, "cxx") == 0) lang_id = "cpp";
+    else if (strcmp(ext, "rs") == 0) lang_id = "rust";
+    else if (strcmp(ext, "py") == 0) lang_id = "python";
+    else if (strcmp(ext, "go") == 0) lang_id = "go";
+    else if (strcmp(ext, "ts") == 0) lang_id = "typescript";
+    else if (strcmp(ext, "js") == 0) lang_id = "javascript";
+    else if (strcmp(ext, "java") == 0) lang_id = "java";
+    
+    if (lang_id) {
+        doc->language_id = malloc(strlen(lang_id) + 1);
+        strcpy(doc->language_id, lang_id);
+    }
+}
+
+/* File path to file:// URI conversion */
+static char *filepath_to_uri(const char *filepath) {
+    if (!filepath) return NULL;
+    
+    /* Simple conversion: prepend file:// and handle only absolute paths */
+    char *uri = malloc(strlen(filepath) + 8);
+    snprintf(uri, strlen(filepath) + 8, "file://%s", filepath);
+    return uri;
+}
+
+/* Helper: Navigate cursor to line/col with bounds checking */
+static void document_goto_position(Document *doc, int line, int col) {
+    Cursor *cur = &doc->cursors[0];
+    size_t max_lines = buffer_line_count(&doc->buffer);
+    
+    /* Bounds check line */
+    if (line < 0) line = 0;
+    if (line >= (int)max_lines) line = (int)max_lines - 1;
+    if (line < 0) line = 0;  /* Empty buffer */
+    
+    cur->row = line;
+    
+    /* Bounds check column */
+    size_t line_len = buffer_line_len(&doc->buffer, line);
+    if (col < 0) col = 0;
+    if (col >= (int)line_len) col = (int)line_len - 1;
+    if (col < 0) col = 0;
+    
+    cur->col = col;
+    document_sync_viewport_to_cursor(doc);
+}
+
+/* LSP goto definition */
+void document_lsp_goto_definition(Document *doc, void *lsp_manager) {
+    if (!doc || !doc->language_id || !lsp_manager) return;
+    
+    LSPManager *manager = (LSPManager *)lsp_manager;
+    LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
+    
+    if (!client) return;
+    
+    Cursor *cur = &doc->cursors[0];
+    
+    /* Convert file path to URI */
+    char *uri = filepath_to_uri(doc->filepath);
+    if (!uri) return;
+    
+    /* Send definition request */
+    lsp_client_send_definition_request(client, uri, cur->row, cur->col);
+    
+    /* Give LSP server time to respond */
+    usleep(100000);
+    
+    /* Read response */
+    char *response = lsp_client_read_response(client);
+    if (!response) {
+        free(uri);
+        return;
+    }
+    
+    /* Parse response */
+    int count = 0;
+    LSPLocation *locations = lsp_parse_definition_response(response, &count);
+    
+    /* Store results */
+    if (doc->goto_results) {
+        for (int i = 0; i < doc->goto_result_count; i++) {
+            free(doc->goto_results[i].uri);
+        }
+        free(doc->goto_results);
+    }
+    
+    doc->goto_result_count = count;
+    if (count > 0) {
+        doc->goto_results = malloc(count * sizeof(LSPGotoResult));
+        for (int i = 0; i < count; i++) {
+            doc->goto_results[i].uri = strdup(locations[i].uri ? locations[i].uri : "");
+            doc->goto_results[i].line = locations[i].range.start.line;
+            doc->goto_results[i].character = locations[i].range.start.character;
+        }
+        lsp_free_locations(locations, count);
+        
+        /* If only one result, navigate directly */
+        if (count == 1) {
+            if (strstr(doc->goto_results[0].uri, doc->filepath)) {
+                document_goto_position(doc, doc->goto_results[0].line, doc->goto_results[0].character);
+            }
+        }
+    }
+    
+    free(response);
+    free(uri);
+}
+
+/* LSP goto type definition */
+void document_lsp_goto_type_definition(Document *doc, void *lsp_manager) {
+    if (!doc || !doc->language_id || !lsp_manager) return;
+    
+    LSPManager *manager = (LSPManager *)lsp_manager;
+    LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
+    
+    if (!client) return;
+    
+    Cursor *cur = &doc->cursors[0];
+    
+    /* Convert file path to URI */
+    char *uri = filepath_to_uri(doc->filepath);
+    if (!uri) return;
+    
+    /* Send type definition request */
+    lsp_client_send_type_definition_request(client, uri, cur->row, cur->col);
+    
+    /* Give LSP server time to respond */
+    usleep(100000);
+    
+    /* Read response */
+    char *response = lsp_client_read_response(client);
+    if (!response) {
+        free(uri);
+        return;
+    }
+    
+    /* Parse response */
+    int count = 0;
+    LSPLocation *locations = lsp_parse_definition_response(response, &count);
+    
+    /* Store results */
+    if (doc->goto_results) {
+        for (int i = 0; i < doc->goto_result_count; i++) {
+            free(doc->goto_results[i].uri);
+        }
+        free(doc->goto_results);
+    }
+    
+    doc->goto_result_count = count;
+    if (count > 0) {
+        doc->goto_results = malloc(count * sizeof(LSPGotoResult));
+        for (int i = 0; i < count; i++) {
+            doc->goto_results[i].uri = strdup(locations[i].uri ? locations[i].uri : "");
+            doc->goto_results[i].line = locations[i].range.start.line;
+            doc->goto_results[i].character = locations[i].range.start.character;
+        }
+        lsp_free_locations(locations, count);
+        
+        /* If only one result, navigate directly */
+        if (count == 1) {
+            if (strstr(doc->goto_results[0].uri, doc->filepath)) {
+                document_goto_position(doc, doc->goto_results[0].line, doc->goto_results[0].character);
+            }
+        }
+    }
+    
+    free(response);
+    free(uri);
+}
+
+/* LSP goto references */
+void document_lsp_goto_references(Document *doc, void *lsp_manager) {
+    if (!doc || !doc->language_id || !lsp_manager) return;
+    
+    LSPManager *manager = (LSPManager *)lsp_manager;
+    LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
+    
+    if (!client) return;
+    
+    Cursor *cur = &doc->cursors[0];
+    
+    /* Convert file path to URI */
+    char *uri = filepath_to_uri(doc->filepath);
+    if (!uri) return;
+    
+    /* Send references request */
+    lsp_client_send_references_request(client, uri, cur->row, cur->col);
+    
+    /* Give LSP server time to respond */
+    usleep(100000);
+    
+    /* Read response */
+    char *response = lsp_client_read_response(client);
+    if (!response) {
+        free(uri);
+        return;
+    }
+    
+    /* Parse response */
+    int count = 0;
+    LSPLocation *locations = lsp_parse_definition_response(response, &count);
+    
+    /* Store results */
+    if (doc->goto_results) {
+        for (int i = 0; i < doc->goto_result_count; i++) {
+            free(doc->goto_results[i].uri);
+        }
+        free(doc->goto_results);
+    }
+    
+    doc->goto_result_count = count;
+    if (count > 0) {
+        doc->goto_results = malloc(count * sizeof(LSPGotoResult));
+        for (int i = 0; i < count; i++) {
+            doc->goto_results[i].uri = strdup(locations[i].uri ? locations[i].uri : "");
+            doc->goto_results[i].line = locations[i].range.start.line;
+            doc->goto_results[i].character = locations[i].range.start.character;
+        }
+        lsp_free_locations(locations, count);
+        
+        /* If only one result, navigate directly */
+        if (count == 1) {
+            if (strstr(doc->goto_results[0].uri, doc->filepath)) {
+                document_goto_position(doc, doc->goto_results[0].line, doc->goto_results[0].character);
+            }
+        }
+    }
+    
+    free(response);
+    free(uri);
+}
+
+/* LSP goto implementation */
+void document_lsp_goto_implementation(Document *doc, void *lsp_manager) {
+    if (!doc || !doc->language_id || !lsp_manager) return;
+    
+    LSPManager *manager = (LSPManager *)lsp_manager;
+    LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
+    
+    if (!client) return;
+    
+    Cursor *cur = &doc->cursors[0];
+    
+    /* Convert file path to URI */
+    char *uri = filepath_to_uri(doc->filepath);
+    if (!uri) return;
+    
+    /* Send implementation request */
+    lsp_client_send_implementation_request(client, uri, cur->row, cur->col);
+    
+    /* Give LSP server time to respond */
+    usleep(100000);
+    
+    /* Read response */
+    char *response = lsp_client_read_response(client);
+    if (!response) {
+        free(uri);
+        return;
+    }
+    
+    /* Parse response */
+    int count = 0;
+    LSPLocation *locations = lsp_parse_definition_response(response, &count);
+    
+    /* Store results */
+    if (doc->goto_results) {
+        for (int i = 0; i < doc->goto_result_count; i++) {
+            free(doc->goto_results[i].uri);
+        }
+        free(doc->goto_results);
+    }
+    
+    doc->goto_result_count = count;
+    if (count > 0) {
+        doc->goto_results = malloc(count * sizeof(LSPGotoResult));
+        for (int i = 0; i < count; i++) {
+            doc->goto_results[i].uri = strdup(locations[i].uri ? locations[i].uri : "");
+            doc->goto_results[i].line = locations[i].range.start.line;
+            doc->goto_results[i].character = locations[i].range.start.character;
+        }
+        lsp_free_locations(locations, count);
+        
+        /* If only one result, navigate directly */
+        if (count == 1) {
+            if (strstr(doc->goto_results[0].uri, doc->filepath)) {
+                document_goto_position(doc, doc->goto_results[0].line, doc->goto_results[0].character);
+            }
+        }
+    }
+    
+    free(response);
+    free(uri);
+}
+
+/* LSP hover documentation */
+void document_lsp_hover(Document *doc, void *lsp_manager) {
+    if (!doc || !doc->language_id || !lsp_manager) return;
+    
+    LSPManager *manager = (LSPManager *)lsp_manager;
+    LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
+    
+    if (!client) return;
+    
+    Cursor *cur = &doc->cursors[0];
+    
+    /* Convert file path to URI */
+    char *uri = filepath_to_uri(doc->filepath);
+    if (!uri) return;
+    
+    /* Send hover request */
+    lsp_client_send_hover_request(client, uri, cur->row, cur->col);
+    
+    /* Give LSP server time to respond */
+    usleep(100000);
+    
+    /* Read response */
+    char *response = lsp_client_read_response(client);
+    if (!response) {
+        free(uri);
+        return;
+    }
+    
+    /* Parse response */
+    LSPHover *hover = lsp_parse_hover_response(response);
+    
+    /* Store result */
+    if (doc->hover_result) {
+        lsp_free_hover((LSPHover *)doc->hover_result);
+    }
+    
+    doc->hover_result = hover;
+    
+    free(response);
+    free(uri);
+}
+
+/* Update syntax highlighting from LSP semantic tokens */
+void document_update_syntax_from_lsp(Document *doc, void *lsp_manager) {
+    if (!doc || !doc->language_id || !lsp_manager) return;
+    
+    LSPManager *manager = (LSPManager *)lsp_manager;
+    LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
+    
+    if (!client) return;
+    
+    /* Convert file path to URI */
+    char *uri = filepath_to_uri(doc->filepath);
+    if (!uri) return;
+    
+    /* Send semantic tokens request */
+    lsp_client_send_semantic_tokens_request(client, uri);
+    
+    /* Give LSP server time to respond */
+    usleep(200000);  /* 200ms for semantic tokens */
+    
+    /* Read response */
+    char *response = lsp_client_read_response(client);
+    if (!response) {
+        free(uri);
+        return;
+    }
+    
+    /* Parse and update syntax */
+    extern void syntax_update_from_lsp(SyntaxHighlighting *, const char *);
+    syntax_update_from_lsp(&doc->syntax, response);
+    
+    free(response);
+    free(uri);
+}
+
+/* Update diagnostics from LSP */
+void document_update_diagnostics_from_lsp(Document *doc, void *lsp_manager) {
+    if (!doc || !doc->language_id || !lsp_manager) return;
+    
+    LSPManager *manager = (LSPManager *)lsp_manager;
+    LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
+    
+    if (!client) return;
+    
+    /* Try to read any pending notifications from LSP server */
+    char *response = lsp_client_read_response(client);
+    if (!response) return;
+    
+    /* Check if it's a publishDiagnostics notification */
+    extern LSPDiagnostics *lsp_parse_publish_diagnostics_notification(const char *);
+    LSPDiagnostics *diagnostics = lsp_parse_publish_diagnostics_notification(response);
+    
+    if (diagnostics && diagnostics->count > 0) {
+        /* Free old diagnostics */
+        if (doc->diagnostics) {
+            lsp_free_diagnostics((LSPDiagnostics *)doc->diagnostics);
+        }
+        /* Store new diagnostics */
+        doc->diagnostics = diagnostics;
+    } else if (diagnostics) {
+        lsp_free_diagnostics(diagnostics);
+    }
+    
+    free(response);
+}
+
+/* Treesitter integration - parse document with treesitter */
+void document_parse_treesitter(Document *doc, void *ts_manager) {
+    if (!doc || !doc->filepath || !ts_manager) return;
+    
+    TreeSitterManager *manager = (TreeSitterManager *)ts_manager;
+    
+    /* Get file extension to determine language */
+    const char *dot = strrchr(doc->filepath, '.');
+    if (!dot || dot == doc->filepath) return;
+    
+    const char *ext = dot + 1;
+    
+    /* Load language parser if not already loaded */
+    if (!treesitter_load_language(manager, ext)) {
+        return;
+    }
+    
+    /* Get the language parser */
+    TreeSitterLanguage *lang = NULL;
+    const char *lang_names[] = {"c", "python", "javascript", "typescript", "bash", "lua", "markdown"};
+    for (int i = 0; i < 7; i++) {
+        lang = treesitter_get_language(manager, lang_names[i]);
+        if (lang) break;
+    }
+    
+    if (!lang) return;
+    
+    /* Reconstruct buffer contents from lines for treesitter parsing */
+    size_t total_lines = buffer_line_count(&doc->buffer);
+    if (total_lines == 0) return;
+    
+    /* Allocate buffer for entire document */
+    size_t total_len = 0;
+    for (size_t i = 0; i < total_lines; i++) {
+        total_len += buffer_line_len(&doc->buffer, i);
+    }
+    
+    if (total_len == 0) return;
+    
+    char *buffer_text = (char *)malloc(total_len + 1);
+    if (!buffer_text) return;
+    
+    /* Build document text */
+    size_t pos = 0;
+    for (size_t i = 0; i < total_lines; i++) {
+        const char *line = buffer_line_ptr(&doc->buffer, i);
+        size_t line_len = buffer_line_len(&doc->buffer, i);
+        memcpy(buffer_text + pos, line, line_len);
+        pos += line_len;
+    }
+    buffer_text[total_len] = '\0';
+    
+    /* Parse with treesitter */
+    treesitter_parse(lang, buffer_text, (uint32_t)total_len);
+    
+    free(buffer_text);
+}
+
+/* Diagnostic navigation functions */
+void document_goto_next_diagnostic(Document *doc) {
+    if (!doc || !doc->diagnostics) return;
+    
+    /* Forward declare LSPDiagnostics for void* cast */
+    typedef struct {
+        int count;
+        void *items_ptr;  /* Will be cast to LSPDiagnostic* */
+    } LSPDiagnosticsProxy;
+    
+    LSPDiagnosticsProxy *diags = (LSPDiagnosticsProxy *)doc->diagnostics;
+    if (!diags || diags->count == 0) return;
+    
+    Cursor *cur = &doc->cursors[0];
+    int current_line = cur->row;
+    
+    /* Forward declare LSPDiagnostic */
+    typedef struct {
+        int start_line;
+        int start_col;
+        int end_line;
+        int end_col;
+        int severity;
+        char *message;
+        char *code;
+    } LSPDiagnosticProxy;
+    
+    LSPDiagnosticProxy *items = (LSPDiagnosticProxy *)diags->items_ptr;
+    if (!items) return;
+    
+    /* Find next diagnostic after current line */
+    for (int i = 0; i < diags->count; i++) {
+        if (items[i].start_line > current_line) {
+            document_cursor_to(doc, items[i].start_line, items[i].start_col);
+            return;
+        }
+    }
+    
+    /* Wrap around to first diagnostic */
+    if (diags->count > 0) {
+        document_cursor_to(doc, items[0].start_line, items[0].start_col);
+    }
+}
+
+void document_goto_prev_diagnostic(Document *doc) {
+    if (!doc || !doc->diagnostics) return;
+    
+    typedef struct {
+        int count;
+        void *items_ptr;
+    } LSPDiagnosticsProxy;
+    
+    LSPDiagnosticsProxy *diags = (LSPDiagnosticsProxy *)doc->diagnostics;
+    if (!diags || diags->count == 0) return;
+    
+    Cursor *cur = &doc->cursors[0];
+    int current_line = cur->row;
+    
+    typedef struct {
+        int start_line;
+        int start_col;
+        int end_line;
+        int end_col;
+        int severity;
+        char *message;
+        char *code;
+    } LSPDiagnosticProxy;
+    
+    LSPDiagnosticProxy *items = (LSPDiagnosticProxy *)diags->items_ptr;
+    if (!items) return;
+    
+    /* Find previous diagnostic before current line (from end to start) */
+    for (int i = diags->count - 1; i >= 0; i--) {
+        if (items[i].start_line < current_line) {
+            document_cursor_to(doc, items[i].start_line, items[i].start_col);
+            return;
+        }
+    }
+    
+    /* Wrap around to last diagnostic */
+    if (diags->count > 0) {
+        document_cursor_to(doc, items[diags->count - 1].start_line, items[diags->count - 1].start_col);
+    }
+}
+
+void document_goto_first_diagnostic(Document *doc) {
+    if (!doc || !doc->diagnostics) return;
+    
+    typedef struct {
+        int count;
+        void *items_ptr;
+    } LSPDiagnosticsProxy;
+    
+    LSPDiagnosticsProxy *diags = (LSPDiagnosticsProxy *)doc->diagnostics;
+    if (!diags || diags->count == 0) return;
+    
+    typedef struct {
+        int start_line;
+        int start_col;
+        int end_line;
+        int end_col;
+        int severity;
+        char *message;
+        char *code;
+    } LSPDiagnosticProxy;
+    
+    LSPDiagnosticProxy *items = (LSPDiagnosticProxy *)diags->items_ptr;
+    if (!items) return;
+    
+    document_cursor_to(doc, items[0].start_line, items[0].start_col);
+}
+
+void document_goto_last_diagnostic(Document *doc) {
+    if (!doc || !doc->diagnostics) return;
+    
+    typedef struct {
+        int count;
+        void *items_ptr;
+    } LSPDiagnosticsProxy;
+    
+    LSPDiagnosticsProxy *diags = (LSPDiagnosticsProxy *)doc->diagnostics;
+    if (!diags || diags->count == 0) return;
+    
+    typedef struct {
+        int start_line;
+        int start_col;
+        int end_line;
+        int end_col;
+        int severity;
+        char *message;
+        char *code;
+    } LSPDiagnosticProxy;
+    
+    LSPDiagnosticProxy *items = (LSPDiagnosticProxy *)diags->items_ptr;
+    if (!items) return;
+    
+    document_cursor_to(doc, items[diags->count - 1].start_line, items[diags->count - 1].start_col);
 }

@@ -8,11 +8,21 @@ void cursor_init(Cursor *c) {
 void cursor_set(Cursor *c, int row, int col) {
     c->row = row;
     c->col = col;
+    c->desired_col = col;  /* Update desired column when explicitly set */
 }
 
 void cursor_move(Cursor *c, int dr, int dc) {
-    c->row += dr;
-    c->col += dc;
+    if (dr != 0) {
+        /* Vertical movement: use desired column if moving up/down */
+        c->row += dr;
+        /* Restore desired column on vertical movement */
+        c->col = c->desired_col;
+    } else if (dc != 0) {
+        /* Horizontal movement: update desired column */
+        c->col += dc;
+        c->desired_col = c->col;
+    }
+    
     if (c->row < 0) c->row = 0;
     if (c->col < 0) c->col = 0;
 }
@@ -20,6 +30,7 @@ void cursor_move(Cursor *c, int dr, int dc) {
 void cursor_move_to(Cursor *c, int row, int col) {
     c->row = row;
     c->col = col;
+    c->desired_col = col;  /* Update desired column when moving to explicit position */
     if (c->row < 0) c->row = 0;
     if (c->col < 0) c->col = 0;
 }
