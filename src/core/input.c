@@ -1534,7 +1534,7 @@ static void handle_command_key(App *app, int key, int action, int mods) {
         } else if (cmd_buf[0] >= '1' && cmd_buf[0] <= '9') {
             int line = atoi(cmd_buf);
             if (line > 0)
-                document_cursor_to(doc, line - 1, (int)buffer_line_count(&doc->buffer) - 1);
+                document_cursor_to(doc, line - 1, 0);
         }
     }
 

@@ -114,6 +114,214 @@ static int json_extract_number(const char *json, const char *key) {
     return (int)strtol(pos, NULL, 10);
 }
 
+static const char *json_skip_ws_range(const char *p, const char *end) {
+    while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r'))
+        p++;
+    return p;
+}
+
+static const char *json_find_range(const char *start, const char *end, const char *needle) {
+    if (!start || !end || end < start || !needle) return NULL;
+    return find_bytes(start, (size_t)(end - start), needle, strlen(needle));
+}
+
+static const char *json_matching_delim(const char *open, const char *end,
+                                       char open_ch, char close_ch) {
+    if (!open || open >= end || *open != open_ch) return NULL;
+    int depth = 0;
+    bool in_string = false;
+    bool escape = false;
+
+    for (const char *p = open; p < end && *p; p++) {
+        char c = *p;
+        if (in_string) {
+            if (escape) {
+                escape = false;
+            } else if (c == '\\') {
+                escape = true;
+            } else if (c == '"') {
+                in_string = false;
+            }
+            continue;
+        }
+
+        if (c == '"') {
+            in_string = true;
+        } else if (c == open_ch) {
+            depth++;
+        } else if (c == close_ch) {
+            depth--;
+            if (depth == 0)
+                return p;
+        }
+    }
+    return NULL;
+}
+
+static const char *json_value_after_key_range(const char *start, const char *end,
+                                              const char *key) {
+    char search[128];
+    snprintf(search, sizeof(search), "\"%s\"", key);
+    const char *p = json_find_range(start, end, search);
+    if (!p) return NULL;
+
+    p += strlen(search);
+    p = json_skip_ws_range(p, end);
+    if (p >= end || *p != ':') return NULL;
+    p++;
+    return json_skip_ws_range(p, end);
+}
+
+static bool json_object_after_key_range(const char *start, const char *end,
+                                        const char *key,
+                                        const char **obj_start,
+                                        const char **obj_end) {
+    const char *value = json_value_after_key_range(start, end, key);
+    if (!value || value >= end || *value != '{') return false;
+
+    const char *close = json_matching_delim(value, end, '{', '}');
+    if (!close) return false;
+
+    if (obj_start) *obj_start = value;
+    if (obj_end) *obj_end = close + 1;
+    return true;
+}
+
+static int json_number_in_range(const char *start, const char *end,
+                                const char *key, int default_value) {
+    const char *value = json_value_after_key_range(start, end, key);
+    if (!value || value >= end) return default_value;
+    char *num_end = NULL;
+    long parsed = strtol(value, &num_end, 10);
+    if (num_end == value || num_end > end) return default_value;
+    return (int)parsed;
+}
+
+static char *json_string_in_range(const char *start, const char *end, const char *key) {
+    const char *value = json_value_after_key_range(start, end, key);
+    if (!value || value >= end || *value != '"') return strdup("");
+    value++;
+
+    size_t cap = (size_t)(end - value) + 1;
+    char *out = malloc(cap);
+    if (!out) return NULL;
+
+    size_t len = 0;
+    bool escape = false;
+    for (const char *p = value; p < end && *p; p++) {
+        char c = *p;
+        if (escape) {
+            if (c == 'n') out[len++] = '\n';
+            else if (c == 'r') out[len++] = '\r';
+            else if (c == 't') out[len++] = '\t';
+            else out[len++] = c;
+            escape = false;
+            continue;
+        }
+        if (c == '\\') {
+            escape = true;
+            continue;
+        }
+        if (c == '"')
+            break;
+        out[len++] = c;
+    }
+    out[len] = '\0';
+    return out;
+}
+
+static void lsp_diagnostics_append(LSPDiagnostics *diag, LSPDiagnostic item) {
+    if (!diag) return;
+    LSPDiagnostic *items = realloc(diag->items, sizeof(LSPDiagnostic) * (size_t)(diag->count + 1));
+    if (!items) {
+        free(item.message);
+        free(item.code);
+        return;
+    }
+    diag->items = items;
+    diag->items[diag->count++] = item;
+}
+
+static void lsp_parse_diagnostic_object(const char *obj_start, const char *obj_end,
+                                        LSPDiagnostic *out) {
+    memset(out, 0, sizeof(*out));
+    out->severity = LSP_DIAG_ERROR;
+
+    const char *range_start = NULL;
+    const char *range_end = NULL;
+    if (json_object_after_key_range(obj_start, obj_end, "range", &range_start, &range_end)) {
+        const char *start_start = NULL;
+        const char *start_end = NULL;
+        if (json_object_after_key_range(range_start, range_end, "start", &start_start, &start_end)) {
+            out->start_line = json_number_in_range(start_start, start_end, "line", 0);
+            out->start_col = json_number_in_range(start_start, start_end, "character", 0);
+        }
+
+        const char *end_start = NULL;
+        const char *end_end = NULL;
+        if (json_object_after_key_range(range_start, range_end, "end", &end_start, &end_end)) {
+            out->end_line = json_number_in_range(end_start, end_end, "line", out->start_line);
+            out->end_col = json_number_in_range(end_start, end_end, "character", out->start_col + 1);
+        }
+    }
+
+    int severity = json_number_in_range(obj_start, obj_end, "severity", LSP_DIAG_ERROR);
+    if (severity < LSP_DIAG_ERROR || severity > LSP_DIAG_HINT)
+        severity = LSP_DIAG_ERROR;
+    out->severity = (LSPDiagnosticSeverity)severity;
+
+    out->message = json_string_in_range(obj_start, obj_end, "message");
+    out->code = json_string_in_range(obj_start, obj_end, "code");
+}
+
+static LSPDiagnostics *lsp_parse_diagnostics_array(const char *array_start) {
+    LSPDiagnostics *diag = malloc(sizeof(LSPDiagnostics));
+    if (!diag) return NULL;
+    memset(diag, 0, sizeof(*diag));
+    if (!array_start || *array_start != '[') return diag;
+
+    const char *array_end = json_matching_delim(array_start, array_start + strlen(array_start), '[', ']');
+    if (!array_end) return diag;
+
+    int depth = 0;
+    bool in_string = false;
+    bool escape = false;
+    const char *obj_start = NULL;
+
+    for (const char *p = array_start + 1; p < array_end; p++) {
+        char c = *p;
+        if (in_string) {
+            if (escape) {
+                escape = false;
+            } else if (c == '\\') {
+                escape = true;
+            } else if (c == '"') {
+                in_string = false;
+            }
+            continue;
+        }
+
+        if (c == '"') {
+            in_string = true;
+        } else if (c == '{') {
+            if (depth == 0)
+                obj_start = p;
+            depth++;
+        } else if (c == '}') {
+            if (depth > 0)
+                depth--;
+            if (depth == 0 && obj_start) {
+                LSPDiagnostic item;
+                lsp_parse_diagnostic_object(obj_start, p + 1, &item);
+                lsp_diagnostics_append(diag, item);
+                obj_start = NULL;
+            }
+        }
+    }
+
+    return diag;
+}
+
 void lsp_manager_init(LSPManager *manager) {
     signal(SIGPIPE, SIG_IGN);
     manager->clients = NULL;
@@ -866,84 +1074,17 @@ LSPClient *lsp_manager_get_client(LSPManager *manager, const char *language_id) 
 
 LSPDiagnostics *lsp_parse_diagnostics_response(const char *response) {
     if (!response) return NULL;
-    
-    LSPDiagnostics *diag = malloc(sizeof(LSPDiagnostics));
-    memset(diag, 0, sizeof(LSPDiagnostics));
-    
+
     /* Parse: {"result": [{...}, {...}]} */
     const char *result = strstr(response, "\"result\"");
-    if (!result) return diag;
-    
-    /* Count diagnostic objects */
-    int count = 0;
-    const char *p = strchr(result, '[');
-    if (!p) return diag;
-    
-    while (p) {
-        p = strchr(p + 1, '{');
-        if (!p || p[1] == ']') break;
-        count++;
+    if (!result) {
+        LSPDiagnostics *diag = malloc(sizeof(LSPDiagnostics));
+        if (diag) memset(diag, 0, sizeof(*diag));
+        return diag;
     }
-    
-    if (count == 0) return diag;
-    
-    diag->items = malloc(count * sizeof(LSPDiagnostic));
-    memset(diag->items, 0, count * sizeof(LSPDiagnostic));
-    diag->count = 0;
-    
-    /* Parse each diagnostic */
-    p = strchr(result, '[');
-    if (!p) return diag;
-    
-    for (int i = 0; i < count && i < 100; i++) {
-        /* Find start of this diagnostic */
-        p = strchr(p, '{');
-        if (!p) break;
-        
-        LSPDiagnostic *d = &diag->items[i];
-        
-        /* Parse range.start.line */
-        const char *line_str = strstr(p, "\"line\"");
-        if (line_str) {
-            d->start_line = json_extract_number(line_str, "line");
-        }
-        
-        /* Parse range.start.character */
-        const char *char_str = strstr(p, "\"character\"");
-        if (char_str) {
-            d->start_col = json_extract_number(char_str, "character");
-        }
-        
-        /* Parse severity (1=error, 2=warning, 3=info, 4=hint) */
-        const char *sev_str = strstr(p, "\"severity\"");
-        if (sev_str) {
-            int sev = json_extract_number(sev_str, "severity");
-            if (sev < 1) sev = 1;
-            d->severity = sev;
-        } else {
-            d->severity = LSP_DIAG_ERROR;
-        }
-        
-        /* Parse message */
-        const char *msg_start = strstr(p, "\"message\"");
-        if (msg_start) {
-            const char *quote = strchr(msg_start + 9, '"');
-            if (quote) {
-                quote++;
-                const char *quote_end = strchr(quote, '"');
-                if (quote_end && quote_end - quote < 256) {
-                    d->message = malloc(quote_end - quote + 1);
-                    memcpy(d->message, quote, quote_end - quote);
-                    d->message[quote_end - quote] = '\0';
-                }
-            }
-        }
-        
-        diag->count++;
-        p++;
-    }
-    
-    return diag;
+
+    const char *array = strchr(result, '[');
+    return lsp_parse_diagnostics_array(array);
 }
 
 void lsp_free_diagnostics(LSPDiagnostics *diag) {
@@ -966,86 +1107,16 @@ LSPDiagnostics *lsp_parse_publish_diagnostics_notification(const char *response)
         return NULL;
     }
     
-    LSPDiagnostics *diag = malloc(sizeof(LSPDiagnostics));
-    memset(diag, 0, sizeof(LSPDiagnostics));
-    
     /* Parse: {"method":"textDocument/publishDiagnostics","params":{"uri":"...","diagnostics":[...]}} */
     const char *diagnostics_start = strstr(response, "\"diagnostics\"");
-    if (!diagnostics_start) return diag;
-    
-    /* Count diagnostic objects */
-    int count = 0;
-    const char *p = strchr(diagnostics_start, '[');
-    if (!p) return diag;
-    
-    while (p) {
-        p = strchr(p + 1, '{');
-        if (!p || p[1] == ']') break;
-        count++;
+    if (!diagnostics_start) {
+        LSPDiagnostics *diag = malloc(sizeof(LSPDiagnostics));
+        if (diag) memset(diag, 0, sizeof(*diag));
+        return diag;
     }
-    
-    if (count == 0) return diag;
-    
-    diag->items = malloc(count * sizeof(LSPDiagnostic));
-    memset(diag->items, 0, count * sizeof(LSPDiagnostic));
-    diag->count = 0;
-    
-    /* Parse each diagnostic */
-    p = strchr(diagnostics_start, '[');
-    if (!p) return diag;
-    
-    for (int i = 0; i < count && i < 100; i++) {
-        /* Find start of this diagnostic */
-        p = strchr(p, '{');
-        if (!p) break;
-        
-        LSPDiagnostic *d = &diag->items[i];
-        
-        /* Parse range.start.line */
-        const char *range_str = strstr(p, "\"range\"");
-        if (range_str) {
-            const char *line_str = strstr(range_str, "\"line\"");
-            if (line_str) {
-                d->start_line = json_extract_number(line_str, "line");
-            }
-            
-            /* Parse range.start.character */
-            const char *char_str = strstr(range_str, "\"character\"");
-            if (char_str) {
-                d->start_col = json_extract_number(char_str, "character");
-            }
-        }
-        
-        /* Parse severity (1=error, 2=warning, 3=info, 4=hint) */
-        const char *sev_str = strstr(p, "\"severity\"");
-        if (sev_str) {
-            int sev = json_extract_number(sev_str, "severity");
-            if (sev < 1) sev = 1;
-            d->severity = sev;
-        } else {
-            d->severity = LSP_DIAG_ERROR;
-        }
-        
-        /* Parse message */
-        const char *msg_start = strstr(p, "\"message\"");
-        if (msg_start) {
-            const char *quote = strchr(msg_start + 9, '"');
-            if (quote) {
-                quote++;
-                const char *quote_end = strchr(quote, '"');
-                if (quote_end && quote_end - quote < 256) {
-                    d->message = malloc(quote_end - quote + 1);
-                    memcpy(d->message, quote, quote_end - quote);
-                    d->message[quote_end - quote] = '\0';
-                }
-            }
-        }
-        
-        diag->count++;
-        p++;
-    }
-    
-    return diag;
+
+    const char *array = strchr(diagnostics_start, '[');
+    return lsp_parse_diagnostics_array(array);
 }
 
 LSPWorkspaceEdit *lsp_parse_rename_response(const char *response) {

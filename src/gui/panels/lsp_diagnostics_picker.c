@@ -48,7 +48,8 @@ void panel_lsp_diagnostics_open(App *app) {
         lsp_diag_entries[lsp_diag_count].character = diag->items[i].start_col;
         lsp_diag_entries[lsp_diag_count].severity = diag->items[i].severity;
         
-        strncpy(lsp_diag_entries[lsp_diag_count].message, diag->items[i].message, 255);
+        const char *message = diag->items[i].message ? diag->items[i].message : "";
+        strncpy(lsp_diag_entries[lsp_diag_count].message, message, 255);
         lsp_diag_entries[lsp_diag_count].message[255] = '\0';
         
         /* Get line preview */
@@ -70,9 +71,8 @@ void panel_lsp_diagnostics_open(App *app) {
     
     /* If only one diagnostic, navigate directly */
     if (lsp_diag_count == 1) {
-        Cursor *cur = &doc->cursors[0];
-        cur->row = lsp_diag_entries[0].line;
-        cur->col = lsp_diag_entries[0].character;
+        document_cursor_to(doc, lsp_diag_entries[0].line, lsp_diag_entries[0].character);
+        document_sync_viewport_to_cursor(doc);
         return;
     }
     
@@ -96,7 +96,6 @@ void panel_lsp_diagnostics_key(App *app, int key) {
     if (!lsp_diag_open) return;
     
     Document *doc = (Document *)app_get_doc(app);
-    Cursor *cur = &doc->cursors[0];
     
     switch (key) {
         case GLFW_KEY_UP:
@@ -111,8 +110,10 @@ void panel_lsp_diagnostics_key(App *app, int key) {
             break;
         case GLFW_KEY_ENTER:
             if (lsp_diag_selected < lsp_diag_count) {
-                cur->row = lsp_diag_entries[lsp_diag_selected].line;
-                cur->col = lsp_diag_entries[lsp_diag_selected].character;
+                document_cursor_to(doc,
+                                   lsp_diag_entries[lsp_diag_selected].line,
+                                   lsp_diag_entries[lsp_diag_selected].character);
+                document_sync_viewport_to_cursor(doc);
                 panel_lsp_diagnostics_close(app);
             }
             break;

@@ -395,11 +395,15 @@ void document_move_cursor(Document *doc, int dr, int dc) {
     document_sync_viewport_to_cursor(doc);
 }
 
-void document_cursor_to(Document *doc, int row, int max_row) {
+void document_cursor_to(Document *doc, int row, int col) {
+    if (!doc) return;
     Cursor *cur = &doc->cursors[0];
+    int max_row = (int)buffer_line_count(&doc->buffer) - 1;
     if (row < 0) row = 0;
     if (row > max_row) row = max_row;
+    if (row < 0) row = 0;
     cur->row = row;
+    cur->col = col;
     size_t len = buffer_line_len(&doc->buffer, cur->row);
     if (cur->col > (int)len) cur->col = (int)len;
     if (cur->col < 0) cur->col = 0;
@@ -3176,15 +3180,11 @@ void document_update_diagnostics_from_lsp(Document *doc, void *lsp_manager) {
     /* Check if it's a publishDiagnostics notification */
     LSPDiagnostics *diagnostics = lsp_parse_publish_diagnostics_notification(response);
     
-    if (diagnostics && diagnostics->count > 0) {
-        /* Free old diagnostics */
+    if (diagnostics) {
         if (doc->diagnostics) {
             lsp_free_diagnostics((LSPDiagnostics *)doc->diagnostics);
         }
-        /* Store new diagnostics */
         doc->diagnostics = diagnostics;
-    } else if (diagnostics) {
-        lsp_free_diagnostics(diagnostics);
     }
     
     free(response);
@@ -3349,143 +3349,107 @@ void document_move_to_treesitter_parent_edge(Document *doc, void *ts_manager, bo
     document_sync_viewport_to_cursor(doc);
 }
 
+static int diagnostic_pos_cmp(const LSPDiagnostic *diag, int row, int col) {
+    if (diag->start_line != row)
+        return diag->start_line < row ? -1 : 1;
+    if (diag->start_col != col)
+        return diag->start_col < col ? -1 : 1;
+    return 0;
+}
+
+static int first_diagnostic_index(LSPDiagnostics *diags) {
+    if (!diags || diags->count <= 0 || !diags->items) return -1;
+    int best = 0;
+    for (int i = 1; i < diags->count; i++) {
+        if (diagnostic_pos_cmp(&diags->items[i],
+                               diags->items[best].start_line,
+                               diags->items[best].start_col) < 0) {
+            best = i;
+        }
+    }
+    return best;
+}
+
+static int last_diagnostic_index(LSPDiagnostics *diags) {
+    if (!diags || diags->count <= 0 || !diags->items) return -1;
+    int best = 0;
+    for (int i = 1; i < diags->count; i++) {
+        if (diagnostic_pos_cmp(&diags->items[i],
+                               diags->items[best].start_line,
+                               diags->items[best].start_col) > 0) {
+            best = i;
+        }
+    }
+    return best;
+}
+
+static void document_goto_diagnostic_item(Document *doc, const LSPDiagnostic *diag) {
+    if (!doc || !diag) return;
+    document_cursor_to(doc, diag->start_line, diag->start_col);
+    document_sync_viewport_to_cursor(doc);
+}
+
 /* Diagnostic navigation functions */
 void document_goto_next_diagnostic(Document *doc) {
     if (!doc || !doc->diagnostics) return;
-    
-    /* Forward declare LSPDiagnostics for void* cast */
-    typedef struct {
-        int count;
-        void *items_ptr;  /* Will be cast to LSPDiagnostic* */
-    } LSPDiagnosticsProxy;
-    
-    LSPDiagnosticsProxy *diags = (LSPDiagnosticsProxy *)doc->diagnostics;
-    if (!diags || diags->count == 0) return;
+    LSPDiagnostics *diags = (LSPDiagnostics *)doc->diagnostics;
+    if (!diags->items || diags->count <= 0) return;
     
     Cursor *cur = &doc->cursors[0];
-    int current_line = cur->row;
-    
-    /* Forward declare LSPDiagnostic */
-    typedef struct {
-        int start_line;
-        int start_col;
-        int end_line;
-        int end_col;
-        int severity;
-        char *message;
-        char *code;
-    } LSPDiagnosticProxy;
-    
-    LSPDiagnosticProxy *items = (LSPDiagnosticProxy *)diags->items_ptr;
-    if (!items) return;
-    
-    /* Find next diagnostic after current line */
+    int best = -1;
     for (int i = 0; i < diags->count; i++) {
-        if (items[i].start_line > current_line) {
-            document_cursor_to(doc, items[i].start_line, items[i].start_col);
-            return;
+        if (diagnostic_pos_cmp(&diags->items[i], cur->row, cur->col) <= 0)
+            continue;
+        if (best < 0 ||
+            diagnostic_pos_cmp(&diags->items[i],
+                               diags->items[best].start_line,
+                               diags->items[best].start_col) < 0) {
+            best = i;
         }
     }
-    
-    /* Wrap around to first diagnostic */
-    if (diags->count > 0) {
-        document_cursor_to(doc, items[0].start_line, items[0].start_col);
-    }
+    if (best < 0)
+        best = first_diagnostic_index(diags);
+    if (best >= 0)
+        document_goto_diagnostic_item(doc, &diags->items[best]);
 }
 
 void document_goto_prev_diagnostic(Document *doc) {
     if (!doc || !doc->diagnostics) return;
-    
-    typedef struct {
-        int count;
-        void *items_ptr;
-    } LSPDiagnosticsProxy;
-    
-    LSPDiagnosticsProxy *diags = (LSPDiagnosticsProxy *)doc->diagnostics;
-    if (!diags || diags->count == 0) return;
+    LSPDiagnostics *diags = (LSPDiagnostics *)doc->diagnostics;
+    if (!diags->items || diags->count <= 0) return;
     
     Cursor *cur = &doc->cursors[0];
-    int current_line = cur->row;
-    
-    typedef struct {
-        int start_line;
-        int start_col;
-        int end_line;
-        int end_col;
-        int severity;
-        char *message;
-        char *code;
-    } LSPDiagnosticProxy;
-    
-    LSPDiagnosticProxy *items = (LSPDiagnosticProxy *)diags->items_ptr;
-    if (!items) return;
-    
-    /* Find previous diagnostic before current line (from end to start) */
-    for (int i = diags->count - 1; i >= 0; i--) {
-        if (items[i].start_line < current_line) {
-            document_cursor_to(doc, items[i].start_line, items[i].start_col);
-            return;
+    int best = -1;
+    for (int i = 0; i < diags->count; i++) {
+        if (diagnostic_pos_cmp(&diags->items[i], cur->row, cur->col) >= 0)
+            continue;
+        if (best < 0 ||
+            diagnostic_pos_cmp(&diags->items[i],
+                               diags->items[best].start_line,
+                               diags->items[best].start_col) > 0) {
+            best = i;
         }
     }
-    
-    /* Wrap around to last diagnostic */
-    if (diags->count > 0) {
-        document_cursor_to(doc, items[diags->count - 1].start_line, items[diags->count - 1].start_col);
-    }
+    if (best < 0)
+        best = last_diagnostic_index(diags);
+    if (best >= 0)
+        document_goto_diagnostic_item(doc, &diags->items[best]);
 }
 
 void document_goto_first_diagnostic(Document *doc) {
     if (!doc || !doc->diagnostics) return;
-    
-    typedef struct {
-        int count;
-        void *items_ptr;
-    } LSPDiagnosticsProxy;
-    
-    LSPDiagnosticsProxy *diags = (LSPDiagnosticsProxy *)doc->diagnostics;
-    if (!diags || diags->count == 0) return;
-    
-    typedef struct {
-        int start_line;
-        int start_col;
-        int end_line;
-        int end_col;
-        int severity;
-        char *message;
-        char *code;
-    } LSPDiagnosticProxy;
-    
-    LSPDiagnosticProxy *items = (LSPDiagnosticProxy *)diags->items_ptr;
-    if (!items) return;
-    
-    document_cursor_to(doc, items[0].start_line, items[0].start_col);
+    LSPDiagnostics *diags = (LSPDiagnostics *)doc->diagnostics;
+    int idx = first_diagnostic_index(diags);
+    if (idx >= 0)
+        document_goto_diagnostic_item(doc, &diags->items[idx]);
 }
 
 void document_goto_last_diagnostic(Document *doc) {
     if (!doc || !doc->diagnostics) return;
-    
-    typedef struct {
-        int count;
-        void *items_ptr;
-    } LSPDiagnosticsProxy;
-    
-    LSPDiagnosticsProxy *diags = (LSPDiagnosticsProxy *)doc->diagnostics;
-    if (!diags || diags->count == 0) return;
-    
-    typedef struct {
-        int start_line;
-        int start_col;
-        int end_line;
-        int end_col;
-        int severity;
-        char *message;
-        char *code;
-    } LSPDiagnosticProxy;
-    
-    LSPDiagnosticProxy *items = (LSPDiagnosticProxy *)diags->items_ptr;
-    if (!items) return;
-    
-    document_cursor_to(doc, items[diags->count - 1].start_line, items[diags->count - 1].start_col);
+    LSPDiagnostics *diags = (LSPDiagnostics *)doc->diagnostics;
+    int idx = last_diagnostic_index(diags);
+    if (idx >= 0)
+        document_goto_diagnostic_item(doc, &diags->items[idx]);
 }
 
 void document_apply_text_edit(Document *doc, const LSPTextEdit *edit) {
