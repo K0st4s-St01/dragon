@@ -156,6 +156,7 @@ Config *config_load(void) {
     toml_table_t *editor = toml_table_in(conf, "editor");
     if (editor) {
         cfg->tab_width = parse_int(editor, "tab_width", cfg->tab_width);
+        if (cfg->tab_width <= 0) cfg->tab_width = 4;
         cfg->font_size = parse_int(editor, "font_size", cfg->font_size);
         cfg->line_numbers = parse_int(editor, "line_numbers", cfg->line_numbers);
         cfg->line_wrapping = parse_int(editor, "line_wrapping", cfg->line_wrapping);

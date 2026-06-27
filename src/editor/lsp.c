@@ -37,6 +37,33 @@ static bool lsp_client_buffer_append(LSPClient *client, const char *data, size_t
     return true;
 }
 
+static bool lsp_client_write_all(LSPClient *client, const char *data, size_t len) {
+    if (!client || client->stdin_fd < 0 || !data) return false;
+    size_t written = 0;
+    while (written < len) {
+        ssize_t n = write(client->stdin_fd, data + written, len - written);
+        if (n > 0) {
+            written += (size_t)n;
+            continue;
+        }
+        if (n < 0 && errno == EINTR)
+            continue;
+        if (n < 0 && (errno == EPIPE || errno == EBADF)) {
+            lsp_client_stop(client);
+            client->status = LSP_STATUS_ERROR;
+        }
+        return false;
+    }
+    return true;
+}
+
+static bool lsp_client_write_message(LSPClient *client, const char *body, int content_len) {
+    char header[256];
+    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
+    return lsp_client_write_all(client, header, strlen(header)) &&
+           lsp_client_write_all(client, body, (size_t)content_len);
+}
+
 /* Helper: Extract JSON string value */
 static char *json_extract_string(const char *json, const char *key) {
     char search[256];
@@ -88,6 +115,7 @@ static int json_extract_number(const char *json, const char *key) {
 }
 
 void lsp_manager_init(LSPManager *manager) {
+    signal(SIGPIPE, SIG_IGN);
     manager->clients = NULL;
     manager->client_count = 0;
     manager->client_capacity = 0;
@@ -280,19 +308,15 @@ bool lsp_client_initialize(LSPClient *client, const char *workspace_root) {
              "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"initialize\",\"params\":%s}",
              client->id++, init_params);
     
-    char header[256];
     int content_len = strlen(buffer);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-    
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, buffer, content_len);
+    if (!lsp_client_write_message(client, buffer, content_len))
+        return false;
     
     /* Send initialized notification */
     const char *initialized_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"initialized\",\"params\":{}}";
     content_len = strlen(initialized_msg);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, initialized_msg, content_len);
+    if (!lsp_client_write_message(client, initialized_msg, content_len))
+        return false;
     
     client->status = LSP_STATUS_INITIALIZED;
     client->initialized = true;
@@ -561,11 +585,8 @@ void lsp_client_send_didOpen(LSPClient *client, const char *file_uri, const char
              "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":%s}",
              params);
     
-    char header[256];
     int content_len = strlen(buffer);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, buffer, content_len);
+    lsp_client_write_message(client, buffer, content_len);
 }
 
 void lsp_client_send_didChange(LSPClient *client, const char *file_uri, const char *text) {
@@ -598,11 +619,8 @@ void lsp_client_send_didChange(LSPClient *client, const char *file_uri, const ch
              "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didChange\",\"params\":%s}",
              params);
     
-    char header[256];
     int content_len = strlen(buffer);
-    snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
-    write(client->stdin_fd, header, strlen(header));
-    write(client->stdin_fd, buffer, content_len);
+    lsp_client_write_message(client, buffer, content_len);
 }
 
 char *lsp_client_read_response(LSPClient *client) {

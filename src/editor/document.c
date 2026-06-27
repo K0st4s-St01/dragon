@@ -697,8 +697,12 @@ void document_clear_cursors(Document *doc) {
 }
 
 void document_insert_char_multi(Document *doc, char c) {
+    if (!doc) return;
+    if (doc->cursor_count < 1) doc->cursor_count = 1;
+    if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
+
     /* Sort cursor indices by buffer position ascending, then iterate descending */
-    int order[64];
+    int order[MAX_CURSORS];
     for (int i = 0; i < doc->cursor_count; i++) order[i] = i;
     for (int i = 1; i < doc->cursor_count; i++) {
         for (int j = i; j > 0; j--) {
@@ -719,7 +723,11 @@ void document_insert_char_multi(Document *doc, char c) {
 }
 
 void document_delete_char_multi(Document *doc) {
-    int order[64];
+    if (!doc) return;
+    if (doc->cursor_count < 1) doc->cursor_count = 1;
+    if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
+
+    int order[MAX_CURSORS];
     for (int i = 0; i < doc->cursor_count; i++) order[i] = i;
     for (int i = 1; i < doc->cursor_count; i++) {
         for (int j = i; j > 0; j--) {
@@ -746,7 +754,11 @@ void document_delete_char_multi(Document *doc) {
 }
 
 void document_newline_multi(Document *doc) {
-    int order[64];
+    if (!doc) return;
+    if (doc->cursor_count < 1) doc->cursor_count = 1;
+    if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
+
+    int order[MAX_CURSORS];
     for (int i = 0; i < doc->cursor_count; i++) order[i] = i;
     for (int i = 1; i < doc->cursor_count; i++) {
         for (int j = i; j > 0; j--) {
@@ -1043,6 +1055,7 @@ void document_uppercase(Document *doc) {
 }
 
 void document_indent_selection(Document *doc) {
+    if (!doc) return;
     Cursor *cur = &doc->cursors[0];
     if (!cur->has_selection) {
         document_indent_line(doc);
@@ -1050,6 +1063,12 @@ void document_indent_selection(Document *doc) {
     }
     int sr, sc, er, ec;
     cursor_normalize(cur, &sr, &sc, &er, &ec);
+    (void)sc; (void)ec;
+    int max_row = (int)buffer_line_count(&doc->buffer) - 1;
+    if (max_row < 0) return;
+    if (sr < 0) sr = 0;
+    if (er > max_row) er = max_row;
+    if (er < sr) return;
     for (int r = sr; r <= er; r++) {
         char tab = '\t';
         size_t pos = buffer_pos_from_row_col(&doc->buffer, r, 0);
@@ -1060,6 +1079,7 @@ void document_indent_selection(Document *doc) {
 }
 
 void document_dedent_selection(Document *doc) {
+    if (!doc) return;
     Cursor *cur = &doc->cursors[0];
     if (!cur->has_selection) {
         document_dedent_line(doc);
@@ -1067,6 +1087,12 @@ void document_dedent_selection(Document *doc) {
     }
     int sr, sc, er, ec;
     cursor_normalize(cur, &sr, &sc, &er, &ec);
+    (void)sc; (void)ec;
+    int max_row = (int)buffer_line_count(&doc->buffer) - 1;
+    if (max_row < 0) return;
+    if (sr < 0) sr = 0;
+    if (er > max_row) er = max_row;
+    if (er < sr) return;
     for (int r = sr; r <= er; r++) {
         const char *line = buffer_line_ptr(&doc->buffer, r);
         if (line[0] == '\t') {

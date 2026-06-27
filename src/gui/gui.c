@@ -99,6 +99,7 @@ static void get_syntax_color(Theme *t, SyntaxType type,
 
 /* Calculate display column position accounting for tabs */
 static int display_col(const char *line, int col, int tab_width) {
+    if (tab_width <= 0) tab_width = 4;
     int display = 0;
     for (int i = 0; i < col && line[i]; i++) {
         if (line[i] == '\t') {
@@ -134,7 +135,7 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
     Config *cfg = app_get_config(app);
     int win_w = app_get_width(app);
     int win_h = app_get_height(app);
-    int tab_width = cfg ? cfg->tab_width : 4;
+    int tab_width = (cfg && cfg->tab_width > 0) ? cfg->tab_width : 4;
 
     float gutter_w = 60.0f;
     float line_h = g->font.glyph_h + 6.0f;  /* Better spacing */
