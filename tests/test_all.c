@@ -1234,6 +1234,53 @@ static void test_lsp_publish_diagnostics_empty(void) {
     PASS();
 }
 
+static void test_lsp_publish_diagnostics_clangd_shape(void) {
+    TEST(lsp_publish_diagnostics_clangd_shape);
+    const char *json =
+        "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/publishDiagnostics\","
+        "\"params\":{\"uri\":\"file:///tmp/main.c\",\"version\":3,\"diagnostics\":["
+        "{\"range\":{\"start\":{\"line\":4,\"character\":9},"
+        "\"end\":{\"line\":4,\"character\":17}},"
+        "\"message\":\"use of undeclared identifier 'missing'\","
+        "\"severity\":1,\"code\":{\"value\":\"undeclared_var\","
+        "\"target\":\"https://clang.llvm.org/\"},\"source\":\"clangd\","
+        "\"relatedInformation\":[{\"location\":{\"uri\":\"file:///tmp/main.c\","
+        "\"range\":{\"start\":{\"line\":1,\"character\":0},"
+        "\"end\":{\"line\":1,\"character\":1}}},\"message\":\"from here\"}]},"
+        "{\"range\":{\"start\":{\"line\":8,\"character\":2},"
+        "\"end\":{\"line\":8,\"character\":3}},\"severity\":2,"
+        "\"code\":1234,\"message\":\"unused variable\"}]}}";
+    LSPDiagnostics *diag = lsp_parse_publish_diagnostics_notification(json);
+    ASSERT(diag != NULL);
+    ASSERT_EQ_STR(diag->uri, "file:///tmp/main.c");
+    ASSERT_EQ_INT(diag->count, 2);
+    ASSERT_EQ_INT(diag->items[0].severity, LSP_DIAG_ERROR);
+    ASSERT_EQ_STR(diag->items[0].code, "undeclared_var");
+    ASSERT_EQ_STR(diag->items[0].message, "use of undeclared identifier 'missing'");
+    ASSERT_EQ_INT(diag->items[1].severity, LSP_DIAG_WARNING);
+    ASSERT_EQ_STR(diag->items[1].code, "1234");
+    lsp_free_diagnostics(diag);
+    PASS();
+}
+
+static void test_lsp_publish_diagnostics_quoted_key_text(void) {
+    TEST(lsp_publish_diagnostics_quoted_key_text);
+    const char *json =
+        "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/publishDiagnostics\","
+        "\"params\":{\"uri\":\"file:///tmp/a.c\",\"diagnostics\":["
+        "{\"range\":{\"start\":{\"line\":0,\"character\":0},"
+        "\"end\":{\"line\":0,\"character\":1}},"
+        "\"message\":\"literal \\\"severity\\\" text should not be parsed as a key\","
+        "\"severity\":2}]}}";
+    LSPDiagnostics *diag = lsp_parse_publish_diagnostics_notification(json);
+    ASSERT(diag != NULL);
+    ASSERT_EQ_INT(diag->count, 1);
+    ASSERT_EQ_INT(diag->items[0].severity, LSP_DIAG_WARNING);
+    ASSERT_EQ_STR(diag->items[0].message, "literal \"severity\" text should not be parsed as a key");
+    lsp_free_diagnostics(diag);
+    PASS();
+}
+
 static void test_lsp_completion_insert_text(void) {
     TEST(lsp_completion_insert_text);
     const char *json =
@@ -4120,6 +4167,8 @@ int main(void) {
     printf("\n[LSP Tests]\n");
     test_lsp_publish_diagnostics_parse();
     test_lsp_publish_diagnostics_empty();
+    test_lsp_publish_diagnostics_clangd_shape();
+    test_lsp_publish_diagnostics_quoted_key_text();
     test_lsp_completion_insert_text();
     test_lsp_formatting_response_parse();
     test_lsp_code_action_edit_parse();

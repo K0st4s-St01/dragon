@@ -45,8 +45,15 @@ void panel_workspace_diagnostics_open(App *app) {
             wd_items[wd_count].severity = diag->items[i].severity;
             snprintf(wd_items[wd_count].file, sizeof(wd_items[wd_count].file), "%s",
                      doc->filepath ? doc->filepath : "[No Name]");
-            snprintf(wd_items[wd_count].message, sizeof(wd_items[wd_count].message), "%s",
-                     diag->items[i].message ? diag->items[i].message : "");
+            const char *message = diag->items[i].message ? diag->items[i].message : "";
+            const char *code = diag->items[i].code ? diag->items[i].code : "";
+            if (code[0]) {
+                snprintf(wd_items[wd_count].message, sizeof(wd_items[wd_count].message),
+                         "[%s] %s", code, message);
+            } else {
+                snprintf(wd_items[wd_count].message, sizeof(wd_items[wd_count].message), "%s",
+                         message);
+            }
             wd_count++;
         }
     }

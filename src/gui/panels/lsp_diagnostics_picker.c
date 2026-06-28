@@ -49,7 +49,14 @@ void panel_lsp_diagnostics_open(App *app) {
         lsp_diag_entries[lsp_diag_count].severity = diag->items[i].severity;
         
         const char *message = diag->items[i].message ? diag->items[i].message : "";
-        strncpy(lsp_diag_entries[lsp_diag_count].message, message, 255);
+        const char *code = diag->items[i].code ? diag->items[i].code : "";
+        if (code[0]) {
+            snprintf(lsp_diag_entries[lsp_diag_count].message,
+                     sizeof(lsp_diag_entries[lsp_diag_count].message),
+                     "[%s] %s", code, message);
+        } else {
+            strncpy(lsp_diag_entries[lsp_diag_count].message, message, 255);
+        }
         lsp_diag_entries[lsp_diag_count].message[255] = '\0';
         
         /* Get line preview */

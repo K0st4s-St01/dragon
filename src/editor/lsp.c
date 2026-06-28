@@ -411,6 +411,45 @@ static char *json_string_in_range(const char *start, const char *end, const char
     return out;
 }
 
+static char *json_scalar_to_string(const char *value, const char *end) {
+    if (!value || value >= end) return strdup("");
+
+    const char *p = value;
+    while (p < end && *p &&
+           *p != ',' && *p != '}' && *p != ']' &&
+           *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') {
+        p++;
+    }
+
+    size_t len = (size_t)(p - value);
+    if (len == 0 || len > 256) return strdup("");
+    char *out = malloc(len + 1);
+    if (!out) return NULL;
+    memcpy(out, value, len);
+    out[len] = '\0';
+    return out;
+}
+
+static char *json_code_in_range(const char *start, const char *end) {
+    const char *value = json_value_after_key_range(start, end, "code");
+    if (!value || value >= end) return strdup("");
+
+    if (*value == '"')
+        return json_string_in_range(start, end, "code");
+
+    if (*value == '{') {
+        const char *obj_end = json_matching_delim(value, end, '{', '}');
+        if (!obj_end) return strdup("");
+        const char *inner = json_value_after_key_range(value, obj_end + 1, "value");
+        if (!inner || inner > obj_end) return strdup("");
+        if (*inner == '"')
+            return json_string_in_range(value, obj_end + 1, "value");
+        return json_scalar_to_string(inner, obj_end + 1);
+    }
+
+    return json_scalar_to_string(value, end);
+}
+
 static void lsp_diagnostics_append(LSPDiagnostics *diag, LSPDiagnostic item) {
     if (!diag) return;
     LSPDiagnostic *items = realloc(diag->items, sizeof(LSPDiagnostic) * (size_t)(diag->count + 1));
@@ -458,7 +497,7 @@ static void lsp_parse_diagnostic_object(const char *obj_start, const char *obj_e
     out->severity = (LSPDiagnosticSeverity)severity;
 
     out->message = json_string_in_range(obj_start, obj_end, "message");
-    out->code = json_string_in_range(obj_start, obj_end, "code");
+    out->code = json_code_in_range(obj_start, obj_end);
 }
 
 static LSPDiagnostics *lsp_parse_diagnostics_array(const char *array_start) {
