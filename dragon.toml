@@ -1,0 +1,20 @@
+[editor]
+tab_width = 4
+font_size = 14
+line_numbers = 1
+line_wrapping = 0
+
+# Built-in themes: dragon, ember, glacier, black+
+theme = "dragon"
+
+[lsp]
+auto_format = 0
+auto_hover = 1
+diagnostic_delay_ms = 100
+
+# Optional per-color overrides for the selected theme.
+# Values are RGBA floats in the 0.0-1.0 range.
+[theme]
+# name = "black+"
+# bg = [0.0, 0.0, 0.0, 1.0]
+# fg = [1.0, 1.0, 1.0, 1.0]

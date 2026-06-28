@@ -1163,6 +1163,7 @@ src/gui/theme.o: src/gui/theme.c.o
 # target to build an object file
 src/gui/theme.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/theme.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/gui/theme.c.o
 .PHONY : src/gui/theme.c.o
 
 src/gui/theme.i: src/gui/theme.c.i
@@ -1171,6 +1172,7 @@ src/gui/theme.i: src/gui/theme.c.i
 # target to preprocess a source file
 src/gui/theme.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/theme.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/gui/theme.c.i
 .PHONY : src/gui/theme.c.i
 
 src/gui/theme.s: src/gui/theme.c.s
@@ -1179,6 +1181,7 @@ src/gui/theme.s: src/gui/theme.c.s
 # target to generate assembly for a file
 src/gui/theme.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/theme.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_core.dir/build.make CMakeFiles/dragon_core.dir/src/gui/theme.c.s
 .PHONY : src/gui/theme.c.s
 
 src/main.o: src/main.c.o

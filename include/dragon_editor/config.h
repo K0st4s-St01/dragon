@@ -9,6 +9,7 @@ typedef struct {
     int font_size;
     int line_numbers;
     int line_wrapping;
+    char theme_name[64];
     
     /* Theme colors (RGBA, 0.0-1.0) */
     struct {
@@ -47,7 +48,7 @@ typedef struct {
     } lsp;
 } Config;
 
-/* Load config from ~/.config/dragon/dragon.toml */
+/* Load config from ./dragon.toml, then ~/.config/dragon/dragon.toml */
 Config *config_load(void);
 
 /* Get default config (if no file found) */

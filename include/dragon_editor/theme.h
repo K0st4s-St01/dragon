@@ -1,6 +1,9 @@
 #ifndef DE_THEME_H
 #define DE_THEME_H
 
+#include <stdbool.h>
+#include "config.h"
+
 typedef struct {
     float bg[4];
     float fg[4];
@@ -31,8 +34,12 @@ typedef struct {
 
 Theme *theme_default(void);
 Theme *theme_get(void);
+const char *theme_current_name(void);
+bool theme_get_named(const char *name, Theme *out);
+bool theme_apply_named(const char *name);
+int theme_list_names(const char **names, int max_names);
 
 /* Apply theme colors from config */
-void theme_apply_config(const void *config_ptr);
+void theme_apply_config(const Config *config);
 
 #endif

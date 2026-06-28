@@ -1,4 +1,5 @@
 #include "dragon_editor/config.h"
+#include "dragon_editor/theme.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,15 +9,13 @@
 
 /* Helper to parse color arrays from TOML table */
 static void parse_color(toml_table_t *tbl, const char *key, float color[4]) {
-    color[0] = color[1] = color[2] = 1.0f;
-    color[3] = 1.0f;
-    
     toml_array_t *arr = toml_array_in(tbl, key);
     if (!arr) return;
     
     for (int i = 0; i < 4 && i < toml_array_nelem(arr); i++) {
-        double d = toml_double_at(arr, i).ok ? toml_double_at(arr, i).u.d : 1.0;
-        color[i] = (float)d;
+        toml_datum_t datum = toml_double_at(arr, i);
+        if (datum.ok)
+            color[i] = (float)datum.u.d;
     }
 }
 
@@ -40,6 +39,7 @@ Config *config_default(void) {
     cfg->font_size = 14;
     cfg->line_numbers = 1;
     cfg->line_wrapping = 0;
+    snprintf(cfg->theme_name, sizeof(cfg->theme_name), "dragon");
     
     /* Theme defaults */
     set_color(cfg->theme.bg,              0.045f, 0.050f, 0.060f, 1.0f);
@@ -76,30 +76,45 @@ Config *config_default(void) {
     return cfg;
 }
 
+static void apply_named_theme_to_config(Config *cfg, const char *name) {
+    if (!cfg || !name || !*name) return;
+    if (!theme_apply_named(name)) {
+        fprintf(stderr, "Config: Unknown theme '%s'\n", name);
+        return;
+    }
+    memcpy(&cfg->theme, theme_get(), sizeof(Theme));
+    snprintf(cfg->theme_name, sizeof(cfg->theme_name), "%s", theme_current_name());
+}
+
 Config *config_load(void) {
     Config *cfg = config_default();
-    
-    /* Get home directory */
+
+    char project_path[512];
+    snprintf(project_path, sizeof(project_path), "dragon.toml");
+
+    FILE *f = fopen(project_path, "r");
+    const char *loaded_path = project_path;
+
+    /* Get home directory for the fallback config path. */
     const char *home = getenv("HOME");
     if (!home) {
         struct passwd *pw = getpwuid(getuid());
-        if (!pw) return cfg;
-        home = pw->pw_dir;
+        if (pw) home = pw->pw_dir;
     }
-    
-    /* Build config file path */
-    char path[512];
-    snprintf(path, sizeof(path), "%s/.config/dragon/dragon.toml", home);
-    
-    /* Try to open and parse config file */
-    FILE *f = fopen(path, "r");
+
+    char user_path[512];
+    if (!f && home) {
+        snprintf(user_path, sizeof(user_path), "%s/.config/dragon/dragon.toml", home);
+        f = fopen(user_path, "r");
+        loaded_path = user_path;
+    }
+
     if (!f) {
-        /* Config file doesn't exist, use defaults */
-        fprintf(stderr, "Config: Using defaults (no config file found at %s)\n", path);
+        fprintf(stderr, "Config: Using defaults (no dragon.toml found)\n");
         return cfg;
     }
     
-    fprintf(stderr, "Config: Loading from %s\n", path);
+    fprintf(stderr, "Config: Loading from %s\n", loaded_path);
     
     char errbuf[200];
     toml_table_t *conf = toml_parse_file(f, errbuf, sizeof(errbuf));
@@ -118,6 +133,11 @@ Config *config_load(void) {
         cfg->font_size = parse_int(editor, "font_size", cfg->font_size);
         cfg->line_numbers = parse_int(editor, "line_numbers", cfg->line_numbers);
         cfg->line_wrapping = parse_int(editor, "line_wrapping", cfg->line_wrapping);
+        toml_datum_t theme_name = toml_string_in(editor, "theme");
+        if (theme_name.ok) {
+            apply_named_theme_to_config(cfg, theme_name.u.s);
+            free(theme_name.u.s);
+        }
         fprintf(stderr, "Config: Editor settings loaded (tab_width=%d, font_size=%d)\n", 
                 cfg->tab_width, cfg->font_size);
     }
@@ -125,6 +145,11 @@ Config *config_load(void) {
     /* Parse theme section */
     toml_table_t *theme = toml_table_in(conf, "theme");
     if (theme) {
+        toml_datum_t theme_name = toml_string_in(theme, "name");
+        if (theme_name.ok) {
+            apply_named_theme_to_config(cfg, theme_name.u.s);
+            free(theme_name.u.s);
+        }
         parse_color(theme, "bg", cfg->theme.bg);
         parse_color(theme, "fg", cfg->theme.fg);
         parse_color(theme, "gutter_bg", cfg->theme.gutter_bg);
@@ -143,14 +168,14 @@ Config *config_load(void) {
         parse_color(theme, "keyword", cfg->theme.keyword);
         parse_color(theme, "string", cfg->theme.string);
         parse_color(theme, "number", cfg->theme.number);
-         parse_color(theme, "comment", cfg->theme.comment);
-         parse_color(theme, "function_color", cfg->theme.function_color);
-         parse_color(theme, "type_color", cfg->theme.type_color);
-         parse_color(theme, "variable_color", cfg->theme.variable_color);
-         parse_color(theme, "macro_color", cfg->theme.macro_color);
-         parse_color(theme, "operator_color", cfg->theme.operator_color);
-         parse_color(theme, "namespace_color", cfg->theme.namespace_color);
-         fprintf(stderr, "Config: Theme colors loaded from config file\n");
+        parse_color(theme, "comment", cfg->theme.comment);
+        parse_color(theme, "function_color", cfg->theme.function_color);
+        parse_color(theme, "type_color", cfg->theme.type_color);
+        parse_color(theme, "variable_color", cfg->theme.variable_color);
+        parse_color(theme, "macro_color", cfg->theme.macro_color);
+        parse_color(theme, "operator_color", cfg->theme.operator_color);
+        parse_color(theme, "namespace_color", cfg->theme.namespace_color);
+        fprintf(stderr, "Config: Theme '%s' loaded from config file\n", cfg->theme_name);
     }
     
     /* Parse lsp section */

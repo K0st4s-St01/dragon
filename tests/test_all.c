@@ -12,6 +12,8 @@
 #include "dragon_editor/syntax.h"
 #include "dragon_editor/document.h"
 #include "dragon_editor/lsp.h"
+#include "dragon_editor/config.h"
+#include "dragon_editor/theme.h"
 
 static int tests_run = 0;
 static int tests_passed = 0;
@@ -3957,6 +3959,42 @@ static void test_lang_settings_unknown(void) {
     PASS();
 }
 
+/* ================================================================
+ * CONFIG AND THEME TESTS
+ * ================================================================ */
+
+static void test_config_default_theme_name(void) {
+    TEST(config_default_theme_name);
+    Config *cfg = config_default();
+    ASSERT(cfg != NULL);
+    ASSERT_EQ_STR(cfg->theme_name, "dragon");
+    ASSERT_TRUE(cfg->theme.bg[0] < 0.10f);
+    config_free(cfg);
+    PASS();
+}
+
+static void test_theme_builtin_black_plus(void) {
+    TEST(theme_builtin_black_plus);
+    Theme t;
+    ASSERT_TRUE(theme_get_named("black+", &t));
+    ASSERT_TRUE(t.bg[0] == 0.0f);
+    ASSERT_TRUE(t.bg[1] == 0.0f);
+    ASSERT_TRUE(t.bg[2] == 0.0f);
+    ASSERT_TRUE(t.fg[0] == 1.0f);
+    ASSERT_TRUE(t.accent[0] == 1.0f);
+    ASSERT_TRUE(t.accent[1] == 0.0f);
+    PASS();
+}
+
+static void test_theme_apply_named_case_insensitive(void) {
+    TEST(theme_apply_named_case_insensitive);
+    ASSERT_TRUE(theme_apply_named("GLACIER"));
+    ASSERT_EQ_STR(theme_current_name(), "glacier");
+    ASSERT_TRUE(theme_get()->accent[2] > 0.80f);
+    ASSERT_TRUE(theme_apply_named("dragon"));
+    PASS();
+}
+
 static void test_lang_settings_detect(void) {
     TEST(lang_settings_detect);
     Document *doc = make_doc(NULL);
@@ -4085,6 +4123,11 @@ int main(void) {
     test_lsp_completion_insert_text();
     test_lsp_formatting_response_parse();
     test_lsp_code_action_edit_parse();
+
+    printf("\n[Config and Theme Tests]\n");
+    test_config_default_theme_name();
+    test_theme_builtin_black_plus();
+    test_theme_apply_named_case_insensitive();
 
     printf("\n[Document Tests]\n");
     test_document_init();

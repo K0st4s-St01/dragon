@@ -24,9 +24,12 @@
 #include "panel_workspace_symbols.h"
 #include "panel_workspace_diagnostics.h"
 #include "panel_completion.h"
+#include "panel_notification.h"
+#include "theme.h"
 #include <GLFW/glfw3.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #define CMD_BUF_MAX 1024
 
@@ -45,6 +48,34 @@ static void input_save_all_buffers(App *app) {
 static void input_format_document(App *app, Document *doc) {
     (void)doc;
     app_format_document(app);
+}
+
+static char *trim_command_arg(char *s) {
+    if (!s) return s;
+    while (*s && isspace((unsigned char)*s)) s++;
+    char *end = s + strlen(s);
+    while (end > s && isspace((unsigned char)end[-1]))
+        *--end = '\0';
+    return s;
+}
+
+static void input_theme_command(App *app, char *arg) {
+    arg = trim_command_arg(arg);
+    if (!arg || !*arg || strcmp(arg, "list") == 0) {
+        const char *names[16];
+        int count = theme_list_names(names, 16);
+        char buf[256] = {0};
+        for (int i = 0; i < count && i < 16; i++) {
+            if (i > 0)
+                strncat(buf, ", ", sizeof(buf) - strlen(buf) - 1);
+            strncat(buf, names[i], sizeof(buf) - strlen(buf) - 1);
+        }
+        notification_push(NOTIF_INFO, "Themes: %s", buf);
+        return;
+    }
+
+    if (!app_apply_theme(app, arg))
+        notification_push(NOTIF_ERROR, "Unknown theme: %s", arg);
 }
 
 void input_cmd_reset(void) {
@@ -1804,6 +1835,12 @@ static void handle_command_key(App *app, int key, int action, int mods) {
         document_sort_selection(doc);
     } else if (strcmp(cmd_buf, "fmt") == 0 || strcmp(cmd_buf, "format") == 0) {
         input_format_document(app, doc);
+    } else if (strncmp(cmd_buf, "theme", 5) == 0 &&
+               (cmd_buf[5] == '\0' || isspace((unsigned char)cmd_buf[5]))) {
+        input_theme_command(app, cmd_buf + 5);
+    } else if (strncmp(cmd_buf, "colorscheme", 11) == 0 &&
+               (cmd_buf[11] == '\0' || isspace((unsigned char)cmd_buf[11]))) {
+        input_theme_command(app, cmd_buf + 11);
     } else if (strncmp(cmd_buf, "reflow ", 7) == 0) {
         int width = atoi(cmd_buf + 7);
         if (width > 0) document_reflow(doc, width);

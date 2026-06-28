@@ -99,6 +99,7 @@ void panel_settings_render(Gui *g, App *app) {
     int count = 0;
 
 #define ADD_INT(name, value) do { keys[count] = name; snprintf(values[count], sizeof(values[count]), "%d", value); count++; } while (0)
+#define ADD_STR(name, value) do { keys[count] = name; snprintf(values[count], sizeof(values[count]), "%s", value); count++; } while (0)
 #define ADD_COLOR(name, value) do { keys[count] = name; color_value(values[count], sizeof(values[count]), value); count++; } while (0)
 
     if (cfg) {
@@ -106,6 +107,7 @@ void panel_settings_render(Gui *g, App *app) {
         ADD_INT("editor.font_size", cfg->font_size);
         ADD_INT("editor.line_numbers", cfg->line_numbers);
         ADD_INT("editor.line_wrapping", cfg->line_wrapping);
+        ADD_STR("editor.theme", cfg->theme_name);
         ADD_INT("lsp.auto_format", cfg->lsp.auto_format);
         ADD_INT("lsp.auto_hover", cfg->lsp.auto_hover);
         ADD_INT("lsp.diagnostic_delay_ms", cfg->lsp.diagnostic_delay_ms);

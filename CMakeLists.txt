@@ -103,6 +103,7 @@ set(TEST_SOURCES
     src/editor/lsp_config.c
     src/editor/treesitter.c
     src/editor/config.c
+    src/gui/theme.c
 )
 
 add_library(dragon_core STATIC ${TEST_SOURCES})
@@ -113,7 +114,7 @@ target_include_directories(dragon_core PUBLIC
     vendor/stb
     /usr/include/tree_sitter
 )
-target_link_libraries(dragon_core PUBLIC tree-sitter m dl)
+target_link_libraries(dragon_core PUBLIC tomlc99 tree-sitter m dl)
 
 add_executable(test_all tests/test_all.c)
 target_include_directories(test_all PRIVATE

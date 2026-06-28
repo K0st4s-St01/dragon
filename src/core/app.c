@@ -530,6 +530,22 @@ void *app_get_lsp_manager(App *app) { return &app->lsp_manager; }
 void *app_get_treesitter_manager(App *app) { return app->ts_manager; }
 Config *app_get_config(App *app) { return app->config; }
 
+bool app_apply_theme(App *app, const char *name) {
+    if (!app || !name || !*name)
+        return false;
+
+    if (!theme_apply_named(name))
+        return false;
+
+    if (app->config) {
+        memcpy(&app->config->theme, theme_get(), sizeof(Theme));
+        snprintf(app->config->theme_name, sizeof(app->config->theme_name), "%s", theme_current_name());
+        theme_apply_config(app->config);
+    }
+    notification_push(NOTIF_SUCCESS, "Theme: %s", theme_current_name());
+    return true;
+}
+
 static LSPClient *app_client_for_doc(App *app, Document *doc) {
     if (!app || !doc || !doc->language_id || !doc->filepath)
         return NULL;
