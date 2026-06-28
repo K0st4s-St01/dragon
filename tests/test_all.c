@@ -986,6 +986,30 @@ static void test_mode_previous_tracking(void) {
     PASS();
 }
 
+static void test_mode_transition_clears_pending_state(void) {
+    TEST(mode_transition_clears_pending_state);
+    ModeState ms;
+    mode_init(&ms);
+    ms.g_pending = true;
+    ms.pending_key = 'i';
+    ms.pending_keys[0] = 'x';
+    ms.pending_len = 1;
+    ms.count = 3;
+    ms.pending_operator = 'd';
+    ms.pending_text_obj = 'a';
+    ms.view_mode_sticky = true;
+    mode_set(&ms, MODE_INSERT);
+    ASSERT_FALSE(ms.g_pending);
+    ASSERT_EQ_INT(ms.pending_key, 0);
+    ASSERT_EQ_INT(ms.pending_keys[0], 0);
+    ASSERT_EQ_INT(ms.pending_len, 0);
+    ASSERT_EQ_INT(ms.count, 0);
+    ASSERT_EQ_INT(ms.pending_operator, 0);
+    ASSERT_EQ_INT(ms.pending_text_obj, 0);
+    ASSERT_FALSE(ms.view_mode_sticky);
+    PASS();
+}
+
 /* ================================================================
  * SYNTAX TESTS
  * ================================================================ */
@@ -3855,6 +3879,7 @@ int main(void) {
     test_mode_same_mode_no_suppress();
     test_mode_all_modes();
     test_mode_previous_tracking();
+    test_mode_transition_clears_pending_state();
 
     printf("\n[Syntax Tests]\n");
     test_syntax_init();
