@@ -130,6 +130,172 @@ static int utf8_char_len(const char *s, int remaining) {
     return 1;
 }
 
+static bool diagnostic_contains_cursor(const LSPDiagnostic *diag, int row, int col) {
+    if (!diag) return false;
+    if (row < diag->start_line || row > diag->end_line)
+        return false;
+    if (diag->start_line == diag->end_line) {
+        int end_col = diag->end_col > diag->start_col ? diag->end_col : diag->start_col + 1;
+        return col >= diag->start_col && col <= end_col;
+    }
+    if (row == diag->start_line)
+        return col >= diag->start_col;
+    if (row == diag->end_line)
+        return col <= diag->end_col;
+    return true;
+}
+
+static const LSPDiagnostic *diagnostic_at_cursor(Document *doc) {
+    if (!doc || !doc->diagnostics || doc->cursor_count <= 0)
+        return NULL;
+
+    Cursor *cur = &doc->cursors[0];
+    LSPDiagnostics *diagnostics = (LSPDiagnostics *)doc->diagnostics;
+    const LSPDiagnostic *line_diag = NULL;
+
+    for (int i = 0; i < diagnostics->count; i++) {
+        const LSPDiagnostic *diag = &diagnostics->items[i];
+        if (!diag->message || !diag->message[0])
+            continue;
+        if (diagnostic_contains_cursor(diag, cur->row, cur->col))
+            return diag;
+        if (!line_diag && diag->start_line == cur->row)
+            line_diag = diag;
+    }
+
+    return line_diag;
+}
+
+static int wrap_text_line(const char *text, int start, int max_chars, char *out, int out_size) {
+    int len = (int)strlen(text);
+    if (start >= len) {
+        if (out_size > 0) out[0] = '\0';
+        return len;
+    }
+
+    int end = start + max_chars;
+    if (end > len) end = len;
+    int break_at = end;
+    if (end < len) {
+        for (int i = end; i > start + 8; i--) {
+            if (text[i] == ' ' || text[i] == '\t') {
+                break_at = i;
+                break;
+            }
+        }
+    }
+
+    int copy = break_at - start;
+    if (copy >= out_size) copy = out_size - 1;
+    if (copy < 0) copy = 0;
+    memcpy(out, text + start, (size_t)copy);
+    out[copy] = '\0';
+
+    while (break_at < len && (text[break_at] == ' ' || text[break_at] == '\t'))
+        break_at++;
+    return break_at;
+}
+
+static void render_diagnostic_popup(Gui *g, App *app, Document *doc,
+                                    float vx, float vy, float vw, float vh,
+                                    float text_x, float text_y, float line_h,
+                                    int first_line, int visible_lines,
+                                    int tab_width) {
+    const LSPDiagnostic *diag = diagnostic_at_cursor(doc);
+    if (!diag || diag->severity != LSP_DIAG_ERROR || !diag->message || !diag->message[0])
+        return;
+
+    Cursor *cur = &doc->cursors[0];
+    int screen_row = cur->row - first_line;
+    if (screen_row < 0 || screen_row >= visible_lines)
+        return;
+
+    Renderer *r = app_get_renderer(app);
+    Theme *t = theme_get();
+    const char *line = buffer_line_ptr(&doc->buffer, cur->row);
+    int line_len = (int)buffer_line_len(&doc->buffer, cur->row);
+    while (line_len > 0 && (line[line_len - 1] == '\n' || line[line_len - 1] == '\r'))
+        line_len--;
+
+    int col = cur->col;
+    if (col < 0) col = 0;
+    if (col > line_len) col = line_len;
+
+    float padding = 8.0f;
+    float title_h = g->font.glyph_h + 4.0f;
+    float msg_line_h = g->font.glyph_h + 3.0f;
+    float max_w = vw - 32.0f;
+    if (max_w > 520.0f) max_w = 520.0f;
+    if (max_w < 220.0f) max_w = vw - 12.0f;
+    if (max_w < 120.0f) return;
+
+    int max_chars = (int)((max_w - padding * 2.0f) / g->font.glyph_w);
+    if (max_chars < 12) max_chars = 12;
+    if (max_chars > 96) max_chars = 96;
+
+    char lines[4][192];
+    int line_count = 0;
+    int pos = 0;
+    while (diag->message[pos] && line_count < 4) {
+        pos = wrap_text_line(diag->message, pos, max_chars, lines[line_count], sizeof(lines[line_count]));
+        if (lines[line_count][0])
+            line_count++;
+    }
+    if (diag->message[pos] && line_count > 0) {
+        int n = (int)strlen(lines[line_count - 1]);
+        if (n > 3) {
+            lines[line_count - 1][n - 3] = '.';
+            lines[line_count - 1][n - 2] = '.';
+            lines[line_count - 1][n - 1] = '.';
+        }
+    }
+    if (line_count == 0) return;
+
+    float content_w = font_text_width(&g->font, "Error");
+    for (int i = 0; i < line_count; i++) {
+        float w = font_text_width(&g->font, lines[i]);
+        if (w > content_w) content_w = w;
+    }
+
+    float popup_w = content_w + padding * 2.0f;
+    if (popup_w > max_w) popup_w = max_w;
+    float popup_h = title_h + (float)line_count * msg_line_h + padding * 2.0f;
+
+    float cursor_x = text_x + display_col(line, col, tab_width) * g->font.glyph_w;
+    float cursor_y = text_y + (float)screen_row * line_h;
+    float popup_x = cursor_x + g->font.glyph_w;
+    float popup_y = cursor_y + line_h + 4.0f;
+
+    if (popup_x + popup_w > vx + vw - 8.0f)
+        popup_x = vx + vw - popup_w - 8.0f;
+    if (popup_x < vx + 8.0f)
+        popup_x = vx + 8.0f;
+    if (popup_y + popup_h > vy + vh - 8.0f)
+        popup_y = cursor_y - popup_h - 4.0f;
+    if (popup_y < vy + 8.0f)
+        popup_y = vy + 8.0f;
+
+    renderer_draw_rect(r, popup_x, popup_y, popup_w, popup_h,
+                       t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], 0.97f);
+    renderer_draw_rect(r, popup_x, popup_y, popup_w, 2.0f,
+                       t->error[0], t->error[1], t->error[2], 1.0f);
+    renderer_draw_rect(r, popup_x, popup_y + popup_h - 1.0f, popup_w, 1.0f,
+                       t->error[0], t->error[1], t->error[2], 0.75f);
+    renderer_draw_rect(r, popup_x, popup_y, 1.0f, popup_h,
+                       t->error[0], t->error[1], t->error[2], 0.75f);
+    renderer_draw_rect(r, popup_x + popup_w - 1.0f, popup_y, 1.0f, popup_h,
+                       t->error[0], t->error[1], t->error[2], 0.75f);
+
+    font_draw(&g->font, r, "Error", popup_x + padding, popup_y + padding,
+              t->error[0], t->error[1], t->error[2], 1.0f);
+    float y = popup_y + padding + title_h;
+    for (int i = 0; i < line_count; i++) {
+        font_draw(&g->font, r, lines[i], popup_x + padding, y,
+                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+        y += msg_line_h;
+    }
+}
+
 static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
                                float vx, float vy, float vw, float vh, bool active) {
     Renderer *r = app_get_renderer(app);
@@ -284,10 +450,6 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
                                             display_col(line, start_col, tab_width)) * g->font.glyph_w;
                 if (underline_w < g->font.glyph_w) underline_w = g->font.glyph_w;
                 renderer_draw_rect(r, dx, y + line_h - 4, underline_w, 2, dr, dg, db, 0.85f);
-                if (line_num == cur->row && diag->items[d].message) {
-                    float msg_x = text_x + (float)(line_len + 2) * g->font.glyph_w;
-                    font_draw(&g->font, r, diag->items[d].message, msg_x, y + 2, dr, dg, db, 1.0f);
-                }
                 break;
             }
         }
@@ -322,6 +484,12 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
                 }
             }
         }
+    }
+
+    if (active) {
+        render_diagnostic_popup(g, app, doc, vx, vy, vw, vh,
+                                text_x, text_y, line_h,
+                                first_line, visible_lines, tab_width);
     }
 }
 
