@@ -6,7 +6,7 @@
 void lsp_config_load_defaults(LSPManager *manager) {
     /* C/C++ - using clangd */
     const char *clangd_args[] = {
-        "--log=off",
+        "--log=error",
         "--clang-tidy",
         "--header-insertion=never",
         "--function-arg-placeholders",

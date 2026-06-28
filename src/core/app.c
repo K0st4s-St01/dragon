@@ -62,6 +62,27 @@ static bool app_doc_is_empty_scratch(Document *doc) {
     return doc && !doc->filepath && !doc->dirty && doc->buffer.len == 0;
 }
 
+static char *app_absolute_path(const char *path) {
+    if (!path) return NULL;
+
+    char *resolved = realpath(path, NULL);
+    if (resolved)
+        return resolved;
+
+    if (path[0] == '/')
+        return strdup(path);
+
+    char *cwd = getcwd(NULL, 0);
+    if (!cwd) return strdup(path);
+
+    size_t len = strlen(cwd) + 1 + strlen(path) + 1;
+    char *absolute = malloc(len);
+    if (absolute)
+        snprintf(absolute, len, "%s/%s", cwd, path);
+    free(cwd);
+    return absolute ? absolute : strdup(path);
+}
+
 static void app_set_active_buffer(App *app, int index) {
     if (!app || index < 0 || index >= app->doc_count) return;
     Document *cur = &app->documents[app->current_doc];
@@ -183,10 +204,12 @@ static Document *app_find_doc_by_uri(App *app, const char *uri) {
         if (!doc->filepath) continue;
         
         char norm_doc_path[2048];
-        /* Normalize the doc filepath as if it were a URI path */
+        char *absolute = app_absolute_path(doc->filepath);
+        const char *doc_path = absolute ? absolute : doc->filepath;
         char doc_uri_buf[2048];
-        snprintf(doc_uri_buf, sizeof(doc_uri_buf), "file://%s", doc->filepath);
+        snprintf(doc_uri_buf, sizeof(doc_uri_buf), "file://%s", doc_path);
         normalize_uri_path(doc_uri_buf, norm_doc_path, sizeof(norm_doc_path));
+        free(absolute);
         
         if (strcmp(norm_uri, norm_doc_path) == 0)
             return doc;
@@ -450,22 +473,29 @@ void app_quit(App *app) {
 void app_open_file(App *app, const char *path) {
     if (!app || !path) return;
 
+    char *absolute = app_absolute_path(path);
+    const char *open_path = absolute ? absolute : path;
+
     for (int i = 0; i < app->doc_count; i++) {
-        if (app->documents[i].filepath && strcmp(app->documents[i].filepath, path) == 0) {
+        if (app->documents[i].filepath && strcmp(app->documents[i].filepath, open_path) == 0) {
             app_set_active_buffer(app, i);
+            free(absolute);
             return;
         }
     }
 
     int target = app->current_doc;
     if (!app_doc_is_empty_scratch(&app->documents[target])) {
-        if (app->doc_count >= MAX_BUFFERS)
+        if (app->doc_count >= MAX_BUFFERS) {
+            free(absolute);
             return;
+        }
         target = app->doc_count++;
         document_init(&app->documents[target]);
     }
 
-    document_open(&app->documents[target], path);
+    document_open(&app->documents[target], open_path);
+    free(absolute);
     if (app->documents[target].filepath) {
         app_set_active_buffer(app, target);
         document_notify_lsp_open(&app->documents[target], &app->lsp_manager);

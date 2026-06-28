@@ -141,7 +141,7 @@ void lsp_client_send_rename_request(LSPClient *client, const char *file_uri, int
 void lsp_client_send_code_action_request(LSPClient *client, const char *file_uri, int start_line, int start_character, int end_line, int end_character);
 void lsp_client_send_semantic_tokens_request(LSPClient *client, const char *file_uri);
 void lsp_client_send_didOpen(LSPClient *client, const char *file_uri, const char *language_id, const char *text);
-void lsp_client_send_didChange(LSPClient *client, const char *file_uri, const char *text);
+void lsp_client_send_didChange(LSPClient *client, const char *file_uri, int version, const char *text);
 
 /* Response parsing */
 char *lsp_client_read_response(LSPClient *client);

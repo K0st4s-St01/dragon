@@ -1697,8 +1697,10 @@ static void handle_command_key(App *app, int key, int action, int mods) {
         document_move_file(doc, path);
     } else if (strcmp(cmd_buf, "reload") == 0 || strcmp(cmd_buf, "rl") == 0 ||
                strcmp(cmd_buf, "reload-all") == 0 || strcmp(cmd_buf, "rla") == 0) {
-        if (doc->filepath)
+        if (doc->filepath) {
             document_open(doc, doc->filepath);
+            document_notify_lsp_open(doc, app_get_lsp_manager(app));
+        }
     } else if (strcmp(cmd_buf, "sort") == 0) {
         document_sort_selection(doc);
     } else if (strcmp(cmd_buf, "fmt") == 0 || strcmp(cmd_buf, "format") == 0) {

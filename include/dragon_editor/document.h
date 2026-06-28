@@ -38,6 +38,8 @@ typedef struct {
     bool    dirty;
     bool    syntax_dirty;
     bool    lsp_dirty;
+    bool    lsp_opened;
+    int     lsp_version;
     int     scroll_y;
     int     scroll_x;
     int     viewport_lines;

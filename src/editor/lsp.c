@@ -146,6 +146,55 @@ fail:
     return NULL;
 }
 
+static char *lsp_absolute_path(const char *path) {
+    if (!path) return NULL;
+
+    char *resolved = realpath(path, NULL);
+    if (resolved)
+        return resolved;
+
+    if (path[0] == '/')
+        return strdup(path);
+
+    char *cwd = getcwd(NULL, 0);
+    if (!cwd) return strdup(path);
+
+    size_t len = strlen(cwd) + 1 + strlen(path) + 1;
+    char *absolute = malloc(len);
+    if (absolute)
+        snprintf(absolute, len, "%s/%s", cwd, path);
+    free(cwd);
+    return absolute ? absolute : strdup(path);
+}
+
+static char *lsp_file_uri_from_path(const char *path) {
+    char *absolute = lsp_absolute_path(path);
+    if (!absolute) return NULL;
+
+    size_t cap = strlen(absolute) * 3 + strlen("file://") + 1;
+    char *uri = malloc(cap);
+    if (!uri) {
+        free(absolute);
+        return NULL;
+    }
+
+    strcpy(uri, "file://");
+    size_t out = strlen(uri);
+    for (const unsigned char *p = (const unsigned char *)absolute; *p && out + 4 < cap; p++) {
+        if ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+            (*p >= '0' && *p <= '9') || *p == '/' || *p == '-' ||
+            *p == '_' || *p == '.' || *p == '~') {
+            uri[out++] = (char)*p;
+        } else {
+            snprintf(uri + out, cap - out, "%%%02X", *p);
+            out += 3;
+        }
+    }
+    uri[out] = '\0';
+    free(absolute);
+    return uri;
+}
+
 static void lsp_client_send_position_request(LSPClient *client, const char *method,
                                              const char *file_uri, int line,
                                              int character, const char *extra_params) {
@@ -600,29 +649,36 @@ bool lsp_client_initialize(LSPClient *client, const char *workspace_root) {
         }
     }
     
-    const char *root = workspace_root ? workspace_root : ".";
-    char *root_path = json_escape_string(root);
-    char *root_uri_path = json_escape_string(root);
-    if (!root_path || !root_uri_path) {
+    char *root_absolute = lsp_absolute_path(workspace_root ? workspace_root : ".");
+    char *root_uri = lsp_file_uri_from_path(root_absolute ? root_absolute : ".");
+    char *root_path = json_escape_string(root_absolute ? root_absolute : ".");
+    char *root_uri_json = json_escape_string(root_uri ? root_uri : "file:///");
+    if (!root_path || !root_uri_json) {
+        free(root_absolute);
+        free(root_uri);
         free(root_path);
-        free(root_uri_path);
+        free(root_uri_json);
         return false;
     }
 
     int init_id = client->id++;
     if (!lsp_client_write_jsonf(client,
         "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"initialize\","
-        "\"params\":{\"processId\":null,\"rootPath\":\"%s\",\"rootUri\":\"file://%s\","
+        "\"params\":{\"processId\":null,\"rootPath\":\"%s\",\"rootUri\":\"%s\","
         "\"capabilities\":{\"textDocument\":{\"synchronization\":{\"didOpen\":true,"
         "\"didChange\":true,\"didSave\":true},\"semanticTokens\":{\"requests\":{\"full\":true}},"
         "\"publishDiagnostics\":{\"relatedInformation\":true}}}}}",
-        init_id, root_path, root_uri_path)) {
+        init_id, root_path, root_uri_json)) {
+        free(root_absolute);
+        free(root_uri);
         free(root_path);
-        free(root_uri_path);
+        free(root_uri_json);
         return false;
     }
+    free(root_absolute);
+    free(root_uri);
     free(root_path);
-    free(root_uri_path);
+    free(root_uri_json);
 
     char id_pattern[64];
     snprintf(id_pattern, sizeof(id_pattern), "\"id\":%d", init_id);
@@ -796,7 +852,7 @@ void lsp_client_send_didOpen(LSPClient *client, const char *file_uri, const char
     free(escaped_text);
 }
 
-void lsp_client_send_didChange(LSPClient *client, const char *file_uri, const char *text) {
+void lsp_client_send_didChange(LSPClient *client, const char *file_uri, int version, const char *text) {
     if (client->status != LSP_STATUS_INITIALIZED) return;
 
     char *uri = json_escape_string(file_uri);
@@ -809,9 +865,9 @@ void lsp_client_send_didChange(LSPClient *client, const char *file_uri, const ch
 
     lsp_client_write_jsonf(client,
         "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didChange\","
-        "\"params\":{\"textDocument\":{\"uri\":\"%s\",\"version\":2},"
+        "\"params\":{\"textDocument\":{\"uri\":\"%s\",\"version\":%d},"
         "\"contentChanges\":[{\"text\":\"%s\"}]}}",
-        uri, escaped_text);
+        uri, version, escaped_text);
 
     free(uri);
     free(escaped_text);

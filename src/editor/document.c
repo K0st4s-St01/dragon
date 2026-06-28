@@ -129,6 +129,27 @@ static void fallback_highlight_line(Document *doc, int row, const char *line, in
     }
 }
 
+static char *document_absolute_path(const char *path) {
+    if (!path) return NULL;
+
+    char *resolved = realpath(path, NULL);
+    if (resolved)
+        return resolved;
+
+    if (path[0] == '/')
+        return strdup(path);
+
+    char *cwd = getcwd(NULL, 0);
+    if (!cwd) return strdup(path);
+
+    size_t len = strlen(cwd) + 1 + strlen(path) + 1;
+    char *absolute = malloc(len);
+    if (absolute)
+        snprintf(absolute, len, "%s/%s", cwd, path);
+    free(cwd);
+    return absolute ? absolute : strdup(path);
+}
+
 void document_mark_dirty(Document *doc) {
     if (!doc) return;
     doc->dirty = true;
@@ -152,6 +173,8 @@ void document_init(Document *doc) {
     doc->hover_result = NULL;
     doc->diagnostics = NULL;
     doc->syntax_dirty = true;
+    doc->lsp_opened = false;
+    doc->lsp_version = 0;
     doc->ts_attempted = false;
     macro_init(&doc->macros);
     doc->alt_filepath = NULL;
@@ -189,11 +212,18 @@ void document_open(Document *doc, const char *path) {
         free(path_copy);
         return;
     }
+    char *absolute = document_absolute_path(path_copy);
+    if (absolute) {
+        free(path_copy);
+        path_copy = absolute;
+    }
     free(doc->filepath);
     doc->filepath = path_copy;
     doc->dirty = false;
     doc->syntax_dirty = true;
     doc->lsp_dirty = false;
+    doc->lsp_opened = false;
+    doc->lsp_version = 0;
     doc->ts_parsed = false;
     doc->ts_attempted = false;
     doc->cursor_count = 1;
@@ -216,14 +246,21 @@ void document_save(Document *doc) {
 
 void document_save_as(Document *doc, const char *path) {
     if (!doc || !path) return;
-    char *path_copy = strdup(path);
+    char *path_copy = document_absolute_path(path);
     if (!path_copy) return;
     free(doc->filepath);
     doc->filepath = path_copy;
     buffer_save(&doc->buffer, doc->filepath);
+    char *resolved = realpath(doc->filepath, NULL);
+    if (resolved) {
+        free(doc->filepath);
+        doc->filepath = resolved;
+    }
     doc->dirty = false;
     doc->syntax_dirty = true;
     doc->lsp_dirty = true;
+    doc->lsp_opened = false;
+    doc->lsp_version = 0;
     doc->ts_parsed = false;
     doc->ts_attempted = false;
     document_detect_language(doc);
@@ -3023,6 +3060,8 @@ void document_notify_lsp_open(Document *doc, void *lsp_manager) {
     char *uri = filepath_to_uri(doc->filepath);
     if (uri) {
         lsp_client_send_didOpen(client, uri, doc->language_id, text);
+        doc->lsp_opened = true;
+        doc->lsp_version = 1;
         free(uri);
     }
     free(text);
@@ -3030,6 +3069,11 @@ void document_notify_lsp_open(Document *doc, void *lsp_manager) {
 
 void document_notify_lsp_change(Document *doc, void *lsp_manager) {
     if (!doc || !doc->filepath || !doc->language_id || !lsp_manager) return;
+
+    if (!doc->lsp_opened) {
+        document_notify_lsp_open(doc, lsp_manager);
+        return;
+    }
     
     LSPManager *manager = (LSPManager *)lsp_manager;
     LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
@@ -3043,7 +3087,10 @@ void document_notify_lsp_change(Document *doc, void *lsp_manager) {
     
     char *uri = filepath_to_uri(doc->filepath);
     if (uri) {
-        lsp_client_send_didChange(client, uri, text);
+        if (doc->lsp_version < 1)
+            doc->lsp_version = 1;
+        doc->lsp_version++;
+        lsp_client_send_didChange(client, uri, doc->lsp_version, text);
         free(uri);
     }
     free(text);
