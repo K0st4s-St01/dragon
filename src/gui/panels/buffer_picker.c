@@ -13,28 +13,34 @@ static bool   bp_open = false;
 static int    bp_selected = 0;
 
 typedef struct {
+    int         index;
     const char *filepath;
     bool        is_dirty;
 } BufferEntry;
 
-/* For now we'll support up to 32 buffers */
-static BufferEntry bp_buffers[32];
+static BufferEntry bp_buffers[64];
 static int bp_buffer_count = 0;
 
 void panel_buffer_picker_open(App *app) {
     bp_open = true;
     bp_selected = 0;
     bp_buffer_count = 0;
-    
-    /* Collect current document */
-    Document *doc = (Document *)app_get_doc(app);
-    if (doc->filepath) {
+
+    int current = app_get_current_buffer_index(app);
+    int count = app_get_buffer_count(app);
+    if (count > (int)(sizeof(bp_buffers) / sizeof(bp_buffers[0])))
+        count = (int)(sizeof(bp_buffers) / sizeof(bp_buffers[0]));
+
+    for (int i = 0; i < count; i++) {
+        Document *doc = (Document *)app_get_doc_at(app, i);
+        if (!doc) continue;
+        bp_buffers[bp_buffer_count].index = i;
         bp_buffers[bp_buffer_count].filepath = doc->filepath;
         bp_buffers[bp_buffer_count].is_dirty = doc->dirty;
+        if (i == current)
+            bp_selected = bp_buffer_count;
         bp_buffer_count++;
     }
-    
-    /* TODO: When multiple buffers are supported, iterate through them */
 }
 
 void panel_buffer_picker_close(App *app) {
@@ -65,11 +71,8 @@ void panel_buffer_picker_key(App *app, int key) {
     } else if (key == GLFW_KEY_END) {
         bp_selected = bp_buffer_count > 0 ? bp_buffer_count - 1 : 0;
     } else if (key == GLFW_KEY_ENTER) {
-        if (bp_buffer_count > 0 && bp_buffers[bp_selected].filepath) {
-            /* Switch to selected buffer */
-            /* For now just close since we only have one buffer */
-            /* TODO: Implement actual buffer switching */
-        }
+        if (bp_buffer_count > 0)
+            app_switch_to_buffer(app, bp_buffers[bp_selected].index);
         panel_buffer_picker_close(app);
     }
 }
@@ -135,7 +138,7 @@ void panel_buffer_picker_render(Gui *g, App *app) {
                       t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
             
             /* Filename */
-            const char *name = bp_buffers[i].filepath;
+            const char *name = bp_buffers[i].filepath ? bp_buffers[i].filepath : "[No Name]";
             /* Extract just the filename from path */
             const char *basename = strrchr(name, '/');
             if (basename) basename++;

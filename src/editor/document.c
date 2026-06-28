@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <regex.h>
 
 #define MAX_CURSORS 64
 
@@ -1304,68 +1305,135 @@ void document_scroll_bottom(Document *doc, int viewport_h) {
 }
 
 void document_set_search(Document *doc, const char *query, size_t len) {
+    if (!doc) return;
     free(doc->search_query);
+    doc->search_query = NULL;
+    doc->search_len = 0;
+    if (!query || len == 0) return;
     doc->search_query = malloc(len + 1);
+    if (!doc->search_query) return;
     memcpy(doc->search_query, query, len);
     doc->search_query[len] = '\0';
     doc->search_len = len;
+}
+
+static bool search_literal_forward(Document *doc, size_t start, size_t *match_start, size_t *match_end) {
+    if (!doc || !doc->search_query || doc->search_len == 0 || start > doc->buffer.len)
+        return false;
+    const char *found = memmem(doc->buffer.text + start, doc->buffer.len - start,
+                               doc->search_query, doc->search_len);
+    if (!found) return false;
+    *match_start = (size_t)(found - doc->buffer.text);
+    *match_end = *match_start + doc->search_len;
+    return true;
+}
+
+static bool search_literal_prev_before(Document *doc, size_t limit, size_t *match_start, size_t *match_end) {
+    if (!doc || !doc->search_query || doc->search_len == 0) return false;
+    if (limit > doc->buffer.len) limit = doc->buffer.len;
+    bool found = false;
+    size_t best = 0;
+    for (size_t i = 0; i + doc->search_len <= limit; i++) {
+        if (memcmp(doc->buffer.text + i, doc->search_query, doc->search_len) == 0) {
+            best = i;
+            found = true;
+        }
+    }
+    if (!found) return false;
+    *match_start = best;
+    *match_end = best + doc->search_len;
+    return true;
+}
+
+static bool search_regex_forward(Document *doc, size_t start, size_t *match_start, size_t *match_end) {
+    if (!doc || !doc->search_query || doc->search_len == 0 || start > doc->buffer.len)
+        return false;
+    regex_t re;
+    if (regcomp(&re, doc->search_query, REG_EXTENDED) != 0)
+        return search_literal_forward(doc, start, match_start, match_end);
+    regmatch_t m;
+    int ok = regexec(&re, doc->buffer.text + start, 1, &m, 0);
+    if (ok == 0 && m.rm_so >= 0) {
+        *match_start = start + (size_t)m.rm_so;
+        *match_end = start + (size_t)m.rm_eo;
+        regfree(&re);
+        return true;
+    }
+    regfree(&re);
+    return false;
+}
+
+static bool search_regex_prev_before(Document *doc, size_t limit, size_t *match_start, size_t *match_end) {
+    if (!doc || !doc->search_query || doc->search_len == 0) return false;
+    if (limit > doc->buffer.len) limit = doc->buffer.len;
+    regex_t re;
+    if (regcomp(&re, doc->search_query, REG_EXTENDED) != 0)
+        return search_literal_prev_before(doc, limit, match_start, match_end);
+
+    bool found = false;
+    size_t offset = 0;
+    while (offset < limit) {
+        regmatch_t m;
+        if (regexec(&re, doc->buffer.text + offset, 1, &m, 0) != 0 || m.rm_so < 0)
+            break;
+        size_t start = offset + (size_t)m.rm_so;
+        size_t end = offset + (size_t)m.rm_eo;
+        if (start >= limit)
+            break;
+        *match_start = start;
+        *match_end = end;
+        found = true;
+        offset = end > offset ? end : offset + 1;
+    }
+    regfree(&re);
+    return found;
+}
+
+static void document_select_match_at_positions(Document *doc, size_t start, size_t end) {
+    Cursor *cur = &doc->cursors[0];
+    int sr, sc, er, ec;
+    if (end < start) end = start;
+    buffer_row_col_from_pos(&doc->buffer, start, &sr, &sc);
+    buffer_row_col_from_pos(&doc->buffer, end, &er, &ec);
+    cursor_move_to(cur, sr, sc);
+    cur->anchor_row = er;
+    cur->anchor_col = ec;
+    cur->has_selection = true;
+    document_sync_viewport_to_cursor(doc);
 }
 
 void document_search_next(Document *doc) {
     if (!doc->search_query || doc->search_len == 0) return;
     Cursor *cur = &doc->cursors[0];
     size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
-    size_t search_start = pos + doc->search_len;
-    if (search_start < doc->buffer.len) {
-        const char *found = memmem(doc->buffer.text + search_start,
-                                   doc->buffer.len - search_start,
-                                   doc->search_query, doc->search_len);
-        if (found) {
-            size_t fpos = (size_t)(found - doc->buffer.text);
-            int row, col;
-            buffer_row_col_from_pos(&doc->buffer, fpos, &row, &col);
-            cursor_move_to(cur, row, col);
-            return;
-        }
+    if (cur->has_selection) {
+        int sr, sc, er, ec;
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+        pos = buffer_pos_from_row_col(&doc->buffer, er, ec);
+    } else if (pos < doc->buffer.len) {
+        pos++;
     }
-    const char *found = memmem(doc->buffer.text, doc->buffer.len,
-                               doc->search_query, doc->search_len);
-    if (found) {
-        size_t fpos = (size_t)(found - doc->buffer.text);
-        int row, col;
-        buffer_row_col_from_pos(&doc->buffer, fpos, &row, &col);
-        cursor_move_to(cur, row, col);
-    }
+
+    size_t start = 0, end = 0;
+    if (search_regex_forward(doc, pos, &start, &end) ||
+        search_regex_forward(doc, 0, &start, &end))
+        document_select_match_at_positions(doc, start, end);
 }
 
 void document_search_prev(Document *doc) {
     if (!doc->search_query || doc->search_len == 0) return;
     Cursor *cur = &doc->cursors[0];
     size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
-    size_t best = 0;
-    bool found = false;
-    for (size_t i = 0; i < pos; i++) {
-        if (i + doc->search_len <= pos &&
-            memcmp(doc->buffer.text + i, doc->search_query, doc->search_len) == 0) {
-            best = i;
-            found = true;
-        }
+    if (cur->has_selection) {
+        int sr, sc, er, ec;
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+        pos = buffer_pos_from_row_col(&doc->buffer, sr, sc);
     }
-    if (!found) {
-        for (size_t i = (pos > 0 ? pos - 1 : 0); i < doc->buffer.len; i++) {
-            if (i + doc->search_len <= doc->buffer.len &&
-                memcmp(doc->buffer.text + i, doc->search_query, doc->search_len) == 0) {
-                best = i;
-                found = true;
-                break;
-            }
-        }
-    }
-    if (found) {
-        int row, col;
-        buffer_row_col_from_pos(&doc->buffer, best, &row, &col);
-        cursor_move_to(cur, row, col);
-    }
+
+    size_t start = 0, end = 0;
+    if (search_regex_prev_before(doc, pos, &start, &end) ||
+        search_regex_prev_before(doc, doc->buffer.len, &start, &end))
+        document_select_match_at_positions(doc, start, end);
 }
 
 void document_extend_to_line_bounds(Document *doc) {
@@ -4339,6 +4407,7 @@ int window_split_vertical(WindowManager *wm, int doc_index) {
     parent->width = parent->width / 2;
     parent->active_child = idx;
     wm->count++;
+    wm->active = idx;
     return idx;
 }
 
@@ -4359,22 +4428,20 @@ int window_split_horizontal(WindowManager *wm, int doc_index) {
     parent->height = parent->height / 2;
     parent->active_child = idx;
     wm->count++;
+    wm->active = idx;
     return idx;
 }
 
 void window_close(WindowManager *wm) {
     if (!wm || wm->count <= 1) return;
     int idx = wm->active;
-    Window *w = &wm->windows[idx];
-    w->visible = false;
+    for (int i = idx; i < wm->count - 1; i++)
+        wm->windows[i] = wm->windows[i + 1];
+    memset(&wm->windows[wm->count - 1], 0, sizeof(Window));
     wm->count--;
-    /* Find a visible window to activate */
-    for (int i = 0; i < MAX_WINDOWS; i++) {
-        if (wm->windows[i].visible) {
-            wm->active = i;
-            return;
-        }
-    }
+    if (idx >= wm->count) idx = wm->count - 1;
+    wm->active = idx < 0 ? 0 : idx;
+    window_equalize(wm);
 }
 
 void window_next(WindowManager *wm) {
@@ -4397,12 +4464,15 @@ void window_goto_left(WindowManager *wm) {
     if (!wm) return;
     Window *w = &wm->windows[wm->active];
     int best = -1;
+    int best_dist = 0;
     for (int i = 0; i < MAX_WINDOWS; i++) {
         if (i == wm->active || !wm->windows[i].visible) continue;
         Window *s = &wm->windows[i];
-        if (s->y == w->y && s->x < w->x) {
-            if (best < 0 || s->x > wm->windows[best].x)
-                best = i;
+        bool overlaps = s->y < w->y + w->height && s->y + s->height > w->y;
+        int dist = w->x - (s->x + s->width);
+        if (overlaps && dist >= 0 && (best < 0 || dist < best_dist)) {
+            best = i;
+            best_dist = dist;
         }
     }
     if (best >= 0) wm->active = best;
@@ -4412,12 +4482,15 @@ void window_goto_right(WindowManager *wm) {
     if (!wm) return;
     Window *w = &wm->windows[wm->active];
     int best = -1;
+    int best_dist = 0;
     for (int i = 0; i < MAX_WINDOWS; i++) {
         if (i == wm->active || !wm->windows[i].visible) continue;
         Window *s = &wm->windows[i];
-        if (s->y == w->y && s->x > w->x) {
-            if (best < 0 || s->x < wm->windows[best].x)
-                best = i;
+        bool overlaps = s->y < w->y + w->height && s->y + s->height > w->y;
+        int dist = s->x - (w->x + w->width);
+        if (overlaps && dist >= 0 && (best < 0 || dist < best_dist)) {
+            best = i;
+            best_dist = dist;
         }
     }
     if (best >= 0) wm->active = best;
@@ -4427,12 +4500,15 @@ void window_goto_up(WindowManager *wm) {
     if (!wm) return;
     Window *w = &wm->windows[wm->active];
     int best = -1;
+    int best_dist = 0;
     for (int i = 0; i < MAX_WINDOWS; i++) {
         if (i == wm->active || !wm->windows[i].visible) continue;
         Window *s = &wm->windows[i];
-        if (s->x == w->x && s->y < w->y) {
-            if (best < 0 || s->y > wm->windows[best].y)
-                best = i;
+        bool overlaps = s->x < w->x + w->width && s->x + s->width > w->x;
+        int dist = w->y - (s->y + s->height);
+        if (overlaps && dist >= 0 && (best < 0 || dist < best_dist)) {
+            best = i;
+            best_dist = dist;
         }
     }
     if (best >= 0) wm->active = best;
@@ -4442,12 +4518,15 @@ void window_goto_down(WindowManager *wm) {
     if (!wm) return;
     Window *w = &wm->windows[wm->active];
     int best = -1;
+    int best_dist = 0;
     for (int i = 0; i < MAX_WINDOWS; i++) {
         if (i == wm->active || !wm->windows[i].visible) continue;
         Window *s = &wm->windows[i];
-        if (s->x == w->x && s->y > w->y) {
-            if (best < 0 || s->y < wm->windows[best].y)
-                best = i;
+        bool overlaps = s->x < w->x + w->width && s->x + s->width > w->x;
+        int dist = s->y - (w->y + w->height);
+        if (overlaps && dist >= 0 && (best < 0 || dist < best_dist)) {
+            best = i;
+            best_dist = dist;
         }
     }
     if (best >= 0) wm->active = best;
@@ -4457,29 +4536,26 @@ void window_maximize(WindowManager *wm) {
     if (!wm) return;
     Window *w = &wm->windows[wm->active];
     w->x = 0; w->y = 0;
-    /* Parent dimensions would come from App; use defaults */
     w->width = 100; w->height = 40;
 }
 
 void window_equalize(WindowManager *wm) {
     if (!wm) return;
-    /* Count visible children of root */
-    int count = 0;
-    for (int i = 0; i < wm->count; i++) {
-        if (wm->windows[i].visible && wm->windows[i].parent == 0)
-            count++;
+    if (wm->count <= 1) {
+        wm->windows[0].x = 0;
+        wm->windows[0].y = 0;
+        wm->windows[0].width = 100;
+        wm->windows[0].height = 40;
+        wm->windows[0].visible = true;
+        return;
     }
-    if (count == 0) return;
-    int w = 100 / count;
-    int idx = 0;
+    int width = 100 / wm->count;
     for (int i = 0; i < wm->count; i++) {
-        if (wm->windows[i].visible && wm->windows[i].parent == 0) {
-            wm->windows[i].x = idx * w;
-            wm->windows[i].width = w;
-            wm->windows[i].y = 0;
-            wm->windows[i].height = 40;
-            idx++;
-        }
+        wm->windows[i].x = i * width;
+        wm->windows[i].y = 0;
+        wm->windows[i].width = (i == wm->count - 1) ? 100 - i * width : width;
+        wm->windows[i].height = 40;
+        wm->windows[i].visible = true;
     }
 }
 

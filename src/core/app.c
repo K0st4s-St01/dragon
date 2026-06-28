@@ -10,6 +10,7 @@
 #include "dragon_editor/treesitter.h"
 #include "dragon_editor/config.h"
 #include "dragon_editor/theme.h"
+#include "dragon_editor/panel_notification.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -57,12 +58,26 @@ static void char_cb(GLFWwindow *win, unsigned int c) {
     input_handle_char(app, c);
 }
 
-static char *app_filepath_to_uri(const char *filepath) {
-    if (!filepath) return NULL;
-    char *uri = malloc(strlen(filepath) + 8);
-    if (!uri) return NULL;
-    snprintf(uri, strlen(filepath) + 8, "file://%s", filepath);
-    return uri;
+static bool app_doc_is_empty_scratch(Document *doc) {
+    return doc && !doc->filepath && !doc->dirty && doc->buffer.len == 0;
+}
+
+static void app_set_active_buffer(App *app, int index) {
+    if (!app || index < 0 || index >= app->doc_count) return;
+    Document *cur = &app->documents[app->current_doc];
+    if (cur->filepath)
+        document_set_alternate(cur, cur->filepath);
+    app->current_doc = index;
+    if (app->window_mgr.active >= 0 && app->window_mgr.active < app->window_mgr.count)
+        app->window_mgr.windows[app->window_mgr.active].doc_index = index;
+}
+
+static void app_sync_buffer_from_active_window(App *app) {
+    if (!app || app->window_mgr.active < 0 || app->window_mgr.active >= app->window_mgr.count)
+        return;
+    int doc_index = app->window_mgr.windows[app->window_mgr.active].doc_index;
+    if (doc_index >= 0 && doc_index < app->doc_count)
+        app->current_doc = doc_index;
 }
 
 /* Normalize a URI path for comparison: strip file:// prefix, remove . and .. */
@@ -74,7 +89,6 @@ static void normalize_uri_path(const char *uri, char *out, size_t out_size) {
     if (strncmp(path, "file://", 7) == 0) path += 7;
     
     /* Simple normalization: copy char by char, handle . and .. */
-    size_t j = 0;
     const char *seg_start = path;
     
     /* Skip leading slash, we'll add it back */
@@ -192,9 +206,12 @@ static void app_update_diagnostics_from_lsp(App *app) {
             LSPDiagnostics *diagnostics = lsp_parse_publish_diagnostics_notification(response);
             if (diagnostics) {
                 app_store_diagnostics(app, diagnostics);
+                free(response);
+                continue;
             }
-            /* Skip non-diagnostic responses (semantic tokens, etc.) */
+            lsp_client_unread_response(client, response);
             free(response);
+            break;
         }
     }
 }
@@ -307,6 +324,7 @@ void app_run(App *app) {
         double now = frame_start;
         app->dt = now - app->last_time;
         app->last_time = now;
+        notification_update(app->dt);
 
         glfwPollEvents();
         
@@ -365,12 +383,31 @@ void app_quit(App *app) {
 }
 
 void app_open_file(App *app, const char *path) {
-    Document *cur = &app->documents[app->current_doc];
-    /* Set alternate file to current file before switching */
-    if (cur->filepath)
-        document_set_alternate(cur, cur->filepath);
-    document_open(cur, path);
-    document_notify_lsp_open(cur, &app->lsp_manager);
+    if (!app || !path) return;
+
+    for (int i = 0; i < app->doc_count; i++) {
+        if (app->documents[i].filepath && strcmp(app->documents[i].filepath, path) == 0) {
+            app_set_active_buffer(app, i);
+            return;
+        }
+    }
+
+    int target = app->current_doc;
+    if (!app_doc_is_empty_scratch(&app->documents[target])) {
+        if (app->doc_count >= MAX_BUFFERS)
+            return;
+        target = app->doc_count++;
+        document_init(&app->documents[target]);
+    }
+
+    document_open(&app->documents[target], path);
+    if (app->documents[target].filepath) {
+        app_set_active_buffer(app, target);
+        document_notify_lsp_open(&app->documents[target], &app->lsp_manager);
+    } else if (target == app->doc_count - 1 && target != app->current_doc) {
+        document_free(&app->documents[target]);
+        app->doc_count--;
+    }
 }
 
 /* Buffer management */
@@ -383,23 +420,18 @@ int app_get_current_buffer_index(App *app) {
 }
 
 void app_switch_to_buffer(App *app, int index) {
-    if (index >= 0 && index < app->doc_count) {
-        Document *cur = &app->documents[app->current_doc];
-        if (cur->filepath)
-            document_set_alternate(cur, cur->filepath);
-        app->current_doc = index;
-    }
+    app_set_active_buffer(app, index);
 }
 
 void app_next_buffer(App *app) {
     if (app->doc_count > 1) {
-        app->current_doc = (app->current_doc + 1) % app->doc_count;
+        app_set_active_buffer(app, (app->current_doc + 1) % app->doc_count);
     }
 }
 
 void app_prev_buffer(App *app) {
     if (app->doc_count > 1) {
-        app->current_doc = (app->current_doc - 1 + app->doc_count) % app->doc_count;
+        app_set_active_buffer(app, (app->current_doc - 1 + app->doc_count) % app->doc_count);
     }
 }
 
@@ -421,6 +453,15 @@ bool app_close_buffer(App *app, int index) {
         app->current_doc = app->doc_count - 1;
     } else if (app->current_doc > index) {
         app->current_doc--;
+    }
+
+    for (int i = 0; i < app->window_mgr.count; i++) {
+        if (app->window_mgr.windows[i].doc_index == index)
+            app->window_mgr.windows[i].doc_index = app->current_doc;
+        else if (app->window_mgr.windows[i].doc_index > index)
+            app->window_mgr.windows[i].doc_index--;
+        if (app->window_mgr.windows[i].doc_index >= app->doc_count)
+            app->window_mgr.windows[i].doc_index = app->current_doc;
     }
     
     return true;
@@ -444,39 +485,48 @@ WindowManager *app_get_window_manager(App *app) {
 }
 
 void app_split_vertical(App *app) {
-    window_split_vertical(&app->window_mgr, app->window_mgr.active);
+    if (window_split_vertical(&app->window_mgr, app->current_doc) >= 0)
+        app_sync_buffer_from_active_window(app);
 }
 
 void app_split_horizontal(App *app) {
-    window_split_horizontal(&app->window_mgr, app->window_mgr.active);
+    if (window_split_horizontal(&app->window_mgr, app->current_doc) >= 0)
+        app_sync_buffer_from_active_window(app);
 }
 
 void app_close_split(App *app) {
     window_close(&app->window_mgr);
+    app_sync_buffer_from_active_window(app);
 }
 
 void app_next_window(App *app) {
     window_next(&app->window_mgr);
+    app_sync_buffer_from_active_window(app);
 }
 
 void app_prev_window(App *app) {
     window_prev(&app->window_mgr);
+    app_sync_buffer_from_active_window(app);
 }
 
 void app_goto_window_left(App *app) {
     window_goto_left(&app->window_mgr);
+    app_sync_buffer_from_active_window(app);
 }
 
 void app_goto_window_right(App *app) {
     window_goto_right(&app->window_mgr);
+    app_sync_buffer_from_active_window(app);
 }
 
 void app_goto_window_up(App *app) {
     window_goto_up(&app->window_mgr);
+    app_sync_buffer_from_active_window(app);
 }
 
 void app_goto_window_down(App *app) {
     window_goto_down(&app->window_mgr);
+    app_sync_buffer_from_active_window(app);
 }
 
 void app_maximize_window(App *app) {

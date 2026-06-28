@@ -30,6 +30,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.o.d"
   "CMakeFiles/dragon_editor.dir/src/gui/gui.c.o"
   "CMakeFiles/dragon_editor.dir/src/gui/gui.c.o.d"
+  "CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.o"
+  "CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.o.d"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o.d"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o"

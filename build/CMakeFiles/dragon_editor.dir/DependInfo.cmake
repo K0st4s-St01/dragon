@@ -23,6 +23,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/xator/dragon/src/editor/syntax.c" "CMakeFiles/dragon_editor.dir/src/editor/syntax.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/editor/syntax.c.o.d"
   "/home/xator/dragon/src/editor/treesitter.c" "CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.o.d"
   "/home/xator/dragon/src/gui/gui.c" "CMakeFiles/dragon_editor.dir/src/gui/gui.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/gui.c.o.d"
+  "/home/xator/dragon/src/gui/panel_notification.c" "CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.o.d"
   "/home/xator/dragon/src/gui/panels/about.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o.d"
   "/home/xator/dragon/src/gui/panels/buffer_picker.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o.d"
   "/home/xator/dragon/src/gui/panels/code_actions.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o.d"

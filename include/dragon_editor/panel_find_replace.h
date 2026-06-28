@@ -7,6 +7,7 @@
 
 typedef enum {
     FR_ACTION_FIND,
+    FR_ACTION_FIND_BACKWARD,
     FR_ACTION_REPLACE,
     FR_ACTION_SELECT,
     FR_ACTION_SPLIT,
@@ -20,6 +21,7 @@ typedef enum {
 } FindAction;
 
 void panel_find_open(App *app, Document *doc);
+void panel_find_open_backward(App *app, Document *doc);
 void panel_find_open_replace(App *app, Document *doc);
 void panel_find_open_ex(App *app, Document *doc, FindAction action);
 void panel_find_close(App *app);

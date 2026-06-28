@@ -32,6 +32,11 @@ void panel_find_open(App *app, Document *doc) {
     fr_cursor_visible = true;
 }
 
+void panel_find_open_backward(App *app, Document *doc) {
+    panel_find_open(app, doc);
+    fr_action = FR_ACTION_FIND_BACKWARD;
+}
+
 void panel_find_open_ex(App *app, Document *doc, FindAction action) {
     panel_find_open(app, doc);
     fr_action = action;
@@ -71,15 +76,6 @@ static bool find_next_range(Document *doc, size_t *start_out, size_t *end_out) {
 
     *start_out = start;
     *end_out = start + (size_t)fr_query_len;
-    return true;
-}
-
-static bool find_next(Document *doc) {
-    size_t start = 0, end = 0;
-    if (!find_next_range(doc, &start, &end)) return false;
-    int row, col;
-    buffer_row_col_from_pos(&doc->buffer, start, &row, &col);
-    cursor_move_to(&doc->cursors[0], row, col);
     return true;
 }
 
@@ -146,7 +142,15 @@ void panel_find_key(App *app, Document *doc, int key) {
     if (!fr_open) return;
     if (key == GLFW_KEY_ENTER) {
         if (fr_action == FR_ACTION_FIND) {
-            find_next(doc);
+            document_set_search(doc, fr_query, (size_t)fr_query_len);
+            document_search_next(doc);
+            panel_find_close(app);
+            return;
+        } else if (fr_action == FR_ACTION_FIND_BACKWARD) {
+            document_set_search(doc, fr_query, (size_t)fr_query_len);
+            document_search_prev(doc);
+            panel_find_close(app);
+            return;
         } else if (fr_action == FR_ACTION_REPLACE) {
             replace_next(doc);
         } else if (fr_action == FR_ACTION_SELECT) {
@@ -228,7 +232,10 @@ void panel_find_render(Gui *g, App *app, Document *doc) {
     /* Determine label based on action */
     const char *label = "Find:";
     const char *btn_label = "Find Next";
-    if (fr_action == FR_ACTION_REPLACE) {
+    if (fr_action == FR_ACTION_FIND_BACKWARD) {
+        label = "Find ?:";
+        btn_label = "Find Prev";
+    } else if (fr_action == FR_ACTION_REPLACE) {
         label = "Find:";
         btn_label = "Replace Next";
     } else if (fr_action == FR_ACTION_PIPE) {

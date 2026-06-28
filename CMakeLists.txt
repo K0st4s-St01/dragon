@@ -36,6 +36,7 @@ set(EDITOR_SOURCES
     src/gui/gui.c
     src/gui/text.c
     src/gui/theme.c
+    src/gui/panel_notification.c
     src/gui/panels/statusbar.c
     src/gui/panels/file_browser.c
     src/gui/panels/find_replace.c

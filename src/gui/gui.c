@@ -29,6 +29,7 @@
 #include "panel_workspace_symbols.h"
 #include "panel_workspace_diagnostics.h"
 #include "panel_completion.h"
+#include "panel_notification.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -129,26 +130,32 @@ static int utf8_char_len(const char *s, int remaining) {
     return 1;
 }
 
-static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
+static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
+                               float vx, float vy, float vw, float vh, bool active) {
     Renderer *r = app_get_renderer(app);
     Theme *t = theme_get();
     Config *cfg = app_get_config(app);
-    int win_w = app_get_width(app);
-    int win_h = app_get_height(app);
     int tab_width = (cfg && cfg->tab_width > 0) ? cfg->tab_width : 4;
 
     float gutter_w = 60.0f;
     float line_h = g->font.glyph_h + 6.0f;  /* Better spacing */
-    float text_x = gutter_w + 12.0f;
-    float text_y = 32.0f;
-    float editor_h = (float)win_h - 32.0f;
+    float text_x = vx + gutter_w + 12.0f;
+    float text_y = vy + 32.0f;
+    float editor_h = vh - 32.0f;
+    if (!doc || vw <= 0 || vh <= 0) return;
 
     Cursor *cur = &doc->cursors[0];
     size_t lines = buffer_line_count(&doc->buffer);
 
     /* Background */
-    renderer_draw_rect(r, 0, 0, (float)win_w, (float)win_h,
+    renderer_draw_rect(r, vx, vy, vw, vh,
                        t->bg[0], t->bg[1], t->bg[2], t->bg[3]);
+    if (active) {
+        renderer_draw_rect(r, vx, vy, vw, 2, t->accent[0], t->accent[1], t->accent[2], 1.0f);
+        renderer_draw_rect(r, vx, vy + vh - 2, vw, 2, t->accent[0], t->accent[1], t->accent[2], 1.0f);
+        renderer_draw_rect(r, vx, vy, 2, vh, t->accent[0], t->accent[1], t->accent[2], 1.0f);
+        renderer_draw_rect(r, vx + vw - 2, vy, 2, vh, t->accent[0], t->accent[1], t->accent[2], 1.0f);
+    }
 
     int first_line = doc->scroll_y;
     int visible_lines = (int)(editor_h / line_h) + 1;
@@ -162,7 +169,7 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
 
         /* Line highlight - current line gets subtle highlight */
         if (line_num == cur->row) {
-            renderer_draw_rect(r, 0, y, (float)win_w, line_h,
+            renderer_draw_rect(r, vx, y, vw, line_h,
                                t->line_highlight[0], t->line_highlight[1],
                                t->line_highlight[2], t->line_highlight[3]);
         }
@@ -188,19 +195,19 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
         }
 
         /* Gutter background */
-        renderer_draw_rect(r, 0, y, gutter_w, line_h,
+        renderer_draw_rect(r, vx, y, gutter_w, line_h,
                            t->gutter_bg[0], t->gutter_bg[1],
                            t->gutter_bg[2], t->gutter_bg[3]);
 
         /* Gutter separator line */
-        renderer_draw_rect(r, gutter_w, y, 1, line_h,
+        renderer_draw_rect(r, vx + gutter_w, y, 1, line_h,
                            t->gutter_fg[0] * 0.3f, t->gutter_fg[1] * 0.3f, 
                            t->gutter_fg[2] * 0.3f, 0.3f);
 
         /* Line number - right aligned */
         char num[16];
         snprintf(num, sizeof(num), "%4d", line_num + 1);
-        font_draw(&g->font, r, num, 10, y + 3,
+        font_draw(&g->font, r, num, vx + 10, y + 3,
                   t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
         
         /* Diagnostic markers on gutter */
@@ -209,7 +216,7 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
             for (int d = 0; d < diag->count; d++) {
                 if (diag->items[d].start_line == line_num) {
                     /* Draw diagnostic indicator */
-                    float diag_x = 6;
+                    float diag_x = vx + 6;
                     float diag_y = y + 3;
                     char indicator = (diag->items[d].severity == LSP_DIAG_ERROR) ? 'E' : 'W';
                     float color_r = (diag->items[d].severity == LSP_DIAG_ERROR) ? 1.0f : 1.0f;
@@ -304,7 +311,31 @@ static void render_editor(Gui *g, App *app, Document *doc, ModeState *mode) {
 }
 
 void gui_render(Gui *g, App *app, Document *doc, ModeState *mode) {
-    render_editor(g, app, doc, mode);
+    WindowManager *wm = app_get_window_manager(app);
+    int win_w = app_get_width(app);
+    int win_h = app_get_height(app);
+    float content_h = (float)win_h - 24.0f;
+    if (content_h < 40.0f) content_h = (float)win_h;
+
+    if (wm && wm->count > 0) {
+        for (int i = 0; i < wm->count; i++) {
+            Window *w = &wm->windows[i];
+            if (!w->visible) continue;
+            Document *wdoc = (Document *)app_get_doc_at(app, w->doc_index);
+            if (!wdoc) continue;
+            float vx = (float)w->x * (float)win_w / 100.0f;
+            float vy = (float)w->y * content_h / 40.0f;
+            float vw = (float)w->width * (float)win_w / 100.0f;
+            float vh = (float)w->height * content_h / 40.0f;
+            glEnable(GL_SCISSOR_TEST);
+            glScissor((int)vx, win_h - (int)(vy + vh), (int)vw, (int)vh);
+            render_editor_view(g, app, wdoc, mode, vx, vy, vw, vh, i == wm->active);
+            glDisable(GL_SCISSOR_TEST);
+        }
+    } else {
+        render_editor_view(g, app, doc, mode, 0, 0, (float)win_w, content_h, true);
+    }
+
      panel_statusbar(g, app, doc, mode);
      panel_file_browser_render(g, app);
      panel_find_render(g, app, doc);
@@ -325,4 +356,5 @@ void gui_render(Gui *g, App *app, Document *doc, ModeState *mode) {
       panel_workspace_symbols_render(g, app);
       panel_workspace_diagnostics_render(g, app);
       panel_completion_render(g, app);
+      panel_notification_render(g, app);
 }

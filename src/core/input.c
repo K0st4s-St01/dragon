@@ -45,6 +45,48 @@ static void handle_insert_key(App *app, int key, int action, int mods);
 static void handle_select_key(App *app, int key, int action, int mods);
 static void handle_command_key(App *app, int key, int action, int mods);
 
+static bool handle_window_key(App *app, int key, int mods) {
+    (void)mods;
+    switch (key) {
+    case GLFW_KEY_W:
+        app_next_window(app);
+        return true;
+    case GLFW_KEY_V:
+        app_split_vertical(app);
+        return true;
+    case GLFW_KEY_S:
+        app_split_horizontal(app);
+        return true;
+    case GLFW_KEY_Q:
+        app_close_split(app);
+        return true;
+    case GLFW_KEY_O:
+        app_maximize_window(app);
+        return true;
+    case GLFW_KEY_H:
+    case GLFW_KEY_LEFT:
+        app_goto_window_left(app);
+        return true;
+    case GLFW_KEY_L:
+    case GLFW_KEY_RIGHT:
+        app_goto_window_right(app);
+        return true;
+    case GLFW_KEY_K:
+    case GLFW_KEY_UP:
+        app_goto_window_up(app);
+        return true;
+    case GLFW_KEY_J:
+    case GLFW_KEY_DOWN:
+        app_goto_window_down(app);
+        return true;
+    case GLFW_KEY_EQUAL:
+        app_equalize_windows(app);
+        return true;
+    default:
+        return false;
+    }
+}
+
 void input_handle_key(App *app, int key, int scancode, int action, int mods) {
     (void)scancode;
     if (action != GLFW_PRESS && action != GLFW_REPEAT) return;
@@ -321,6 +363,11 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
     if (mode->pending_key) {
         char pk = mode->pending_key;
         mode->pending_key = 0;
+
+        if (pk == 'w') {
+            handle_window_key(app, key, mods);
+            return;
+        }
 
         if (pk == 'r') {
             char c = 0;
@@ -903,6 +950,9 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             document_jumplist_push(doc, cur->row, cur->col);
             return;
         }
+        case GLFW_KEY_W:
+            mode->pending_key = 'w';
+            return;
         case GLFW_KEY_6:
             /* Ctrl-^ - go to alternate file */
             if (mods & GLFW_MOD_SHIFT) {
@@ -948,7 +998,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
     /* ? (Shift+/) - Search backward */
     if (key == GLFW_KEY_SLASH && (mods & GLFW_MOD_SHIFT)) {
         Document *doc2 = (Document *)app_get_doc(app);
-        panel_find_open(app, doc2);
+        panel_find_open_backward(app, doc2);
         return;
     }
 
@@ -1150,7 +1200,10 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         break;
     case GLFW_KEY_SLASH: {
         Document *doc2 = (Document *)app_get_doc(app);
-        panel_find_open(app, doc2);
+        if (mods & GLFW_MOD_SHIFT)
+            panel_find_open_backward(app, doc2);
+        else
+            panel_find_open(app, doc2);
         break;
     }
     /* G - handled before switch */
@@ -1717,6 +1770,9 @@ static void handle_select_key(App *app, int key, int action, int mods) {
     /* Ctrl combinations in select mode */
     if (mods & GLFW_MOD_CONTROL) {
         switch (key) {
+        case GLFW_KEY_W:
+            mode->pending_key = 'w';
+            return;
         case GLFW_KEY_F:
             document_page_down_extend(doc);
             return;
@@ -1784,6 +1840,11 @@ static void handle_select_key(App *app, int key, int action, int mods) {
     if (mode->pending_key) {
         char pk = mode->pending_key;
         mode->pending_key = 0;
+
+        if (pk == 'w') {
+            handle_window_key(app, key, mods);
+            return;
+        }
 
         if (pk == 'f') {
             char c = 0;

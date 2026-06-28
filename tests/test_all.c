@@ -3503,7 +3503,7 @@ static void test_window_split_vertical(void) {
     int idx = window_split_vertical(&wm, 1);
     ASSERT(idx > 0);
     ASSERT_EQ_INT(wm.count, 2);
-    ASSERT_EQ_INT(wm.active, 0);
+    ASSERT_EQ_INT(wm.active, idx);
     ASSERT_TRUE(wm.windows[idx].visible);
     ASSERT_EQ_INT(wm.windows[idx].doc_index, 1);
     ASSERT_EQ_INT(wm.windows[idx].parent, 0);
@@ -3529,8 +3529,9 @@ static void test_window_close(void) {
     window_split_vertical(&wm, 1);
     ASSERT_EQ_INT(wm.count, 2);
     window_close(&wm);
-    ASSERT_FALSE(wm.windows[0].visible);
-    ASSERT_EQ_INT(wm.active, 1);
+    ASSERT_EQ_INT(wm.count, 1);
+    ASSERT_TRUE(wm.windows[0].visible);
+    ASSERT_EQ_INT(wm.active, 0);
     PASS();
 }
 
@@ -3540,11 +3541,11 @@ static void test_window_next_prev(void) {
     window_manager_init(&wm);
     window_split_vertical(&wm, 1);
     window_next(&wm);
-    ASSERT_EQ_INT(wm.active, 1);
-    window_next(&wm);
     ASSERT_EQ_INT(wm.active, 0);
-    window_prev(&wm);
+    window_next(&wm);
     ASSERT_EQ_INT(wm.active, 1);
+    window_prev(&wm);
+    ASSERT_EQ_INT(wm.active, 0);
     PASS();
 }
 

@@ -581,6 +581,30 @@ src/gui/gui.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/gui.c.s
 .PHONY : src/gui/gui.c.s
 
+src/gui/panel_notification.o: src/gui/panel_notification.c.o
+.PHONY : src/gui/panel_notification.o
+
+# target to build an object file
+src/gui/panel_notification.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.o
+.PHONY : src/gui/panel_notification.c.o
+
+src/gui/panel_notification.i: src/gui/panel_notification.c.i
+.PHONY : src/gui/panel_notification.i
+
+# target to preprocess a source file
+src/gui/panel_notification.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.i
+.PHONY : src/gui/panel_notification.c.i
+
+src/gui/panel_notification.s: src/gui/panel_notification.c.s
+.PHONY : src/gui/panel_notification.s
+
+# target to generate assembly for a file
+src/gui/panel_notification.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.s
+.PHONY : src/gui/panel_notification.c.s
+
 src/gui/panels/about.o: src/gui/panels/about.c.o
 .PHONY : src/gui/panels/about.o
 
@@ -1264,6 +1288,9 @@ help:
 	@echo "... src/gui/gui.o"
 	@echo "... src/gui/gui.i"
 	@echo "... src/gui/gui.s"
+	@echo "... src/gui/panel_notification.o"
+	@echo "... src/gui/panel_notification.i"
+	@echo "... src/gui/panel_notification.s"
 	@echo "... src/gui/panels/about.o"
 	@echo "... src/gui/panels/about.i"
 	@echo "... src/gui/panels/about.s"
