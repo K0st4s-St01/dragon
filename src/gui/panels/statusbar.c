@@ -5,12 +5,11 @@
 #include "app.h"
 #include "document.h"
 #include "mode.h"
+#include "input.h"
 #include "theme.h"
 #include "gui.h"
 #include "renderer.h"
 #include "lsp.h"
-
-extern const char *input_cmd_get(void);
 
 static const char *mode_name(Mode m) {
     switch (m) {
@@ -23,6 +22,56 @@ static const char *mode_name(Mode m) {
     case MODE_FIND:            return "FIND";
     case MODE_SEARCH:          return "SEARCH";
     default:                   return "?";
+    }
+}
+
+static void draw_command_completions(Gui *g, Renderer *r, Theme *t,
+                                     int win_w, float bar_y) {
+    int count = input_cmd_completion_count();
+    if (count <= 0)
+        return;
+
+    int selected = input_cmd_completion_selected();
+    float row_h = g->font.glyph_h + 6.0f;
+    float panel_w = 560.0f;
+    if (panel_w > (float)win_w - 24.0f)
+        panel_w = (float)win_w - 24.0f;
+    float panel_h = row_h * (float)count + 10.0f;
+    float x = 12.0f;
+    float y = bar_y - panel_h - 4.0f;
+    if (y < 4.0f)
+        y = 4.0f;
+
+    renderer_draw_rect(r, x, y, panel_w, panel_h,
+                       t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], 0.98f);
+    renderer_draw_rect(r, x, y, panel_w, 1.0f,
+                       t->accent[0], t->accent[1], t->accent[2], 1.0f);
+    renderer_draw_rect(r, x, y + panel_h - 1.0f, panel_w, 1.0f,
+                       t->accent[0], t->accent[1], t->accent[2], 1.0f);
+
+    for (int i = 0; i < count; i++) {
+        float row_y = y + 5.0f + (float)i * row_h;
+        if (i == selected) {
+            renderer_draw_rect(r, x + 4.0f, row_y - 2.0f, panel_w - 8.0f, row_h,
+                               t->menu_selected[0], t->menu_selected[1],
+                               t->menu_selected[2], t->menu_selected[3]);
+        }
+
+        const char *name = input_cmd_completion_name(i);
+        const char *detail = input_cmd_completion_detail(i);
+        if (name) {
+            font_draw(&g->font, r, name, x + 12.0f, row_y,
+                      t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+        }
+        if (detail && detail[0]) {
+            float detail_w = font_text_width(&g->font, detail);
+            float detail_x = x + panel_w - detail_w - 12.0f;
+            if (detail_x > x + 180.0f) {
+                font_draw(&g->font, r, detail, detail_x, row_y,
+                          t->gutter_fg[0], t->gutter_fg[1],
+                          t->gutter_fg[2], t->gutter_fg[3]);
+            }
+        }
     }
 }
 
@@ -184,6 +233,7 @@ void panel_statusbar(Gui *g, App *app, Document *doc, ModeState *mode) {
               t->bg[0], t->bg[1], t->bg[2], 1.0f);
 
     if (mode_is(mode, MODE_COMMAND)) {
+        draw_command_completions(g, r, t, w, y);
         const char *cmd = input_cmd_get();
         char cmd_display[192];
         snprintf(cmd_display, sizeof(cmd_display), ":%s", cmd);

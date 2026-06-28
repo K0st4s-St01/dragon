@@ -27,14 +27,74 @@
 #include "panel_notification.h"
 #include "theme.h"
 #include <GLFW/glfw3.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
 
 #define CMD_BUF_MAX 1024
+#define CMD_COMPLETION_MAX 12
 
 static char cmd_buf[CMD_BUF_MAX] = {0};
 static int  cmd_len = 0;
+
+typedef struct {
+    const char *name;
+    const char *detail;
+    bool theme_name;
+} CmdCompletion;
+
+static CmdCompletion cmd_completions[CMD_COMPLETION_MAX];
+static int cmd_completion_count = 0;
+static int cmd_completion_selected = 0;
+static void command_completion_update(void);
+
+static const CmdCompletion static_cmds[] = {
+    {"w", "Write current buffer", false},
+    {"write", "Write current buffer", false},
+    {"q", "Quit", false},
+    {"quit", "Quit", false},
+    {"wq", "Write and quit", false},
+    {"x", "Write and quit", false},
+    {"wqa", "Write all and quit", false},
+    {"qa", "Quit all", false},
+    {"bn", "Next buffer", false},
+    {"bnext", "Next buffer", false},
+    {"bp", "Previous buffer", false},
+    {"bprev", "Previous buffer", false},
+    {"bc", "Close buffer", false},
+    {"bclose", "Close buffer", false},
+    {"new", "New buffer", false},
+    {"n", "New buffer", false},
+    {"e", "Open file", false},
+    {"edit", "Open file", false},
+    {"o", "Open file", false},
+    {"open", "Open file", false},
+    {"r", "Read file into buffer", false},
+    {"read", "Read file into buffer", false},
+    {"mv", "Move/rename file", false},
+    {"move", "Move/rename file", false},
+    {"reload", "Reload current file", false},
+    {"rl", "Reload current file", false},
+    {"reload-all", "Reload current file", false},
+    {"rla", "Reload current file", false},
+    {"sort", "Sort selection", false},
+    {"fmt", "Format document", false},
+    {"format", "Format document", false},
+    {"theme", "Set theme", false},
+    {"colorscheme", "Set theme", false},
+    {"reflow", "Reflow text", false},
+    {"retab", "Convert indentation to tabs", false},
+    {"expandtab", "Convert indentation to spaces", false},
+    {"lsp-stop", "Stop LSP servers", false},
+    {"lsp-restart", "Restart LSP servers", false},
+    {"workspace-symbols", "Workspace symbols", false},
+    {"workspace-diagnostics", "Workspace diagnostics", false},
+    {"tree-sitter-subtree", "Tree-sitter inspector", false},
+    {"ts-subtree", "Tree-sitter inspector", false},
+    {"tree-sitter-highlight-name", "Tree-sitter inspector", false},
+    {"tree-sitter-scopes", "Tree-sitter inspector", false},
+};
 
 static void input_save_all_buffers(App *app) {
     int count = app_get_buffer_count(app);
@@ -81,10 +141,124 @@ static void input_theme_command(App *app, char *arg) {
 void input_cmd_reset(void) {
     cmd_buf[0] = '\0';
     cmd_len = 0;
+    cmd_completion_selected = 0;
+    command_completion_update();
 }
 
 const char *input_cmd_get(void) {
     return cmd_buf;
+}
+
+int input_cmd_completion_count(void) {
+    return cmd_completion_count;
+}
+
+int input_cmd_completion_selected(void) {
+    return cmd_completion_selected;
+}
+
+const char *input_cmd_completion_name(int index) {
+    if (index < 0 || index >= cmd_completion_count) return NULL;
+    return cmd_completions[index].name;
+}
+
+const char *input_cmd_completion_detail(int index) {
+    if (index < 0 || index >= cmd_completion_count) return NULL;
+    return cmd_completions[index].detail;
+}
+
+static bool cmd_has_arg_prefix(const char *cmd, const char *name, const char **arg) {
+    size_t len = strlen(name);
+    if (strncmp(cmd, name, len) != 0)
+        return false;
+    if (cmd[len] != ' ' && cmd[len] != '\0')
+        return false;
+    if (arg)
+        *arg = cmd + len;
+    return true;
+}
+
+static bool command_completion_matches(const char *name, const char *query) {
+    if (!name || !query) return false;
+    if (!*query) return true;
+    size_t qlen = strlen(query);
+    if (strncmp(name, query, qlen) == 0)
+        return true;
+    return strstr(name, query) != NULL;
+}
+
+static bool command_completion_exists(const char *name) {
+    for (int i = 0; i < cmd_completion_count; i++) {
+        if (strcmp(cmd_completions[i].name, name) == 0)
+            return true;
+    }
+    return false;
+}
+
+static void command_completion_add(const char *name, const char *detail, bool theme_name) {
+    if (!name || !*name || cmd_completion_count >= CMD_COMPLETION_MAX)
+        return;
+    if (command_completion_exists(name))
+        return;
+    cmd_completions[cmd_completion_count++] = (CmdCompletion){
+        .name = name,
+        .detail = detail ? detail : "",
+        .theme_name = theme_name,
+    };
+}
+
+static void command_completion_update(void) {
+    cmd_completion_count = 0;
+    if (cmd_completion_selected < 0)
+        cmd_completion_selected = 0;
+
+    const char *arg = NULL;
+    bool completing_theme =
+        cmd_has_arg_prefix(cmd_buf, "theme", &arg) ||
+        cmd_has_arg_prefix(cmd_buf, "colorscheme", &arg);
+    if (completing_theme && arg && *arg == ' ') {
+        while (*arg && isspace((unsigned char)*arg)) arg++;
+        const char *names[32];
+        int count = theme_list_names(names, 32);
+        for (int i = 0; i < count && i < 32; i++) {
+            if (command_completion_matches(names[i], arg))
+                command_completion_add(names[i], "theme", true);
+        }
+    } else {
+        for (size_t i = 0; i < sizeof(static_cmds) / sizeof(static_cmds[0]); i++) {
+            if (command_completion_matches(static_cmds[i].name, cmd_buf))
+                command_completion_add(static_cmds[i].name, static_cmds[i].detail, false);
+        }
+
+        int count = 0;
+        Command *commands = command_get_all(&count);
+        for (int i = 0; commands && i < count; i++) {
+            if (command_completion_matches(commands[i].name, cmd_buf))
+                command_completion_add(commands[i].name, commands[i].label, false);
+        }
+    }
+
+    if (cmd_completion_selected >= cmd_completion_count)
+        cmd_completion_selected = cmd_completion_count > 0 ? cmd_completion_count - 1 : 0;
+}
+
+static void command_completion_accept(void) {
+    if (cmd_completion_count <= 0)
+        return;
+
+    CmdCompletion *item = &cmd_completions[cmd_completion_selected];
+    if (item->theme_name) {
+        const char *arg = NULL;
+        if (cmd_has_arg_prefix(cmd_buf, "theme", &arg)) {
+            snprintf(cmd_buf, sizeof(cmd_buf), "theme %s", item->name);
+        } else if (cmd_has_arg_prefix(cmd_buf, "colorscheme", &arg)) {
+            snprintf(cmd_buf, sizeof(cmd_buf), "colorscheme %s", item->name);
+        }
+    } else {
+        snprintf(cmd_buf, sizeof(cmd_buf), "%s", item->name);
+    }
+    cmd_len = (int)strlen(cmd_buf);
+    command_completion_update();
 }
 
 static char key_to_char(int key, int mods) {
@@ -457,6 +631,7 @@ void input_handle_char(App *app, unsigned int c) {
         if (c >= 32 && c < 127 && cmd_len < CMD_BUF_MAX - 1 && c != ':') {
             cmd_buf[cmd_len++] = (char)c;
             cmd_buf[cmd_len] = '\0';
+            command_completion_update();
         }
     }
 }
@@ -1740,13 +1915,41 @@ static void handle_insert_key(App *app, int key, int action, int mods) {
 }
 
 static void handle_command_key(App *app, int key, int action, int mods) {
-    (void)action; (void)mods;
+    (void)action;
     Document *doc = (Document *)app_get_doc(app);
     ModeState *mode = (ModeState *)app_get_mode(app);
 
     if ((key == GLFW_KEY_BACKSPACE || (key == GLFW_KEY_H && (mods & GLFW_MOD_CONTROL))) && cmd_len > 0) {
         cmd_len--;
         cmd_buf[cmd_len] = '\0';
+        command_completion_update();
+        return;
+    }
+
+    if (key == GLFW_KEY_TAB) {
+        if (cmd_completion_count > 0) {
+            if (mods & GLFW_MOD_SHIFT) {
+                cmd_completion_selected--;
+                if (cmd_completion_selected < 0)
+                    cmd_completion_selected = cmd_completion_count - 1;
+            }
+            command_completion_accept();
+        }
+        return;
+    }
+
+    if (key == GLFW_KEY_DOWN) {
+        if (cmd_completion_count > 0)
+            cmd_completion_selected = (cmd_completion_selected + 1) % cmd_completion_count;
+        return;
+    }
+
+    if (key == GLFW_KEY_UP) {
+        if (cmd_completion_count > 0) {
+            cmd_completion_selected--;
+            if (cmd_completion_selected < 0)
+                cmd_completion_selected = cmd_completion_count - 1;
+        }
         return;
     }
 

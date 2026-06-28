@@ -9,7 +9,7 @@ void lsp_config_load_defaults(LSPManager *manager) {
         "--log=error",
         "--clang-tidy",
         "--header-insertion=never",
-        "--function-arg-placeholders",
+        "--function-arg-placeholders=true",
         "--enable-config"
     };
     lsp_manager_add_server(manager, "c", "clangd", clangd_args, 5);
