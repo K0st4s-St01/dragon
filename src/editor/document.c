@@ -2950,6 +2950,28 @@ static bool diagnostic_uri_matches_document(const LSPDiagnostics *diagnostics, D
     char *doc_uri = filepath_to_uri(doc->filepath);
     if (!doc_uri) return false;
     bool matches = strcmp(diagnostics->uri, doc_uri) == 0;
+    if (!matches) {
+        char decoded[2048];
+        size_t decoded_len = 0;
+        for (const char *p = diagnostics->uri; *p && decoded_len < sizeof(decoded) - 1; p++) {
+            if (*p == '%' && p[1] && p[2]) {
+                int hi = (p[1] >= '0' && p[1] <= '9') ? p[1] - '0' :
+                         (p[1] >= 'a' && p[1] <= 'f') ? p[1] - 'a' + 10 :
+                         (p[1] >= 'A' && p[1] <= 'F') ? p[1] - 'A' + 10 : -1;
+                int lo = (p[2] >= '0' && p[2] <= '9') ? p[2] - '0' :
+                         (p[2] >= 'a' && p[2] <= 'f') ? p[2] - 'a' + 10 :
+                         (p[2] >= 'A' && p[2] <= 'F') ? p[2] - 'A' + 10 : -1;
+                if (hi >= 0 && lo >= 0) {
+                    decoded[decoded_len++] = (char)((hi << 4) | lo);
+                    p += 2;
+                    continue;
+                }
+            }
+            decoded[decoded_len++] = *p;
+        }
+        decoded[decoded_len] = '\0';
+        matches = strcmp(decoded, doc_uri) == 0;
+    }
     free(doc_uri);
     return matches;
 }
@@ -2961,8 +2983,6 @@ void document_notify_lsp_open(Document *doc, void *lsp_manager) {
     LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
     if (!client) return;
     
-    if (doc->buffer.len == 0) return;
-
     char *text = malloc(doc->buffer.len + 1);
     if (!text) return;
 
@@ -3378,6 +3398,7 @@ void document_update_syntax_from_lsp(Document *doc, void *lsp_manager) {
     /* Only process if it's a semantic tokens response, not diagnostics */
     if (strstr(response, "textDocument/publishDiagnostics")) {
         /* It's a diagnostics notification, skip it (will be handled by app_update_diagnostics) */
+        lsp_client_unread_response(client, response);
         free(response);
         free(uri);
         return;
@@ -3437,6 +3458,8 @@ void document_update_diagnostics_from_lsp(Document *doc, void *lsp_manager) {
         } else {
             lsp_free_diagnostics(diagnostics);
         }
+    } else {
+        lsp_client_unread_response(client, response);
     }
     
     free(response);

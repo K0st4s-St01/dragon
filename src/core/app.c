@@ -87,6 +87,27 @@ static void normalize_uri_path(const char *uri, char *out, size_t out_size) {
     /* Strip file:// prefix */
     const char *path = uri;
     if (strncmp(path, "file://", 7) == 0) path += 7;
+
+    char decoded[2048];
+    size_t decoded_len = 0;
+    for (const char *p = path; *p && decoded_len < sizeof(decoded) - 1; p++) {
+        if (*p == '%' && p[1] && p[2]) {
+            int hi = (p[1] >= '0' && p[1] <= '9') ? p[1] - '0' :
+                     (p[1] >= 'a' && p[1] <= 'f') ? p[1] - 'a' + 10 :
+                     (p[1] >= 'A' && p[1] <= 'F') ? p[1] - 'A' + 10 : -1;
+            int lo = (p[2] >= '0' && p[2] <= '9') ? p[2] - '0' :
+                     (p[2] >= 'a' && p[2] <= 'f') ? p[2] - 'a' + 10 :
+                     (p[2] >= 'A' && p[2] <= 'F') ? p[2] - 'A' + 10 : -1;
+            if (hi >= 0 && lo >= 0) {
+                decoded[decoded_len++] = (char)((hi << 4) | lo);
+                p += 2;
+                continue;
+            }
+        }
+        decoded[decoded_len++] = *p;
+    }
+    decoded[decoded_len] = '\0';
+    path = decoded;
     
     /* Simple normalization: copy char by char, handle . and .. */
     const char *seg_start = path;
@@ -198,6 +219,8 @@ static void app_update_diagnostics_from_lsp(App *app) {
         if (client->status != LSP_STATUS_INITIALIZED)
             continue;
 
+        char *deferred[16] = {0};
+        int deferred_count = 0;
         for (int frame = 0; frame < 16; frame++) {
             char *response = lsp_client_read_response(client);
             if (!response)
@@ -209,9 +232,18 @@ static void app_update_diagnostics_from_lsp(App *app) {
                 free(response);
                 continue;
             }
-            lsp_client_unread_response(client, response);
-            free(response);
-            break;
+            if (deferred_count < (int)(sizeof(deferred) / sizeof(deferred[0]))) {
+                deferred[deferred_count++] = response;
+            } else {
+                lsp_client_unread_response(client, response);
+                free(response);
+                break;
+            }
+        }
+
+        for (int d = deferred_count - 1; d >= 0; d--) {
+            lsp_client_unread_response(client, deferred[d]);
+            free(deferred[d]);
         }
     }
 }

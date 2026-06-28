@@ -11,6 +11,7 @@
 #include "dragon_editor/mode.h"
 #include "dragon_editor/syntax.h"
 #include "dragon_editor/document.h"
+#include "dragon_editor/lsp.h"
 
 static int tests_run = 0;
 static int tests_passed = 0;
@@ -1166,6 +1167,44 @@ static void test_syntax_boundary_positions(void) {
     ASSERT_EQ_INT(syntax_get_type_at(&sh, 0, 6), SYNTAX_KEYWORD);
     ASSERT_EQ_INT(syntax_get_type_at(&sh, 0, 7), SYNTAX_NORMAL);
     syntax_free(&sh);
+    PASS();
+}
+
+/* ================================================================
+ * LSP TESTS
+ * ================================================================ */
+
+static void test_lsp_publish_diagnostics_parse(void) {
+    TEST(lsp_publish_diagnostics_parse);
+    const char *json =
+        "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/publishDiagnostics\","
+        "\"params\":{\"uri\":\"file:///tmp/a.c\",\"diagnostics\":["
+        "{\"range\":{\"start\":{\"line\":2,\"character\":4},"
+        "\"end\":{\"line\":2,\"character\":7}},\"severity\":1,"
+        "\"message\":\"expected ] token\",\"code\":\"E1\"}]}}";
+    LSPDiagnostics *diag = lsp_parse_publish_diagnostics_notification(json);
+    ASSERT(diag != NULL);
+    ASSERT_EQ_STR(diag->uri, "file:///tmp/a.c");
+    ASSERT_EQ_INT(diag->count, 1);
+    ASSERT_EQ_INT(diag->items[0].start_line, 2);
+    ASSERT_EQ_INT(diag->items[0].start_col, 4);
+    ASSERT_EQ_INT(diag->items[0].end_col, 7);
+    ASSERT_EQ_INT(diag->items[0].severity, LSP_DIAG_ERROR);
+    ASSERT_EQ_STR(diag->items[0].message, "expected ] token");
+    lsp_free_diagnostics(diag);
+    PASS();
+}
+
+static void test_lsp_publish_diagnostics_empty(void) {
+    TEST(lsp_publish_diagnostics_empty);
+    const char *json =
+        "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/publishDiagnostics\","
+        "\"params\":{\"uri\":\"file:///tmp/a.c\",\"diagnostics\":[]}}";
+    LSPDiagnostics *diag = lsp_parse_publish_diagnostics_notification(json);
+    ASSERT(diag != NULL);
+    ASSERT_EQ_STR(diag->uri, "file:///tmp/a.c");
+    ASSERT_EQ_INT(diag->count, 0);
+    lsp_free_diagnostics(diag);
     PASS();
 }
 
@@ -3832,6 +3871,10 @@ int main(void) {
     test_syntax_multiline_tokens();
     test_syntax_all_types();
     test_syntax_boundary_positions();
+
+    printf("\n[LSP Tests]\n");
+    test_lsp_publish_diagnostics_parse();
+    test_lsp_publish_diagnostics_empty();
 
     printf("\n[Document Tests]\n");
     test_document_init();
