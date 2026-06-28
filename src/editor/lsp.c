@@ -271,6 +271,40 @@ static const char *json_find_range(const char *start, const char *end, const cha
     return find_bytes(start, (size_t)(end - start), needle, strlen(needle));
 }
 
+static const char *json_key_in_range(const char *start, const char *end, const char *key) {
+    if (!start || !end || end < start || !key) return NULL;
+
+    char search[128];
+    snprintf(search, sizeof(search), "\"%s\"", key);
+    size_t search_len = strlen(search);
+    bool in_string = false;
+    bool escape = false;
+
+    for (const char *p = start; p < end && *p; p++) {
+        char c = *p;
+        if (in_string) {
+            if (escape)
+                escape = false;
+            else if (c == '\\')
+                escape = true;
+            else if (c == '"')
+                in_string = false;
+            continue;
+        }
+
+        if (c == '"') {
+            if ((size_t)(end - p) >= search_len && memcmp(p, search, search_len) == 0) {
+                const char *after = json_skip_ws_range(p + search_len, end);
+                if (after < end && *after == ':')
+                    return p;
+            }
+            in_string = true;
+        }
+    }
+
+    return NULL;
+}
+
 static const char *json_matching_delim(const char *open, const char *end,
                                        char open_ch, char close_ch) {
     if (!open || open >= end || *open != open_ch) return NULL;
@@ -306,12 +340,13 @@ static const char *json_matching_delim(const char *open, const char *end,
 
 static const char *json_value_after_key_range(const char *start, const char *end,
                                               const char *key) {
-    char search[128];
-    snprintf(search, sizeof(search), "\"%s\"", key);
-    const char *p = json_find_range(start, end, search);
+    const char *p = json_key_in_range(start, end, key);
     if (!p) return NULL;
 
-    p += strlen(search);
+    p++;
+    while (p < end && *p && *p != '"') p++;
+    if (p >= end || *p != '"') return NULL;
+    p++;
     p = json_skip_ws_range(p, end);
     if (p >= end || *p != ':') return NULL;
     p++;
