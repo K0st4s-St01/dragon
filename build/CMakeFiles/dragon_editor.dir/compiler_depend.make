@@ -1394,12 +1394,15 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o: /home/xator/dragon
   /usr/include/alloca.h \
   /usr/include/bits/atomic_wide_counter.h \
   /usr/include/bits/byteswap.h \
+  /usr/include/bits/cloexec.h \
   /usr/include/bits/confname.h \
   /usr/include/bits/dirent.h \
   /usr/include/bits/dirent_ext.h \
   /usr/include/bits/endian.h \
   /usr/include/bits/endianness.h \
   /usr/include/bits/environments.h \
+  /usr/include/bits/fcntl-linux.h \
+  /usr/include/bits/fcntl.h \
   /usr/include/bits/floatn-common.h \
   /usr/include/bits/floatn.h \
   /usr/include/bits/getopt_core.h \
@@ -1455,6 +1458,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o: /home/xator/dragon
   /usr/include/bits/wordsize.h \
   /usr/include/dirent.h \
   /usr/include/endian.h \
+  /usr/include/fcntl.h \
   /usr/include/features-time64.h \
   /usr/include/features.h \
   /usr/include/gnu/stubs-64.h \

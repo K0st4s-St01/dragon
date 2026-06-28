@@ -354,10 +354,19 @@ void panel_file_browser_key(App *app, int key) {
     case GLFW_KEY_ENTER: {
         if (fb_mode == FB_MODE_NEW_FILE) {
             if (fb_path_len > 0) {
+                const char *target = fb_root;
+                if (fb_count > 0) {
+                    FbEntry *sel = &fb_entries[fb_selected];
+                    if (sel->is_dir && strcmp(sel->name, "..") != 0)
+                        target = sel->path;
+                }
                 char fullpath[FB_PATH_MAX];
-                snprintf(fullpath, sizeof(fullpath), "%s/%s", fb_root, fb_path_input);
+                snprintf(fullpath, sizeof(fullpath), "%s/%s", target, fb_path_input);
                 int fd = open(fullpath, O_CREAT | O_EXCL | O_WRONLY, 0644);
                 if (fd >= 0) close(fd);
+                if (fb_count > 0 && fb_entries[fb_selected].is_dir &&
+                    strcmp(fb_entries[fb_selected].name, "..") != 0)
+                    fb_set_expanded(fb_entries[fb_selected].path, true);
             }
             fb_mode = FB_MODE_OPEN_FILE;
             fb_rebuild();
@@ -365,9 +374,18 @@ void panel_file_browser_key(App *app, int key) {
         }
         if (fb_mode == FB_MODE_NEW_FOLDER) {
             if (fb_path_len > 0) {
+                const char *target = fb_root;
+                if (fb_count > 0) {
+                    FbEntry *sel = &fb_entries[fb_selected];
+                    if (sel->is_dir && strcmp(sel->name, "..") != 0)
+                        target = sel->path;
+                }
                 char fullpath[FB_PATH_MAX];
-                snprintf(fullpath, sizeof(fullpath), "%s/%s", fb_root, fb_path_input);
+                snprintf(fullpath, sizeof(fullpath), "%s/%s", target, fb_path_input);
                 mkdir(fullpath, 0755);
+                if (fb_count > 0 && fb_entries[fb_selected].is_dir &&
+                    strcmp(fb_entries[fb_selected].name, "..") != 0)
+                    fb_set_expanded(fb_entries[fb_selected].path, true);
             }
             fb_mode = FB_MODE_OPEN_FILE;
             fb_rebuild();
