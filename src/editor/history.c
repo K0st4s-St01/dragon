@@ -5,6 +5,8 @@
 void history_init(History *h) {
     memset(h, 0, sizeof(*h));
     h->current = -1;
+    h->next_group = 1;
+    h->active_group = 0;
 }
 
 void history_free(History *h) {
@@ -12,6 +14,8 @@ void history_free(History *h) {
         free(h->entries[i].text);
     memset(h, 0, sizeof(*h));
     h->current = -1;
+    h->next_group = 1;
+    h->active_group = 0;
 }
 
 void history_clear(History *h) {
@@ -19,6 +23,20 @@ void history_clear(History *h) {
         free(h->entries[i].text);
     h->count = 0;
     h->current = -1;
+    h->next_group = 1;
+    h->active_group = 0;
+}
+
+void history_begin_group(History *h) {
+    if (!h || h->active_group) return;
+    if (h->next_group <= 0)
+        h->next_group = 1;
+    h->active_group = h->next_group++;
+}
+
+void history_end_group(History *h) {
+    if (!h) return;
+    h->active_group = 0;
 }
 
 static void push_entry(History *h, OpType type, size_t pos, const char *text,
@@ -50,6 +68,7 @@ static void push_entry(History *h, OpType type, size_t pos, const char *text,
     e->len = len;
     e->cursor_row = cursor_row;
     e->cursor_col = cursor_col;
+    e->group = h->active_group;
     h->count++;
     h->current = h->count - 1;
 }

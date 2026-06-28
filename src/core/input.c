@@ -19,6 +19,7 @@
 #include "panel_palette.h"
 #include "panel_settings.h"
 #include "panel_treesitter_inspector.h"
+#include "panel_terminal.h"
 #include "panel_workspace_symbols.h"
 #include "panel_workspace_diagnostics.h"
 #include "panel_completion.h"
@@ -47,6 +48,78 @@ void input_cmd_reset(void) {
 
 const char *input_cmd_get(void) {
     return cmd_buf;
+}
+
+static char key_to_char(int key, int mods) {
+    bool shift = (mods & GLFW_MOD_SHIFT) != 0;
+
+    if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
+        return (char)((shift ? 'A' : 'a') + (key - GLFW_KEY_A));
+
+    if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) {
+        static const char shifted_digits[] = ")!@#$%^&*(";
+        int idx = key - GLFW_KEY_0;
+        return shift ? shifted_digits[idx] : (char)('0' + idx);
+    }
+
+    switch (key) {
+    case GLFW_KEY_SPACE: return ' ';
+    case GLFW_KEY_APOSTROPHE: return shift ? '"' : '\'';
+    case GLFW_KEY_GRAVE_ACCENT: return shift ? '~' : '`';
+    case GLFW_KEY_COMMA: return shift ? '<' : ',';
+    case GLFW_KEY_PERIOD: return shift ? '>' : '.';
+    case GLFW_KEY_LEFT_BRACKET: return shift ? '{' : '[';
+    case GLFW_KEY_RIGHT_BRACKET: return shift ? '}' : ']';
+    case GLFW_KEY_BACKSLASH: return shift ? '|' : '\\';
+    case GLFW_KEY_SLASH: return shift ? '?' : '/';
+    case GLFW_KEY_SEMICOLON: return shift ? ':' : ';';
+    case GLFW_KEY_MINUS: return shift ? '_' : '-';
+    case GLFW_KEY_EQUAL: return shift ? '+' : '=';
+    default: return 0;
+    }
+}
+
+static char key_to_object_char(int key, int mods) {
+    char c = key_to_char(key, mods);
+    if (c >= 'A' && c <= 'Z')
+        c = (char)(c - 'A' + 'a');
+    return c;
+}
+
+static void record_last_insert_char(ModeState *mode, char c, int cursor_delta) {
+    if (mode->last_insert_len < (int)sizeof(mode->last_insert_text) - 1) {
+        mode->last_insert_text[mode->last_insert_len++] = c;
+        mode->last_insert_text[mode->last_insert_len] = '\0';
+        mode->last_insert_cursor_delta += cursor_delta;
+    }
+}
+
+static void insert_backspace(Document *doc, ModeState *mode) {
+    if (doc->cursor_count > 1)
+        document_delete_char_multi(doc);
+    else
+        document_delete_char(doc);
+    if (mode->last_insert_len > 0) {
+        mode->last_insert_len--;
+        mode->last_insert_text[mode->last_insert_len] = '\0';
+        mode->last_insert_cursor_delta--;
+    }
+}
+
+static void insert_newline(Document *doc, ModeState *mode) {
+    if (doc->cursor_count > 1)
+        document_newline_multi(doc);
+    else
+        document_newline(doc);
+    record_last_insert_char(mode, '\n', -mode->last_insert_cursor_delta);
+}
+
+static void insert_tab(Document *doc, ModeState *mode) {
+    if (doc->cursor_count > 1)
+        document_insert_char_multi(doc, '\t');
+    else
+        document_insert_char(doc, '\t');
+    record_last_insert_char(mode, '\t', 1);
 }
 
 static void handle_normal_key(App *app, int key, int action, int mods);
@@ -102,8 +175,17 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
 
     ModeState *mode = (ModeState *)app_get_mode(app);
 
+    if (key == GLFW_KEY_GRAVE_ACCENT && (mods & GLFW_MOD_CONTROL)) {
+        if (panel_terminal_is_open())
+            panel_terminal_close(app);
+        else
+            panel_terminal_open(app);
+        return;
+    }
+
     /* Global escape */
     if (key == GLFW_KEY_ESCAPE) {
+        if (panel_terminal_is_open()) { panel_terminal_close(app); return; }
         if (panel_file_browser_is_open()) { panel_file_browser_close(app); return; }
         if (panel_find_is_open()) { panel_find_close(app); return; }
         if (panel_goto_is_open()) { panel_goto_close(app); return; }
@@ -139,6 +221,11 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
             mode->pending_key = 0;
             return;
         }
+    }
+
+    if (panel_terminal_is_open()) {
+        panel_terminal_key(app, key, mods);
+        return;
     }
 
     /* Route keys to find panel when open */
@@ -250,6 +337,11 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
 void input_handle_char(App *app, unsigned int c) {
     ModeState *mode = (ModeState *)app_get_mode(app);
     
+    if (panel_terminal_is_open()) {
+        panel_terminal_input(app, c);
+        return;
+    }
+
     if (panel_completion_is_open()) {
         panel_completion_close(app);
     }
@@ -365,7 +457,8 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
     }
 
     /* Get repeat count (default 1) */
-    int count = mode->count > 0 ? mode->count : 1;
+    bool had_count = mode->count > 0;
+    int count = had_count ? mode->count : 1;
     mode->count = 0;
 
     /* Pending key handling */
@@ -379,20 +472,12 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         }
 
         if (pk == 'r') {
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
-                c = (char)((mods & GLFW_MOD_SHIFT) ? 'A' : 'a') + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9)
-                c = (char)('0' + (key - GLFW_KEY_0));
-            else if (key == GLFW_KEY_SPACE) c = ' ';
+            char c = key_to_char(key, mods);
             if (c) document_replace_selection_char(doc, c);
             return;
         }
         if (pk == 'f') {
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
-            else if (key == GLFW_KEY_SPACE) c = ' ';
+            char c = key_to_char(key, mods);
             if (c) {
                 document_find_char_forward(doc, c);
                 mode->last_motion_type = 'f';
@@ -401,10 +486,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             return;
         }
         if (pk == 'F') {
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
-            else if (key == GLFW_KEY_SPACE) c = ' ';
+            char c = key_to_char(key, mods);
             if (c) {
                 document_find_char_backward(doc, c);
                 mode->last_motion_type = 'F';
@@ -413,10 +495,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             return;
         }
         if (pk == 't') {
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
-            else if (key == GLFW_KEY_SPACE) c = ' ';
+            char c = key_to_char(key, mods);
             if (c) {
                 document_till_char_forward(doc, c);
                 mode->last_motion_type = 't';
@@ -425,10 +504,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             return;
         }
         if (pk == 'T') {
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
-            else if (key == GLFW_KEY_SPACE) c = ' ';
+            char c = key_to_char(key, mods);
             if (c) {
                 document_till_char_backward(doc, c);
                 mode->last_motion_type = 'T';
@@ -479,6 +555,16 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                 mode->pending_len = 1;
                 return;
             }
+            if (key == GLFW_KEY_I && !(mods & GLFW_MOD_SHIFT)) {
+                mode->pending_text_obj = 'i';
+                mode->pending_key = 'i';
+                return;
+            }
+            if (key == GLFW_KEY_A && !(mods & GLFW_MOD_SHIFT)) {
+                mode->pending_text_obj = 'a';
+                mode->pending_key = 'i';
+                return;
+            }
             if (key == GLFW_KEY_M) {
                 /* mm = go to matching bracket */
                 document_match_bracket(doc);
@@ -488,45 +574,21 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         }
         if (pk == 's' && mode->pending_len == 1 && mode->pending_keys[0] == 'm') {
             /* ms<char> = surround with char */
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
-            else if (key == GLFW_KEY_SPACE) c = ' ';
-            else if (key == GLFW_KEY_9) c = '(';
-            else if (key == GLFW_KEY_0) c = ')';
-            else if (key == GLFW_KEY_MINUS) c = '_';
-            else if (key == GLFW_KEY_COMMA) c = '<';
-            else if (key == GLFW_KEY_PERIOD) c = '>';
-            else if (key == GLFW_KEY_LEFT_BRACKET) c = '[';
-            else if (key == GLFW_KEY_RIGHT_BRACKET) c = ']';
-            else if (key == GLFW_KEY_MINUS) c = '_';
+            char c = key_to_char(key, mods);
             if (c) document_surround(doc, c);
             mode->pending_len = 0;
             return;
         }
         if (pk == 'd' && mode->pending_len == 1 && mode->pending_keys[0] == 'm') {
             /* md<char> = delete surrounding char */
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
-            else if (key == GLFW_KEY_9) c = '(';
-            else if (key == GLFW_KEY_0) c = ')';
-            else if (key == GLFW_KEY_LEFT_BRACKET) c = '[';
-            else if (key == GLFW_KEY_RIGHT_BRACKET) c = ']';
+            char c = key_to_char(key, mods);
             if (c) document_delete_surround(doc, c);
             mode->pending_len = 0;
             return;
         }
         if (pk == 'r' && mode->pending_len == 1 && mode->pending_keys[0] == 'm') {
             /* mr<from><to> = replace surrounding delimiter */
-            char from = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) from = 'a' + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) from = '0' + (key - GLFW_KEY_0);
-            else if (key == GLFW_KEY_9) from = '(';
-            else if (key == GLFW_KEY_0) from = ')';
-            else if (key == GLFW_KEY_LEFT_BRACKET) from = '[';
-            else if (key == GLFW_KEY_RIGHT_BRACKET) from = ']';
-            else if (key == GLFW_KEY_MINUS) from = '_';
+            char from = key_to_char(key, mods);
             if (from) {
                 mode->pending_keys[0] = 'r';
                 mode->pending_keys[1] = from;
@@ -539,14 +601,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         if (pk == 'r' && mode->pending_len == 2 && mode->pending_keys[0] == 'r') {
             /* mr<from><to> second char */
             char from = mode->pending_keys[1];
-            char to = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) to = 'a' + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) to = '0' + (key - GLFW_KEY_0);
-            else if (key == GLFW_KEY_9) to = '(';
-            else if (key == GLFW_KEY_0) to = ')';
-            else if (key == GLFW_KEY_LEFT_BRACKET) to = '[';
-            else if (key == GLFW_KEY_RIGHT_BRACKET) to = ']';
-            else if (key == GLFW_KEY_MINUS) to = '_';
+            char to = key_to_char(key, mods);
             if (to) document_replace_surround(doc, from, to);
             mode->pending_len = 0;
             return;
@@ -555,17 +610,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             /* Text object: i<a/w/(/)/[/]/{/}/</>/< /"/'/`/p> */
             char obj = mode->pending_text_obj;  /* 'i' or 'a' */
             bool inner = (obj == 'i');
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
-            else if (key == GLFW_KEY_9) c = '(';
-            else if (key == GLFW_KEY_0) c = ')';
-            else if (key == GLFW_KEY_LEFT_BRACKET) c = (mods & GLFW_MOD_SHIFT) ? '{' : '[';
-            else if (key == GLFW_KEY_RIGHT_BRACKET) c = (mods & GLFW_MOD_SHIFT) ? '}' : ']';
-            else if (key == GLFW_KEY_COMMA) c = '<';
-            else if (key == GLFW_KEY_PERIOD) c = '>';
-            else if (key == GLFW_KEY_MINUS) c = '_';
-            else if (key == GLFW_KEY_BACKSLASH) c = '\\';
-            else if (key == GLFW_KEY_P) c = 'p';  /* paragraph */
+            char c = key_to_object_char(key, mods);
 
             if (c) {
                 /* Ensure cursor has a selection anchor */
@@ -577,8 +622,8 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                 case '(': case ')': inner ? document_select_inside_paren(doc) : document_select_around_paren(doc); break;
                 case '[': case ']': inner ? document_select_inside_bracket(doc) : document_select_around_bracket(doc); break;
                 case '{': case '}': inner ? document_select_inside_curly(doc) : document_select_around_curly(doc); break;
-                case '<': inner ? document_select_inside_angle(doc) : document_select_around_angle(doc); break;
-                case '"': inner ? document_select_inside_quote(doc) : document_select_around_quote(doc); break;
+                case '<': case '>': inner ? document_select_inside_angle(doc) : document_select_around_angle(doc); break;
+                case '"': case '\'': inner ? document_select_inside_quote(doc) : document_select_around_quote(doc); break;
                 case '`': inner ? document_select_inside_backtick(doc) : document_select_around_backtick(doc); break;
                 case 'p': inner ? document_select_inside_paragraph(doc) : document_select_around_paragraph(doc); break;
                 default: break;
@@ -740,8 +785,13 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                   return;
               }
               if (key == GLFW_KEY_T) {
-                  /* Space t - tree-sitter node inspector */
-                  panel_treesitter_inspector_open(app);
+                  if (mods & GLFW_MOD_SHIFT) {
+                      /* Space T - terminal panel */
+                      panel_terminal_open(app);
+                  } else {
+                      /* Space t - tree-sitter node inspector */
+                      panel_treesitter_inspector_open(app);
+                  }
                   mode->pending_len = 0;
                   return;
               }
@@ -852,13 +902,12 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             document_goto_last_modification(doc); /* g. - go to last modification */
         else if (key == GLFW_KEY_BACKSLASH) {
             /* g| - go to column number (count required) */
-            if (mode->count > 0) {
+            if (had_count) {
                 Cursor *cur = &doc->cursors[0];
-                int target = mode->count - 1;
+                int target = count - 1;
                 int len = (int)buffer_line_len(&doc->buffer, cur->row);
                 cur->col = target < len ? target : len;
             }
-            mode->count = 0;
         }
         return;
     }
@@ -872,7 +921,10 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         }
         switch (key) {
         case GLFW_KEY_SEMICOLON:
-            document_flip_cursor_anchor(doc);
+            if (mods & GLFW_MOD_SHIFT)
+                document_force_selection_forward(doc);
+            else
+                document_flip_cursor_anchor(doc);
             return;
         case GLFW_KEY_D:
             document_delete_selection(doc);
@@ -885,10 +937,16 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             document_split_selection_newlines(doc);
             return;
         case GLFW_KEY_MINUS:
-            document_merge_selections(doc);
+            if (mods & GLFW_MOD_SHIFT)
+                document_merge_consecutive_selections(doc);
+            else
+                document_merge_selections(doc);
             return;
         case GLFW_KEY_J:
             document_join_lines_with_space(doc);
+            return;
+        case GLFW_KEY_X:
+            document_shrink_to_line_bounds(doc);
             return;
         case GLFW_KEY_GRAVE_ACCENT:
             document_uppercase(doc);
@@ -955,6 +1013,12 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         case GLFW_KEY_U:
             document_half_page_up(doc, doc->viewport_lines);
             return;
+        case GLFW_KEY_F:
+            document_cursor_page_down(doc);
+            return;
+        case GLFW_KEY_B:
+            document_cursor_page_up(doc);
+            return;
         case GLFW_KEY_C:
             document_comment_toggle(doc);
             return;
@@ -1002,21 +1066,11 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         return;
     }
 
-    /* Alt-. - Repeat last motion (stub) */
-    if (key == GLFW_KEY_PERIOD && (mods & GLFW_MOD_ALT)) {
-        return;
-    }
-
     /* : (Shift+semicolon) - Command mode */
-    if (key == GLFW_KEY_SEMICOLON && (mods & GLFW_MOD_SHIFT)) {
+    if (key == GLFW_KEY_SEMICOLON && (mods & GLFW_MOD_SHIFT) &&
+        !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
         mode_set(mode, MODE_COMMAND);
         input_cmd_reset();
-        return;
-    }
-
-    /* Alt-; - Flip cursor and anchor */
-    if (key == GLFW_KEY_SEMICOLON && (mods & GLFW_MOD_ALT)) {
-        document_flip_cursor_anchor(doc);
         return;
     }
 
@@ -1039,11 +1093,6 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         return;
     }
 
-    /* Alt-: - Force selection direction forward */
-    if (key == GLFW_KEY_SEMICOLON && (mods & GLFW_MOD_ALT)) {
-        document_force_selection_forward(doc);
-        return;
-    }
 
     /* ( ) - Rotate selections */
     if (key == GLFW_KEY_9 && !(mods & GLFW_MOD_SHIFT)) {
@@ -1057,13 +1106,18 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
 
     /* G - Go to line number or end of file */
     if (key == GLFW_KEY_G && !(mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL)) {
+        if (had_count)
+            mode->count = count;
         mode->g_pending = true;
         return;
     }
 
     /* Shift+G - Go to end of file */
     if (key == GLFW_KEY_G && (mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL)) {
-        document_cursor_doc_end(doc);
+        if (had_count)
+            document_cursor_to(doc, count - 1, 0);
+        else
+            document_cursor_doc_end(doc);
         return;
     }
 
@@ -1156,7 +1210,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
     }
 
     /* K - Keep selections matching */
-    if (key == GLFW_KEY_K && !(mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+    if (key == GLFW_KEY_K && (mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
         panel_find_open_ex(app, doc, FR_ACTION_KEEP);
         return;
     }
@@ -1219,6 +1273,13 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         goto finish_normal_key;
     }
 
+    /* J - Join lines inside selection */
+    if (key == GLFW_KEY_J && (mods & GLFW_MOD_SHIFT) &&
+        !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+        document_join_lines_selection(doc);
+        goto finish_normal_key;
+    }
+
     switch (key) {
     /* Mode switching */
     case GLFW_KEY_I: mode_set(mode, MODE_INSERT); goto finish_normal_key;
@@ -1246,7 +1307,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
 
     /* Navigation (with count) */
     case GLFW_KEY_H: case GLFW_KEY_LEFT:  for (int i = 0; i < count; i++) document_move_cursor(doc, 0, -1); goto finish_normal_key;
-    case GLFW_KEY_DOWN:  for (int i = 0; i < count; i++) document_move_cursor(doc, 1, 0); goto finish_normal_key;
+    case GLFW_KEY_J: case GLFW_KEY_DOWN:  for (int i = 0; i < count; i++) document_move_cursor(doc, 1, 0); goto finish_normal_key;
     case GLFW_KEY_K: case GLFW_KEY_UP:    for (int i = 0; i < count; i++) document_move_cursor(doc, -1, 0); goto finish_normal_key;
     case GLFW_KEY_L: case GLFW_KEY_RIGHT: for (int i = 0; i < count; i++) document_move_cursor(doc, 0, 1); goto finish_normal_key;
     case GLFW_KEY_HOME:  document_cursor_home(doc); goto finish_normal_key;
@@ -1301,11 +1362,6 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                 }
             }
         }
-        goto finish_normal_key;
-
-    /* J - Join lines inside selection */
-    case GLFW_KEY_J:
-        document_join_lines_selection(doc);
         goto finish_normal_key;
 
     /* % - Select entire file */
@@ -1440,7 +1496,7 @@ static void handle_insert_key(App *app, int key, int action, int mods) {
     Document *doc = (Document *)app_get_doc(app);
     ModeState *mode = (ModeState *)app_get_mode(app);
 
-    /* Ctrl-w / Alt-Backspace - delete previous word */
+    /* Ctrl-x - completion */
     if (key == GLFW_KEY_X && (mods & GLFW_MOD_CONTROL)) {
         panel_completion_open(app);
         return;
@@ -1483,6 +1539,18 @@ static void handle_insert_key(App *app, int key, int action, int mods) {
             cur->col = start;
             document_mark_dirty(doc);
         }
+        return;
+    }
+
+    /* Ctrl-h / Backspace - delete previous char */
+    if (key == GLFW_KEY_H && (mods & GLFW_MOD_CONTROL)) {
+        insert_backspace(doc, mode);
+        return;
+    }
+
+    /* Ctrl-j / Enter - insert newline */
+    if (key == GLFW_KEY_J && (mods & GLFW_MOD_CONTROL)) {
+        insert_newline(doc, mode);
         return;
     }
 
@@ -1532,9 +1600,12 @@ static void handle_insert_key(App *app, int key, int action, int mods) {
         return;
     }
 
-    /* Ctrl-z - undo */
+    /* Ctrl-z / Ctrl-Shift-z - undo/redo */
     if (key == GLFW_KEY_Z && (mods & GLFW_MOD_CONTROL)) {
-        document_undo(doc);
+        if (mods & GLFW_MOD_SHIFT)
+            document_redo(doc);
+        else
+            document_undo(doc);
         return;
     }
 
@@ -1563,36 +1634,13 @@ static void handle_insert_key(App *app, int key, int action, int mods) {
         mode_set(mode, MODE_NORMAL);
         break;
     case GLFW_KEY_BACKSPACE:
-        if (doc->cursor_count > 1)
-            document_delete_char_multi(doc);
-        else
-            document_delete_char(doc);
-        if (mode->last_insert_len > 0) {
-            mode->last_insert_len--;
-            mode->last_insert_cursor_delta--;
-        }
+        insert_backspace(doc, mode);
         break;
     case GLFW_KEY_ENTER:
-        if (doc->cursor_count > 1)
-            document_newline_multi(doc);
-        else
-            document_newline(doc);
-        if (mode->last_insert_len < 4095) {
-            mode->last_insert_text[mode->last_insert_len++] = '\n';
-            mode->last_insert_text[mode->last_insert_len] = '\0';
-            mode->last_insert_cursor_delta = 0;
-        }
+        insert_newline(doc, mode);
         break;
     case GLFW_KEY_TAB:
-        if (doc->cursor_count > 1)
-            document_insert_char_multi(doc, '\t');
-        else
-            document_insert_char(doc, '\t');
-        if (mode->last_insert_len < 4095) {
-            mode->last_insert_text[mode->last_insert_len++] = '\t';
-            mode->last_insert_text[mode->last_insert_len] = '\0';
-            mode->last_insert_cursor_delta++;
-        }
+        insert_tab(doc, mode);
         break;
     case GLFW_KEY_HOME:
         document_cursor_home(doc);
@@ -1628,7 +1676,7 @@ static void handle_command_key(App *app, int key, int action, int mods) {
     Document *doc = (Document *)app_get_doc(app);
     ModeState *mode = (ModeState *)app_get_mode(app);
 
-    if (key == GLFW_KEY_BACKSPACE && cmd_len > 0) {
+    if ((key == GLFW_KEY_BACKSPACE || (key == GLFW_KEY_H && (mods & GLFW_MOD_CONTROL))) && cmd_len > 0) {
         cmd_len--;
         cmd_buf[cmd_len] = '\0';
         return;
@@ -1833,7 +1881,45 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             return;
         }
         if (key == GLFW_KEY_SEMICOLON) {
-            document_flip_cursor_anchor(doc);
+            if (mods & GLFW_MOD_SHIFT)
+                document_force_selection_forward(doc);
+            else
+                document_flip_cursor_anchor(doc);
+            return;
+        }
+        if (key == GLFW_KEY_MINUS) {
+            if (mods & GLFW_MOD_SHIFT)
+                document_merge_consecutive_selections(doc);
+            else
+                document_merge_selections(doc);
+            return;
+        }
+        if (key == GLFW_KEY_S) {
+            document_split_selection_newlines(doc);
+            return;
+        }
+        if (key == GLFW_KEY_J) {
+            document_join_lines_with_space(doc);
+            return;
+        }
+        if (key == GLFW_KEY_K) {
+            panel_find_open_ex(app, doc, FR_ACTION_REMOVE);
+            return;
+        }
+        if (key == GLFW_KEY_X) {
+            document_shrink_to_line_bounds(doc);
+            return;
+        }
+        if (key == GLFW_KEY_GRAVE_ACCENT) {
+            document_uppercase(doc);
+            return;
+        }
+        if (key == GLFW_KEY_9 && (mods & GLFW_MOD_SHIFT)) {
+            document_rotate_selection_contents_backward(doc);
+            return;
+        }
+        if (key == GLFW_KEY_0 && (mods & GLFW_MOD_SHIFT)) {
+            document_rotate_selection_contents_forward(doc);
             return;
         }
         if (key == GLFW_KEY_COMMA) {
@@ -1883,6 +1969,26 @@ static void handle_select_key(App *app, int key, int action, int mods) {
         return;
     }
 
+    if (key == GLFW_KEY_S && !(mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+        panel_find_open_ex(app, doc, FR_ACTION_SELECT);
+        return;
+    }
+
+    if (key == GLFW_KEY_S && (mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+        panel_find_open_ex(app, doc, FR_ACTION_SPLIT);
+        return;
+    }
+
+    if (key == GLFW_KEY_K && (mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+        panel_find_open_ex(app, doc, FR_ACTION_KEEP);
+        return;
+    }
+
+    if (key == GLFW_KEY_J && (mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+        document_join_lines_selection(doc);
+        return;
+    }
+
     /* Pending keys in select mode */
     if (mode->pending_key) {
         char pk = mode->pending_key;
@@ -1894,10 +2000,7 @@ static void handle_select_key(App *app, int key, int action, int mods) {
         }
 
         if (pk == 'f') {
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
-            else if (key == GLFW_KEY_SPACE) c = ' ';
+            char c = key_to_char(key, mods);
             if (c) {
                 document_find_char_forward(doc, c);
                 mode->last_motion_type = 'f';
@@ -1906,10 +2009,7 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             return;
         }
         if (pk == 'F') {
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
-            else if (key == GLFW_KEY_SPACE) c = ' ';
+            char c = key_to_char(key, mods);
             if (c) {
                 document_find_char_backward(doc, c);
                 mode->last_motion_type = 'F';
@@ -1918,10 +2018,7 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             return;
         }
         if (pk == 't') {
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
-            else if (key == GLFW_KEY_SPACE) c = ' ';
+            char c = key_to_char(key, mods);
             if (c) {
                 document_till_char_forward(doc, c);
                 mode->last_motion_type = 't';
@@ -1930,10 +2027,7 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             return;
         }
         if (pk == 'T') {
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
-            else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) c = '0' + (key - GLFW_KEY_0);
-            else if (key == GLFW_KEY_SPACE) c = ' ';
+            char c = key_to_char(key, mods);
             if (c) {
                 document_till_char_backward(doc, c);
                 mode->last_motion_type = 'T';
@@ -1945,16 +2039,7 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             /* Text object in select mode: extends selection */
             char obj = mode->pending_text_obj;
             bool inner = (obj == 'i');
-            char c = 0;
-            if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) c = 'a' + (key - GLFW_KEY_A);
-            else if (key == GLFW_KEY_9) c = '(';
-            else if (key == GLFW_KEY_0) c = ')';
-            else if (key == GLFW_KEY_LEFT_BRACKET) c = (mods & GLFW_MOD_SHIFT) ? '{' : '[';
-            else if (key == GLFW_KEY_RIGHT_BRACKET) c = (mods & GLFW_MOD_SHIFT) ? '}' : ']';
-            else if (key == GLFW_KEY_COMMA) c = '<';
-            else if (key == GLFW_KEY_PERIOD) c = '>';
-            else if (key == GLFW_KEY_MINUS) c = '_';
-            else if (key == GLFW_KEY_P) c = 'p';
+            char c = key_to_object_char(key, mods);
 
             if (c) {
                 Cursor *cur = &doc->cursors[0];
@@ -1964,8 +2049,8 @@ static void handle_select_key(App *app, int key, int action, int mods) {
                 case '(': case ')': inner ? document_select_inside_paren(doc) : document_select_around_paren(doc); break;
                 case '[': case ']': inner ? document_select_inside_bracket(doc) : document_select_around_bracket(doc); break;
                 case '{': case '}': inner ? document_select_inside_curly(doc) : document_select_around_curly(doc); break;
-                case '<': inner ? document_select_inside_angle(doc) : document_select_around_angle(doc); break;
-                case '"': inner ? document_select_inside_quote(doc) : document_select_around_quote(doc); break;
+                case '<': case '>': inner ? document_select_inside_angle(doc) : document_select_around_angle(doc); break;
+                case '"': case '\'': inner ? document_select_inside_quote(doc) : document_select_around_quote(doc); break;
                 case '`': inner ? document_select_inside_backtick(doc) : document_select_around_backtick(doc); break;
                 case 'p': inner ? document_select_inside_paragraph(doc) : document_select_around_paragraph(doc); break;
                 default: break;
@@ -1995,7 +2080,7 @@ static void handle_select_key(App *app, int key, int action, int mods) {
         break;
     /* Navigation - extends selection */
     case GLFW_KEY_H: case GLFW_KEY_LEFT:  document_move_cursor(doc, 0, -1); break;
-    case GLFW_KEY_DOWN:  document_move_cursor(doc, 1, 0); break;
+    case GLFW_KEY_J: case GLFW_KEY_DOWN:  document_move_cursor(doc, 1, 0); break;
     case GLFW_KEY_K: case GLFW_KEY_UP:    document_move_cursor(doc, -1, 0); break;
     case GLFW_KEY_L: case GLFW_KEY_RIGHT: document_move_cursor(doc, 0, 1); break;
     case GLFW_KEY_HOME:  document_cursor_home(doc); break;
@@ -2058,11 +2143,6 @@ static void handle_select_key(App *app, int key, int action, int mods) {
         break;
     }
 
-    /* J - Join lines in selection */
-    case GLFW_KEY_J:
-        document_join_lines_selection(doc);
-        break;
-
     /* p / P - Paste after/before */
     case GLFW_KEY_P:
         if (mods & GLFW_MOD_SHIFT)
@@ -2108,6 +2188,10 @@ static void handle_select_key(App *app, int key, int action, int mods) {
     /* % - Select entire file */
     case GLFW_KEY_5:
         document_select_all(doc);
+        break;
+
+    case GLFW_KEY_EQUAL:
+        document_format_selection(doc);
         break;
 
     default: break;

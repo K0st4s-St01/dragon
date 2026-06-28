@@ -29,30 +29,30 @@ Helix is selection-first:
   - [x] ~~Match mode: `m`~~
   - [x] ~~View mode: `z`~~
   - [x] ~~Sticky view mode: `Z`~~
-  - [ ] Window mode: `Ctrl-w`
+  - [x] ~~Window mode: `Ctrl-w`~~
   - [x] ~~Space mode: `Space`~~
 
 ### P0 — Selections
 
-- [x] Store one or more selections.
-- [x] Store one primary selection.
-- [x] Each selection must have:
-  - [x] anchor
-  - [x] head/cursor
-  - [x] direction
-- [x] Normal-mode movement replaces the current selection.
-- [x] Select-mode movement extends the current selection.
-- [x] Editing commands operate on all selections.
-- [x] Commands that need a single cursor use the primary selection.
+- [x] ~~Store one or more selections.~~
+- [x] ~~Store one primary selection.~~
+- [x] ~~Each selection must have:~~
+  - [x] ~~anchor~~
+  - [x] ~~head/cursor~~
+  - [x] ~~direction~~
+- [x] ~~Normal-mode movement replaces the current selection.~~
+- [x] ~~Select-mode movement extends the current selection.~~
+- [x] ~~Editing commands operate on all selections.~~
+- [x] ~~Commands that need a single cursor use the primary selection.~~
 
 ### P0 — Undo/Redo
 
-- [x] `u` — undo.
-- [x] `U` — redo.
-- [x] `Alt-u` — move backward in history.
-- [x] `Alt-U` — move forward in history.
-- [x] Insert-mode edits become one undo checkpoint when leaving insert mode.
-- [x] `Ctrl-s` in insert mode commits an undo checkpoint.
+- [x] ~~`u` — undo.~~
+- [x] ~~`U` — redo.~~
+- [x] ~~`Alt-u` — move backward in history.~~
+- [x] ~~`Alt-U` — move forward in history.~~
+- [x] ~~Insert-mode edits become one undo checkpoint when leaving insert mode.~~
+- [x] ~~`Ctrl-s` in insert mode commits an undo checkpoint.~~
 
 ---
 
@@ -92,31 +92,31 @@ Notes:
 
 ## 2.2 Changes
 
-- [x] `r<char>` — replace selection with character.
-- [x] `R` — replace selection with yanked text.
-- [x] `~` — toggle case of selected text.
-- [x] `` ` `` — lowercase selected text.
-- [x] `Alt-\`` — uppercase selected text.
-- [x] `i` — enter insert mode before selection.
-- [x] `a` — enter insert mode after selection.
-- [x] `I` — insert at line start.
-- [x] `A` — insert at line end.
-- [x] `o` — open new line below selection and enter insert mode.
-- [x] `O` — open new line above selection and enter insert mode.
-- [x] `.` — repeat last insert.
-- [x] `y` — yank selection.
-- [x] `p` — paste after selection.
-- [x] `P` — paste before selection.
+- [x] ~~`r<char>` — replace selection with character.~~
+- [x] ~~`R` — replace selection with yanked text.~~
+- [x] ~~`~` — toggle case of selected text.~~
+- [x] ~~`` ` `` — lowercase selected text.~~
+- [x] ~~`Alt-\`` — uppercase selected text.~~
+- [x] ~~`i` — enter insert mode before selection.~~
+- [x] ~~`a` — enter insert mode after selection.~~
+- [x] ~~`I` — insert at line start.~~
+- [x] ~~`A` — insert at line end.~~
+- [x] ~~`o` — open new line below selection and enter insert mode.~~
+- [x] ~~`O` — open new line above selection and enter insert mode.~~
+- [x] ~~`.` — repeat last insert.~~
+- [x] ~~`y` — yank selection.~~
+- [x] ~~`p` — paste after selection.~~
+- [x] ~~`P` — paste before selection.~~
 - [ ] `"` followed by register — select register.
-- [x] `>` — indent selection.
-- [x] `<` — unindent selection.
-- [x] `=` — format selection using formatter/LSP.
-- [x] `d` — delete selection.
-- [x] `Alt-d` — delete selection without yanking.
-- [x] `c` — change selection: delete and enter insert mode.
-- [x] `Alt-c` — change selection without yanking.
-- [x] `Ctrl-a` — increment number/object under cursor.
-- [x] `Ctrl-x` — decrement number/object under cursor.
+- [x] ~~`>` — indent selection.~~
+- [x] ~~`<` — unindent selection.~~
+- [x] ~~`=` — format selection using formatter/LSP.~~
+- [x] ~~`d` — delete selection.~~
+- [x] ~~`Alt-d` — delete selection without yanking.~~
+- [x] ~~`c` — change selection: delete and enter insert mode.~~
+- [x] ~~`Alt-c` — change selection without yanking.~~
+- [x] ~~`Ctrl-a` — increment number/object under cursor.~~
+- [x] ~~`Ctrl-x` — decrement number/object under cursor.~~
 
 Removed Vim-style items:
 - [ ] Do not implement `dd` as the canonical delete-line command. In Helix, use `x` then `d`.
@@ -127,33 +127,33 @@ Removed Vim-style items:
 
 ## 2.3 Selection Manipulation
 
-- [x] `s` — select all matches inside current selections.
-- [x] `S` — split selections on matches.
-- [x] `Alt-s` — split selection on newlines.
-- [x] `Alt-minus` — merge selections.
-- [x] `Alt-_` — merge consecutive selections.
-- [x] `&` — align selections in columns.
-- [x] `_` — trim whitespace from selections.
-- [x] `;` — collapse selection to cursor.
-- [x] `Alt-;` — flip selection cursor and anchor.
-- [x] `Alt-:` — force selection direction forward.
-- [x] `,` — keep only the primary selection.
-- [x] `Alt-,` — remove primary selection.
-- [x] `C` — copy selection onto next line / add cursor below.
-- [x] `Alt-C` — copy selection onto previous line / add cursor above.
-- [x] `(` — rotate main selection backward.
-- [x] `)` — rotate main selection forward.
-- [x] `Alt-(` — rotate selection contents backward.
-- [x] `Alt-)` — rotate selection contents forward.
-- [x] `%` — select entire file.
-- [x] `x` — select current line; if already line-selected, extend to next line.
-- [x] `X` — extend selection to line bounds.
-- [x] `Alt-x` — shrink selection to line bounds.
-- [x] `J` — join lines inside selection.
-- [x] `Alt-J` — join lines with inserted space selected.
-- [x] `K` — keep selections matching pattern.
-- [x] `Alt-K` — remove selections matching pattern.
-- [x] `Ctrl-c` — comment/uncomment selections.
+- [x] ~~`s` — select all matches inside current selections.~~
+- [x] ~~`S` — split selections on matches.~~
+- [x] ~~`Alt-s` — split selection on newlines.~~
+- [x] ~~`Alt-minus` — merge selections.~~
+- [x] ~~`Alt-_` — merge consecutive selections.~~
+- [x] ~~`&` — align selections in columns.~~
+- [x] ~~`_` — trim whitespace from selections.~~
+- [x] ~~`;` — collapse selection to cursor.~~
+- [x] ~~`Alt-;` — flip selection cursor and anchor.~~
+- [x] ~~`Alt-:` — force selection direction forward.~~
+- [x] ~~`,` — keep only the primary selection.~~
+- [x] ~~`Alt-,` — remove primary selection.~~
+- [x] ~~`C` — copy selection onto next line / add cursor below.~~
+- [x] ~~`Alt-C` — copy selection onto previous line / add cursor above.~~
+- [x] ~~`(` — rotate main selection backward.~~
+- [x] ~~`)` — rotate main selection forward.~~
+- [x] ~~`Alt-(` — rotate selection contents backward.~~
+- [x] ~~`Alt-)` — rotate selection contents forward.~~
+- [x] ~~`%` — select entire file.~~
+- [x] ~~`x` — select current line; if already line-selected, extend to next line.~~
+- [x] ~~`X` — extend selection to line bounds.~~
+- [x] ~~`Alt-x` — shrink selection to line bounds.~~
+- [x] ~~`J` — join lines inside selection.~~
+- [x] ~~`Alt-J` — join lines with inserted space selected.~~
+- [x] ~~`K` — keep selections matching pattern.~~
+- [x] ~~`Alt-K` — remove selections matching pattern.~~
+- [x] ~~`Ctrl-c` — comment/uncomment selections.~~
 - [x] ~~`Alt-o` / `Alt-Up` — expand selection to parent syntax node.~~
 - [x] ~~`Alt-i` / `Alt-Down` — shrink syntax-tree selection.~~
 - [x] ~~`Alt-p` / `Alt-Left` — select previous syntax sibling.~~
@@ -172,12 +172,12 @@ Corrected meanings:
 
 ## 2.4 Search
 
-- [x] `/` — search forward using regex.
-- [x] `?` — search backward using regex.
-- [x] `n` — select next search match.
-- [x] `N` — select previous search match.
-- [x] `*` — use current selection as search pattern, with word boundaries.
-- [x] `Alt-*` — use current selection as search pattern without word-boundary detection.
+- [x] ~~`/` — search forward using regex.~~
+- [x] ~~`?` — search backward using regex.~~
+- [x] ~~`n` — select next search match.~~
+- [x] ~~`N` — select previous search match.~~
+- [x] ~~`*` — use current selection as search pattern, with word boundaries.~~
+- [x] ~~`Alt-*` — use current selection as search pattern without word-boundary detection.~~
 - [ ] Support search register `/`.
 - [ ] Allow selecting another search register with `"<register>`.
 
@@ -188,67 +188,67 @@ Removed Vim-style items:
 
 ## 2.5 Shell Commands
 
-- [x] `|` — pipe each selection through shell command and replace with output.
-- [x] `Alt-|` — pipe each selection into shell command and ignore output.
-- [x] `!` — run shell command and insert output before each selection.
-- [x] `Alt-!` — run shell command and append output after each selection.
-- [x] `$` — keep selections where shell command returns exit code 0.
+- [x] ~~`|` — pipe each selection through shell command and replace with output.~~
+- [x] ~~`Alt-|` — pipe each selection into shell command and ignore output.~~
+- [x] ~~`!` — run shell command and insert output before each selection.~~
+- [x] ~~`Alt-!` — run shell command and append output after each selection.~~
+- [x] ~~`$` — keep selections where shell command returns exit code 0.~~
 
 ---
 
 ## 3. Select / Extend Mode
 
-- [x] Enter with `v`.
-- [x] `Escape` returns to normal mode.
-- [x] Normal movement commands must become extending movement commands.
-- [x] Goto-mode motions must also extend selection.
-- [x] Editing commands remain mostly the same as normal mode.
+- [x] ~~Enter with `v`.~~
+- [x] ~~`Escape` returns to normal mode.~~
+- [x] ~~Normal movement commands must become extending movement commands.~~
+- [x] ~~Goto-mode motions must also extend selection.~~
+- [x] ~~Editing commands remain mostly the same as normal mode.~~
 
 Required select-mode equivalents:
-- [x] `h/j/k/l`, arrows — extend by character/visual line.
-- [x] `w/b/e/W/B/E` — extend by word/WORD.
-- [x] `f/F/t/T` — extend to character.
-- [x] `Alt-.` — repeat last motion while extending.
-- [x] `Ctrl-f` / `Ctrl-b` — page while extending.
-- [x] `Ctrl-d` / `Ctrl-u` — half-page while extending.
-- [x] `d` — delete selection.
-- [x] `Alt-d` — delete without yanking.
-- [x] `c` — change selection.
-- [x] `Alt-c` — change without yanking.
-- [x] `y` — yank selection.
-- [x] `p` / `P` — paste after/before selection.
-- [x] `>` / `<` — indent/unindent selection.
-- [x] `=` — format selection.
-- [x] `J` / `Alt-J` — join selections.
-- [x] `~`, `` ` ``, `Alt-\`` — case operations.
-- [x] `s` — select matches inside selection.
-- [x] `S` — split selection on matches.
-- [x] `Alt-s` — split on newlines.
-- [x] `;` — collapse selection.
-- [x] `Alt-;` — flip cursor and anchor.
-- [x] `,` — keep primary selection.
-- [x] `%` — select entire file.
-- [x] `n` / `N` — extend/add search matches in select mode.
+- [x] ~~`h/j/k/l`, arrows — extend by character/visual line.~~
+- [x] ~~`w/b/e/W/B/E` — extend by word/WORD.~~
+- [x] ~~`f/F/t/T` — extend to character.~~
+- [x] ~~`Alt-.` — repeat last motion while extending.~~
+- [x] ~~`Ctrl-f` / `Ctrl-b` — page while extending.~~
+- [x] ~~`Ctrl-d` / `Ctrl-u` — half-page while extending.~~
+- [x] ~~`d` — delete selection.~~
+- [x] ~~`Alt-d` — delete without yanking.~~
+- [x] ~~`c` — change selection.~~
+- [x] ~~`Alt-c` — change without yanking.~~
+- [x] ~~`y` — yank selection.~~
+- [x] ~~`p` / `P` — paste after/before selection.~~
+- [x] ~~`>` / `<` — indent/unindent selection.~~
+- [x] ~~`=` — format selection.~~
+- [x] ~~`J` / `Alt-J` — join selections.~~
+- [x] ~~`~`, `` ` ``, `Alt-\`` — case operations.~~
+- [x] ~~`s` — select matches inside selection.~~
+- [x] ~~`S` — split selection on matches.~~
+- [x] ~~`Alt-s` — split on newlines.~~
+- [x] ~~`;` — collapse selection.~~
+- [x] ~~`Alt-;` — flip cursor and anchor.~~
+- [x] ~~`,` — keep primary selection.~~
+- [x] ~~`%` — select entire file.~~
+- [x] ~~`n` / `N` — extend/add search matches in select mode.~~
 
 ---
 
 ## 4. Insert Mode
 
-- [x] `Escape` — return to normal mode.
-- [x] `Ctrl-s` — commit undo checkpoint.
+- [x] ~~`Escape` — return to normal mode.~~
+- [x] ~~`Ctrl-s` — commit undo checkpoint.~~
 - [x] ~~`Ctrl-x` — trigger completion.~~
-- [x] `Ctrl-r` — insert register content.
-- [x] `Ctrl-w` / `Alt-Backspace` — delete previous word.
-- [x] `Alt-d` / `Alt-Delete` — delete next word.
-- [x] `Ctrl-u` — delete to line start.
-- [x] `Ctrl-k` — delete to line end.
-- [x] `Ctrl-h` / `Backspace` / `Shift-Backspace` — delete previous char.
-- [x] `Ctrl-d` / `Delete` — delete next char.
-- [x] `Ctrl-j` / `Enter` — insert newline.
-- [x] `Up`, `Down`, `Left`, `Right` — optional beginner movement bindings.
-- [x] `PageUp`, `PageDown` — optional beginner page movement.
-- [x] `Home` — move to line start.
-- [x] `End` — move to line end including newline behavior.
+- [x] ~~`Ctrl-r` — insert register content.~~
+- [x] ~~`Ctrl-w` / `Alt-Backspace` — delete previous word.~~
+- [x] ~~`Alt-d` / `Alt-Delete` — delete next word.~~
+- [x] ~~`Ctrl-u` — delete to line start.~~
+- [x] ~~`Ctrl-k` — delete to line end.~~
+- [x] ~~`Ctrl-h` / `Backspace` / `Shift-Backspace` — delete previous char.~~
+- [x] ~~`Ctrl-d` / `Delete` — delete next char.~~
+- [x] ~~`Ctrl-j` / `Enter` — insert newline.~~
+- [x] ~~`Up`, `Down`, `Left`, `Right` — optional beginner movement bindings.~~
+- [x] ~~`PageUp`, `PageDown` — optional beginner page movement.~~
+- [x] ~~`Home` — move to line start.~~
+- [x] ~~`End` — move to line end including newline behavior.~~
 
 Corrected meaning:
 - `Ctrl-d` in insert mode deletes the next character. It is not dedent by default.
@@ -259,28 +259,28 @@ Corrected meaning:
 
 Enter with `g`.
 
-- [x] `gg` — go to line number if count is provided, otherwise start of file.
-- [x] `ge` — go to end of file.
-- [x] `gf` — go to file in selection.
-- [x] `gh` — go to line start.
-- [x] `gl` — go to line end.
-- [x] `gs` — go to first non-whitespace character of line.
-- [x] `gt` — go to top of visible window.
-- [x] `gc` — go to center of visible window.
-- [x] `gb` — go to bottom of visible window.
-- [x] `gd` — go to definition using LSP. (Working - sends LSP request, parses response, navigates)
-- [x] `gy` — go to type definition using LSP. (Working - sends LSP request, parses response, navigates)
-- [x] `gr` — go to references using LSP. (Working - sends LSP request, parses response, navigates)
-- [x] `gi` — go to implementation using LSP. (Working - sends LSP request, parses response, navigates)
+- [x] ~~`gg` — go to line number if count is provided, otherwise start of file.~~
+- [x] ~~`ge` — go to end of file.~~
+- [x] ~~`gf` — go to file in selection.~~
+- [x] ~~`gh` — go to line start.~~
+- [x] ~~`gl` — go to line end.~~
+- [x] ~~`gs` — go to first non-whitespace character of line.~~
+- [x] ~~`gt` — go to top of visible window.~~
+- [x] ~~`gc` — go to center of visible window.~~
+- [x] ~~`gb` — go to bottom of visible window.~~
+- [x] ~~`gd` — go to definition using LSP. (Working - sends LSP request, parses response, navigates)~~
+- [x] ~~`gy` — go to type definition using LSP. (Working - sends LSP request, parses response, navigates)~~
+- [x] ~~`gr` — go to references using LSP. (Working - sends LSP request, parses response, navigates)~~
+- [x] ~~`gi` — go to implementation using LSP. (Working - sends LSP request, parses response, navigates)~~
 - [ ] `ga` — go to last accessed / alternate file.
 - [ ] `gm` — go to last modified / alternate file.
-- [x] `gn` — go to next buffer.
-- [x] `gp` — go to previous buffer.
-- [x] `g.` — go to last modification in current file.
-- [x] `gj` — move down by textual line.
-- [x] `gk` — move up by textual line.
+- [x] ~~`gn` — go to next buffer.~~
+- [x] ~~`gp` — go to previous buffer.~~
+- [x] ~~`g.` — go to last modification in current file.~~
+- [x] ~~`gj` — move down by textual line.~~
+- [x] ~~`gk` — move up by textual line.~~
 - [ ] `gw` — show word labels and jump/select by label.
-- [x] `g|` — go to column number if count is provided, otherwise start of line.
+- [x] ~~`g|` — go to column number if count is provided, otherwise start of line.~~
 
 Removed/changed:
 - [ ] Do not use `^` or `_` as the primary first-nonblank command. Use `gs`.
@@ -293,12 +293,12 @@ Removed/changed:
 
 Enter with `m`.
 
-- [x] `mm` — go to matching bracket/tree-sitter bracket.
-- [x] `ms<char>` — surround current selection with character.
-- [x] `md<char>` — delete surrounding delimiter.
-- [x] `mr<from><to>` — replace surrounding delimiter.
-- [ ] `ma<object>` — select around text object.
-- [ ] `mi<object>` — select inside text object.
+- [x] ~~`mm` — go to matching bracket/tree-sitter bracket.~~
+- [x] ~~`ms<char>` — surround current selection with character.~~
+- [x] ~~`md<char>` — delete surrounding delimiter.~~
+- [x] ~~`mr<from><to>` — replace surrounding delimiter.~~
+- [x] ~~`ma<object>` — select around text object.~~
+- [x] ~~`mi<object>` — select inside text object.~~
 
 Corrected meaning:
 - `m` is match mode, not set-mark.
@@ -314,16 +314,16 @@ Optional extension:
 Enter with `z`.
 Sticky view mode enters with `Z`.
 
-- [x] `zz` or `zc` — vertically center current line.
-- [x] `zt` — align current line to top.
-- [x] `zb` — align current line to bottom.
-- [x] `zm` — horizontally center/middle align.
-- [x] `zj` / `zDown` — scroll view down.
-- [x] `zk` / `zUp` — scroll view up.
-- [x] `zCtrl-f` / `zPageDown` — page down.
-- [x] `zCtrl-b` / `zPageUp` — page up.
-- [x] `zCtrl-u` — cursor/view half page up.
-- [x] `zCtrl-d` — cursor/view half page down.
+- [x] ~~`zz` or `zc` — vertically center current line.~~
+- [x] ~~`zt` — align current line to top.~~
+- [x] ~~`zb` — align current line to bottom.~~
+- [x] ~~`zm` — horizontally center/middle align.~~
+- [x] ~~`zj` / `zDown` — scroll view down.~~
+- [x] ~~`zk` / `zUp` — scroll view up.~~
+- [x] ~~`zCtrl-f` / `zPageDown` — page down.~~
+- [x] ~~`zCtrl-b` / `zPageUp` — page up.~~
+- [x] ~~`zCtrl-u` — cursor/view half page up.~~
+- [x] ~~`zCtrl-d` — cursor/view half page down.~~
 
 Corrected meaning:
 - `z` alone enters view mode. It is not just "center view".
@@ -334,14 +334,14 @@ Corrected meaning:
 
 Enter with `Ctrl-w`.
 
-- [ ] `Ctrl-w w` / `Ctrl-w Ctrl-w` — switch to next window.
-- [ ] `Ctrl-w v` / `Ctrl-w Ctrl-v` — vertical split.
-- [ ] `Ctrl-w s` / `Ctrl-w Ctrl-s` — horizontal split.
+- [x] ~~`Ctrl-w w` / `Ctrl-w Ctrl-w` — switch to next window.~~
+- [x] ~~`Ctrl-w v` / `Ctrl-w Ctrl-v` — vertical split.~~
+- [x] ~~`Ctrl-w s` / `Ctrl-w Ctrl-s` — horizontal split.~~
 - [ ] `Ctrl-w f` — open file in selection in horizontal split.
 - [ ] `Ctrl-w F` — open file in selection in vertical split.
-- [ ] `Ctrl-w h/j/k/l` — move to neighboring split.
-- [ ] `Ctrl-w q` / `Ctrl-w Ctrl-q` — close current window.
-- [ ] `Ctrl-w o` / `Ctrl-w Ctrl-o` — keep only current window.
+- [x] ~~`Ctrl-w h/j/k/l` — move to neighboring split.~~
+- [x] ~~`Ctrl-w q` / `Ctrl-w Ctrl-q` — close current window.~~
+- [x] ~~`Ctrl-w o` / `Ctrl-w Ctrl-o` — keep only current window.~~
 - [ ] `Ctrl-w H/J/K/L` — swap current window left/down/up/right.
 
 ---
@@ -350,6 +350,7 @@ Enter with `Ctrl-w`.
 
 Enter with `Space`.
 
+- [x] ~~`Ctrl-~` — terminal panel.~~
 - [x] ~~`Space f` — file picker at LSP workspace root.~~
 - [x] ~~`Space F` — file picker at current working directory.~~
 - [x] ~~`Space o` — file picker at $HOME directory.~~
@@ -364,16 +365,17 @@ Enter with `Space`.
 - [x] ~~`Space r` — rename symbol.~~
 - [x] ~~`Space a` — code action.~~
 - [x] ~~`Space h` — select references to symbol under cursor.~~
+- [x] ~~`Space T` — terminal panel.~~
 - [ ] `Space '` — reopen last fuzzy picker.
-- [ ] `Space w` — enter window mode.
+- [x] ~~`Space w` — enter window mode.~~
 - [x] ~~`Space c` — comment/uncomment selections.~~
-- [ ] `Space C` — block comment/uncomment.
+- [x] ~~`Space C` — block comment/uncomment.~~
 - [ ] `Space Alt-c` — line comment/uncomment.
 - [x] ~~`Space p` — paste system clipboard after selections.~~
 - [x] ~~`Space P` — paste system clipboard before selections.~~
 - [x] ~~`Space y` — yank selections to system clipboard.~~
-- [ ] `Space Y` — yank main selection to system clipboard.
-- [ ] `Space R` — replace selections with system clipboard.
+- [x] ~~`Space Y` — yank main selection to system clipboard.~~
+- [x] ~~`Space R` — replace selections with system clipboard.~~
 - [x] ~~`Space /` — global search in workspace.~~
 - [x] ~~`Space ?` — command palette.~~
 
@@ -385,18 +387,18 @@ Helix has fuzzy pickers, not a traditional built-in tree file browser.
 
 ### Picker navigation
 
-- [x] `Tab` / `Down` / `Ctrl-n` — next entry.
-- [x] `Shift-Tab` / `Up` / `Ctrl-p` — previous entry.
-- [x] `PageDown` / `Ctrl-d` — page down.
-- [x] `PageUp` / `Ctrl-u` — page up.
-- [x] `Home` — first entry.
-- [x] `End` — last entry.
-- [x] `Enter` — open selected item.
+- [x] ~~`Tab` / `Down` / `Ctrl-n` — next entry.~~
+- [x] ~~`Shift-Tab` / `Up` / `Ctrl-p` — previous entry.~~
+- [x] ~~`PageDown` / `Ctrl-d` — page down.~~
+- [x] ~~`PageUp` / `Ctrl-u` — page up.~~
+- [x] ~~`Home` — first entry.~~
+- [x] ~~`End` — last entry.~~
+- [x] ~~`Enter` — open selected item.~~
 - [ ] `Alt-Enter` — open selected item in background.
 - [ ] `Ctrl-s` — open horizontally.
 - [ ] `Ctrl-v` — open vertically.
 - [ ] `Ctrl-t` — toggle preview.
-- [x] `Escape` / `Ctrl-c` — close picker.
+- [x] ~~`Escape` / `Ctrl-c` — close picker.~~
 
 ### File picker behavior
 
@@ -427,34 +429,34 @@ Enter with `:`.
 
 ### Files and buffers
 
-- [x] `:open`, `:o`, `:edit`, `:e <path>` — open file.
-- [x] `:write`, `:w [path]` — write current buffer; optional path means save as.
-- [x] `:write!`, `:w! [path]` — force write.
-- [x] `:write-quit`, `:wq`, `:x [path]` — write and quit current view.
-- [x] `:write-quit!`, `:wq!`, `:x! [path]` — force write and quit.
-- [x] `:quit`, `:q` — close current view.
-- [x] `:quit!`, `:q!` — force close current view.
-- [x] `:quit-all`, `:qa` — close all views.
-- [x] `:quit-all!`, `:qa!` — force close all views.
-- [x] `:buffer-next`, `:bn`, `:bnext` — next buffer.
-- [x] `:buffer-previous`, `:bp`, `:bprev` — previous buffer.
-- [x] `:buffer-close`, `:bc`, `:bclose` — close current buffer.
-- [x] `:buffer-close!`, `:bc!`, `:bclose!` — force close current buffer.
+- [x] ~~`:open`, `:o`, `:edit`, `:e <path>` — open file.~~
+- [x] ~~`:write`, `:w [path]` — write current buffer; optional path means save as.~~
+- [x] ~~`:write!`, `:w! [path]` — force write.~~
+- [x] ~~`:write-quit`, `:wq`, `:x [path]` — write and quit current view.~~
+- [x] ~~`:write-quit!`, `:wq!`, `:x! [path]` — force write and quit.~~
+- [x] ~~`:quit`, `:q` — close current view.~~
+- [x] ~~`:quit!`, `:q!` — force close current view.~~
+- [x] ~~`:quit-all`, `:qa` — close all views.~~
+- [x] ~~`:quit-all!`, `:qa!` — force close all views.~~
+- [x] ~~`:buffer-next`, `:bn`, `:bnext` — next buffer.~~
+- [x] ~~`:buffer-previous`, `:bp`, `:bprev` — previous buffer.~~
+- [x] ~~`:buffer-close`, `:bc`, `:bclose` — close current buffer.~~
+- [x] ~~`:buffer-close!`, `:bc!`, `:bclose!` — force close current buffer.~~
 - [ ] `:buffer-close-others`, `:bco` — close other buffers.
 - [ ] `:buffer-close-all`, `:bca` — close all buffers without quitting.
-- [x] `:new`, `:n` — new scratch buffer.
-- [x] `:read`, `:r <path>` — insert file contents into buffer.
-- [x] `:move`, `:mv <path>` — move current buffer and file to a new path.
-- [x] `:reload`, `:rl` — reload current file from disk.
-- [x] `:reload-all`, `:rla` — reload all files.
+- [x] ~~`:new`, `:n` — new scratch buffer.~~
+- [x] ~~`:read`, `:r <path>` — insert file contents into buffer.~~
+- [x] ~~`:move`, `:mv <path>` — move current buffer and file to a new path.~~
+- [x] ~~`:reload`, `:rl` — reload current file from disk.~~
+- [x] ~~`:reload-all`, `:rla` — reload all files.~~
 
 Changed from original:
 - [ ] Do not require `:bf` / `:bl` as default first/last buffer commands unless adding custom extensions.
 
 ### Editing commands
 
-- [x] `:format`, `:fmt` — format current file with formatter/LSP.
-- [x] `:sort` — sort ranges in selection.
+- [x] ~~`:format`, `:fmt` — format current file with formatter/LSP.~~
+- [x] ~~`:sort` — sort ranges in selection.~~
 - [ ] `:reflow` — hard-wrap current selection.
 - [ ] `:indent-style` — set tabs/spaces indentation.
 - [ ] `:line-ending` — set CRLF/LF.
@@ -565,14 +567,14 @@ Corrected:
 
 ## 15. LSP Features
 
-- [x] LSP server process management. (Multi-server support for C, C++, Rust, Python, Go, TypeScript, JavaScript)
-- [x] Per-language server configuration. (Default configurations + auto-initialization)
-- [x] `gd` — goto definition. (Full implementation: request → parse response → navigate)
-- [x] `gy` — goto type definition. (Full implementation: request → parse response → navigate)
-- [x] `gr` — goto references. (Full implementation: request → parse response → navigate)
-- [x] `gi` — goto implementation. (Full implementation: request → parse response → navigate)
-- [x] `Space-k` — hover. (Full implementation: request → parse response → tooltip display)
-- [x] Syntax highlighting from LSP semanticTokens. (Delta-decoded parser, token type mapping, dynamic highlighting)
+- [x] ~~LSP server process management. (Multi-server support for C, C++, Rust, Python, Go, TypeScript, JavaScript)~~
+- [x] ~~Per-language server configuration. (Default configurations + auto-initialization)~~
+- [x] ~~`gd` — goto definition. (Full implementation: request → parse response → navigate)~~
+- [x] ~~`gy` — goto type definition. (Full implementation: request → parse response → navigate)~~
+- [x] ~~`gr` — goto references. (Full implementation: request → parse response → navigate)~~
+- [x] ~~`gi` — goto implementation. (Full implementation: request → parse response → navigate)~~
+- [x] ~~`Space-k` — hover. (Full implementation: request → parse response → tooltip display)~~
+- [x] ~~Syntax highlighting from LSP semanticTokens. (Delta-decoded parser, token type mapping, dynamic highlighting)~~
 - [x] ~~`Space-r` — rename symbol.~~
 - [x] ~~`Space-a` — code action.~~
 - [x] ~~`Space-s` — document symbols.~~

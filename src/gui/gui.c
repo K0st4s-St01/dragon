@@ -26,6 +26,7 @@
 #include "panel_palette.h"
 #include "panel_settings.h"
 #include "panel_treesitter_inspector.h"
+#include "panel_terminal.h"
 #include "panel_workspace_symbols.h"
 #include "panel_workspace_diagnostics.h"
 #include "panel_completion.h"
@@ -312,6 +313,18 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
 
     Cursor *cur = &doc->cursors[0];
     size_t lines = buffer_line_count(&doc->buffer);
+    int visible_lines = (int)(editor_h / line_h) + 1;
+    if (visible_lines < 1) visible_lines = 1;
+    int visible_cols = (int)((vw - gutter_w - 20.0f) / g->font.glyph_w);
+    if (visible_cols < 1) visible_cols = 1;
+    if (active) {
+        doc->viewport_lines = visible_lines;
+        doc->viewport_cols = visible_cols;
+        document_sync_viewport_to_cursor(doc);
+    }
+    int scroll_x = doc->scroll_x;
+    if (scroll_x < 0) scroll_x = 0;
+    float content_x = text_x - (float)scroll_x * g->font.glyph_w;
 
     /* Background */
     renderer_draw_rect(r, vx, vy, vw, vh,
@@ -324,7 +337,6 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
     }
 
     int first_line = doc->scroll_y;
-    int visible_lines = (int)(editor_h / line_h) + 1;
     if (first_line + visible_lines > (int)lines)
         first_line = (int)lines - visible_lines;
     if (first_line < 0) first_line = 0;
@@ -352,11 +364,17 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
                 const char *sel_line = buffer_line_ptr(&doc->buffer, line_num);
                 int sel_dcol_start = display_col(sel_line, sel_start, 4);
                 int sel_dcol_end = display_col(sel_line, sel_end, 4);
-                float x1 = text_x + sel_dcol_start * g->font.glyph_w;
-                float x2 = text_x + sel_dcol_end * g->font.glyph_w;
-                renderer_draw_rect(r, x1, y, x2-x1, line_h,
-                                   t->selection_bg[0], t->selection_bg[1],
-                                   t->selection_bg[2], t->selection_bg[3]);
+                float x1 = content_x + sel_dcol_start * g->font.glyph_w;
+                float x2 = content_x + sel_dcol_end * g->font.glyph_w;
+                float clip_left = text_x;
+                float clip_right = vx + vw - 2.0f;
+                if (x1 < clip_left) x1 = clip_left;
+                if (x2 > clip_right) x2 = clip_right;
+                if (x2 > x1) {
+                    renderer_draw_rect(r, x1, y, x2-x1, line_h,
+                                       t->selection_bg[0], t->selection_bg[1],
+                                       t->selection_bg[2], t->selection_bg[3]);
+                }
             }
         }
 
@@ -419,8 +437,9 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
                     int char_len = utf8_char_len(line + col, line_len - col);
                     char ch[5] = {0};
                     memcpy(ch, line + col, (size_t)char_len);
-                    float x = text_x + dcol * g->font.glyph_w;
-                    font_draw(&g->font, r, ch, x, y + 2, sr, sg, sb, sa);
+                    float x = content_x + dcol * g->font.glyph_w;
+                    if (x + g->font.glyph_w >= text_x && x <= vx + vw - 2.0f)
+                        font_draw(&g->font, r, ch, x, y + 2, sr, sg, sb, sa);
                 }
                 
                 col += utf8_char_len(line + col, line_len - col);
@@ -445,11 +464,20 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
                     diag->items[d].end_col : start_col + 1;
                 if (end_col > line_len) end_col = line_len;
                 if (end_col <= start_col) end_col = start_col + 1;
-                float dx = text_x + display_col(line, start_col, tab_width) * g->font.glyph_w;
+                float dx = content_x + display_col(line, start_col, tab_width) * g->font.glyph_w;
                 float underline_w = (float)(display_col(line, end_col, tab_width) -
                                             display_col(line, start_col, tab_width)) * g->font.glyph_w;
                 if (underline_w < g->font.glyph_w) underline_w = g->font.glyph_w;
-                renderer_draw_rect(r, dx, y + line_h - 4, underline_w, 2, dr, dg, db, 0.85f);
+                float ux = dx;
+                float uw = underline_w;
+                if (ux < text_x) {
+                    uw -= text_x - ux;
+                    ux = text_x;
+                }
+                if (ux + uw > vx + vw - 2.0f)
+                    uw = vx + vw - 2.0f - ux;
+                if (uw > 0.0f)
+                    renderer_draw_rect(r, ux, y + line_h - 4, uw, 2, dr, dg, db, 0.85f);
                 break;
             }
         }
@@ -463,7 +491,7 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
             if (csr >= 0 && csr < visible_lines) {
                 const char *cur_line = buffer_line_ptr(&doc->buffer, c->row);
                 int cur_dcol = display_col(cur_line, c->col, tab_width);
-                float cx = text_x + cur_dcol * g->font.glyph_w;
+                float cx = content_x + cur_dcol * g->font.glyph_w;
                 float cy = text_y + (float)csr * line_h;
                 float cw = mode_is(mode, MODE_INSERT) ? 2.0f : g->font.glyph_w;
                 float ch = line_h;
@@ -474,13 +502,19 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
                 
                 if (ci > 0) { cr *= 0.6f; cg *= 0.6f; cb *= 0.6f; }
                 
-                /* Main cursor block */
-                renderer_draw_rect(r, cx, cy, cw, ch, cr, cg, cb, ca);
-                
-                /* Insert mode: thin line with highlight */
-                if (mode_is(mode, MODE_INSERT) && ci == 0) {
-                    renderer_draw_rect(r, cx - 1, cy, cw + 2, ch, 
-                                      cr, cg, cb, ca * 0.4f);  /* Glow effect */
+                if (cx + cw >= text_x && cx <= vx + vw - 2.0f) {
+                    if (cx < text_x) {
+                        cw -= text_x - cx;
+                        cx = text_x;
+                    }
+                    /* Main cursor block */
+                    renderer_draw_rect(r, cx, cy, cw, ch, cr, cg, cb, ca);
+                    
+                    /* Insert mode: thin line with highlight */
+                    if (mode_is(mode, MODE_INSERT) && ci == 0) {
+                        renderer_draw_rect(r, cx - 1, cy, cw + 2, ch, 
+                                          cr, cg, cb, ca * 0.4f);  /* Glow effect */
+                    }
                 }
             }
         }
@@ -488,7 +522,7 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
 
     if (active) {
         render_diagnostic_popup(g, app, doc, vx, vy, vw, vh,
-                                text_x, text_y, line_h,
+                                content_x, text_y, line_h,
                                 first_line, visible_lines, tab_width);
     }
 }
@@ -539,5 +573,6 @@ void gui_render(Gui *g, App *app, Document *doc, ModeState *mode) {
       panel_workspace_symbols_render(g, app);
       panel_workspace_diagnostics_render(g, app);
       panel_completion_render(g, app);
+      panel_terminal_render(g, app);
       panel_notification_render(g, app);
 }

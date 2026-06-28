@@ -16,6 +16,7 @@ typedef struct {
     size_t  len;       /* Length of text */
     int     cursor_row;
     int     cursor_col;
+    int     group;
 } HistoryEntry;
 
 #define HISTORY_MAX 1024
@@ -24,11 +25,15 @@ typedef struct {
     HistoryEntry entries[HISTORY_MAX];
     int count;
     int current;       /* Index of the next entry to redo (-1 = nothing to redo) */
+    int next_group;
+    int active_group;
 } History;
 
 void history_init(History *h);
 void history_free(History *h);
 void history_clear(History *h);
+void history_begin_group(History *h);
+void history_end_group(History *h);
 void history_push_insert(History *h, size_t pos, const char *text, size_t len,
                          int cursor_row, int cursor_col);
 void history_push_delete(History *h, size_t pos, const char *text, size_t len,

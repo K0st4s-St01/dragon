@@ -1851,6 +1851,41 @@ static void test_document_sync_viewport(void) {
     PASS();
 }
 
+static void test_document_sync_viewport_horizontal_right(void) {
+    TEST(document_sync_viewport_horizontal_right);
+    Document *doc = make_doc("0123456789abcdef");
+    doc->viewport_cols = 5;
+    document_cursor_to(doc, 0, 12);
+    ASSERT_EQ_INT(doc->scroll_x, 8);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_sync_viewport_horizontal_left(void) {
+    TEST(document_sync_viewport_horizontal_left);
+    Document *doc = make_doc("0123456789abcdef");
+    doc->viewport_cols = 5;
+    doc->scroll_x = 8;
+    document_cursor_to(doc, 0, 2);
+    ASSERT_EQ_INT(doc->scroll_x, 2);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_move_cursor_updates_scroll_x(void) {
+    TEST(document_move_cursor_updates_scroll_x);
+    Document *doc = make_doc("0123456789abcdef");
+    doc->viewport_cols = 4;
+    document_move_cursor(doc, 0, 10);
+    ASSERT_EQ_INT(doc->cursors[0].col, 10);
+    ASSERT_EQ_INT(doc->scroll_x, 7);
+    document_move_cursor(doc, 0, -10);
+    ASSERT_EQ_INT(doc->cursors[0].col, 0);
+    ASSERT_EQ_INT(doc->scroll_x, 0);
+    free_doc(doc);
+    PASS();
+}
+
 static void test_document_set_search(void) {
     TEST(document_set_search);
     Document *doc = make_doc("hello world hello");
@@ -2324,6 +2359,26 @@ static void test_document_insert_char_multi(void) {
     PASS();
 }
 
+static void test_document_insert_char_multi_undo_redo(void) {
+    TEST(document_insert_char_multi_undo_redo);
+    Document *doc = make_doc("aaa bbb ccc");
+    doc->cursor_count = 3;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 0);
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 4);
+    cursor_init(&doc->cursors[2]);
+    cursor_move_to(&doc->cursors[2], 0, 8);
+    document_insert_char_multi(doc, 'X');
+    ASSERT_EQ_STR(doc->buffer.text, "Xaaa Xbbb Xccc");
+    document_undo(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "aaa bbb ccc");
+    document_redo(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "Xaaa Xbbb Xccc");
+    free_doc(doc);
+    PASS();
+}
+
 static void test_document_move_cursor_multi(void) {
     TEST(document_move_cursor_multi);
     Document *doc = make_doc("aaa\nbbb\nccc");
@@ -2398,6 +2453,26 @@ static void test_document_delete_char_multi(void) {
     PASS();
 }
 
+static void test_document_delete_char_multi_undo_redo(void) {
+    TEST(document_delete_char_multi_undo_redo);
+    Document *doc = make_doc("aaa bbb ccc");
+    doc->cursor_count = 3;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 1);
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 5);
+    cursor_init(&doc->cursors[2]);
+    cursor_move_to(&doc->cursors[2], 0, 9);
+    document_delete_char_multi(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "aa bb cc");
+    document_undo(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "aaa bbb ccc");
+    document_redo(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "aa bb cc");
+    free_doc(doc);
+    PASS();
+}
+
 static void test_document_newline_multi(void) {
     TEST(document_newline_multi);
     Document *doc = make_doc("abc def ghi");
@@ -2409,6 +2484,26 @@ static void test_document_newline_multi(void) {
     cursor_init(&doc->cursors[2]);
     cursor_move_to(&doc->cursors[2], 0, 11);
     document_newline_multi(doc);
+    ASSERT_EQ_SIZE(buffer_line_count(&doc->buffer), 4);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_newline_multi_undo_redo(void) {
+    TEST(document_newline_multi_undo_redo);
+    Document *doc = make_doc("abc def ghi");
+    doc->cursor_count = 3;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 3);
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 7);
+    cursor_init(&doc->cursors[2]);
+    cursor_move_to(&doc->cursors[2], 0, 11);
+    document_newline_multi(doc);
+    ASSERT_EQ_SIZE(buffer_line_count(&doc->buffer), 4);
+    document_undo(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "abc def ghi");
+    document_redo(doc);
     ASSERT_EQ_SIZE(buffer_line_count(&doc->buffer), 4);
     free_doc(doc);
     PASS();
@@ -3957,6 +4052,9 @@ int main(void) {
     test_document_scroll_up_down();
     test_document_scroll_up_clamp();
     test_document_sync_viewport();
+    test_document_sync_viewport_horizontal_right();
+    test_document_sync_viewport_horizontal_left();
+    test_document_move_cursor_updates_scroll_x();
     test_document_set_search();
     test_document_search_next();
     test_document_search_prev();
@@ -4000,11 +4098,14 @@ int main(void) {
 
     printf("\n[Additional Document Tests - Multi-cursor]\n");
     test_document_insert_char_multi();
+    test_document_insert_char_multi_undo_redo();
     test_document_move_cursor_multi();
     test_document_delete_selection_multi();
     test_document_add_cursor_below_above();
     test_document_delete_char_multi();
+    test_document_delete_char_multi_undo_redo();
     test_document_newline_multi();
+    test_document_newline_multi_undo_redo();
 
     printf("\n[Additional Document Tests - Selection ops]\n");
     test_document_replace_selection_char();

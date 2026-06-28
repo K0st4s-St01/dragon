@@ -57,6 +57,7 @@ set(EDITOR_SOURCES
     src/gui/panels/workspace_symbols.c
     src/gui/panels/workspace_diagnostics.c
     src/gui/panels/completion.c
+    src/gui/panels/terminal.c
 )
 
 add_executable(${PROJECT_NAME} ${EDITOR_SOURCES})
@@ -78,6 +79,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${GL_LIBRARIES}
     m
     dl
+    util
     tree-sitter
 )
 

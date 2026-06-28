@@ -1013,6 +1013,30 @@ src/gui/panels/symbols_picker.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.s
 .PHONY : src/gui/panels/symbols_picker.c.s
 
+src/gui/panels/terminal.o: src/gui/panels/terminal.c.o
+.PHONY : src/gui/panels/terminal.o
+
+# target to build an object file
+src/gui/panels/terminal.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/terminal.c.o
+.PHONY : src/gui/panels/terminal.c.o
+
+src/gui/panels/terminal.i: src/gui/panels/terminal.c.i
+.PHONY : src/gui/panels/terminal.i
+
+# target to preprocess a source file
+src/gui/panels/terminal.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/terminal.c.i
+.PHONY : src/gui/panels/terminal.c.i
+
+src/gui/panels/terminal.s: src/gui/panels/terminal.c.s
+.PHONY : src/gui/panels/terminal.s
+
+# target to generate assembly for a file
+src/gui/panels/terminal.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/terminal.c.s
+.PHONY : src/gui/panels/terminal.c.s
+
 src/gui/panels/treesitter_inspector.o: src/gui/panels/treesitter_inspector.c.o
 .PHONY : src/gui/panels/treesitter_inspector.o
 
@@ -1342,6 +1366,9 @@ help:
 	@echo "... src/gui/panels/symbols_picker.o"
 	@echo "... src/gui/panels/symbols_picker.i"
 	@echo "... src/gui/panels/symbols_picker.s"
+	@echo "... src/gui/panels/terminal.o"
+	@echo "... src/gui/panels/terminal.i"
+	@echo "... src/gui/panels/terminal.s"
 	@echo "... src/gui/panels/treesitter_inspector.o"
 	@echo "... src/gui/panels/treesitter_inspector.i"
 	@echo "... src/gui/panels/treesitter_inspector.s"

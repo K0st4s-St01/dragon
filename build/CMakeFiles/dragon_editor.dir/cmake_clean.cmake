@@ -66,6 +66,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o.d"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.o"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.o.d"
+  "CMakeFiles/dragon_editor.dir/src/gui/panels/terminal.c.o"
+  "CMakeFiles/dragon_editor.dir/src/gui/panels/terminal.c.o.d"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o.d"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o"

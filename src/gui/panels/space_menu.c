@@ -42,6 +42,7 @@ static SpaceCommand commands[] = {
     {"a", "Code actions", true},
     {"h", "Select references", true},
     {"t", "Tree-sitter node", true},
+    {"T", "Terminal panel", true},
 
     /* Editing */
     {"c", "Comment toggle (line)", true},
@@ -81,9 +82,9 @@ static const char *get_category(int idx) {
     if (idx == 0)  return "Files & Buffers";
     if (idx == 5)  return "Search";
     if (idx == 7)  return "LSP Features";
-    if (idx == 16) return "Editing";
-    if (idx == 18) return "Clipboard (System)";
-    if (idx == 23) return "Window";
+    if (idx == 17) return "Editing";
+    if (idx == 19) return "Clipboard (System)";
+    if (idx == 24) return "Window";
     return "";
 }
 
@@ -238,6 +239,9 @@ void panel_space_menu_input(App *app, unsigned int c) {
             } else if (strcmp(key_str, "t") == 0) {
                 extern void panel_treesitter_inspector_open(App *);
                 panel_treesitter_inspector_open(app);
+            } else if (strcmp(key_str, "T") == 0) {
+                extern void panel_terminal_open(App *);
+                panel_terminal_open(app);
             } else if (strcmp(key_str, "c") == 0) {
                 document_comment_toggle(doc);
             } else if (strcmp(key_str, "C") == 0) {

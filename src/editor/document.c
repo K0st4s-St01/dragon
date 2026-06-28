@@ -165,6 +165,7 @@ void document_init(Document *doc) {
     doc->cursor_count = 1;
     cursor_init(&doc->cursors[0]);
     doc->viewport_lines = 40;
+    doc->viewport_cols = 80;
     history_init(&doc->history);
     doc->language_id = NULL;
     syntax_init(&doc->syntax, NULL);
@@ -308,6 +309,10 @@ void document_delete_selection(Document *doc) {
     }
     if (count == 0) return;
 
+    bool own_group = doc->history.active_group == 0 && count > 1;
+    if (own_group)
+        history_begin_group(&doc->history);
+
     for (int i = 1; i < count; i++) {
         for (int j = i; j > 0; j--) {
             int ar, ac, ae_r, ae_c;
@@ -344,6 +349,8 @@ void document_delete_selection(Document *doc) {
         cursor_move_to(cur, sr, sc);
         cursor_clear_selection(cur);
     }
+    if (own_group)
+        history_end_group(&doc->history);
     document_mark_dirty(doc);
 }
 
@@ -572,7 +579,12 @@ void document_scroll_down(Document *doc) {
 
 /* Ensure cursor is visible in viewport */
 void document_sync_viewport_to_cursor(Document *doc) {
+    if (!doc) return;
     Cursor *cur = &doc->cursors[0];
+    if (doc->viewport_lines < 1)
+        doc->viewport_lines = 1;
+    if (doc->viewport_cols < 1)
+        doc->viewport_cols = 1;
     
     /* If cursor is above visible area, scroll up */
     if (cur->row < doc->scroll_y) {
@@ -587,19 +599,36 @@ void document_sync_viewport_to_cursor(Document *doc) {
     
     /* Ensure scroll_y doesn't go negative */
     if (doc->scroll_y < 0) doc->scroll_y = 0;
+
+    if (cur->col < doc->scroll_x)
+        doc->scroll_x = cur->col;
+
+    int visible_right = doc->scroll_x + doc->viewport_cols - 1;
+    if (cur->col > visible_right)
+        doc->scroll_x = cur->col - doc->viewport_cols + 1;
+
+    if (doc->scroll_x < 0) doc->scroll_x = 0;
 }
 
 void document_undo(Document *doc) {
     HistoryEntry *e = history_peek_undo(&doc->history);
     if (!e) return;
     Cursor *cur = &doc->cursors[0];
-    if (e->type == OP_INSERT) {
-        buffer_delete(&doc->buffer, e->pos, e->len);
-    } else {
-        buffer_insert(&doc->buffer, e->pos, e->text, e->len);
-    }
-    cursor_move_to(cur, e->cursor_row, e->cursor_col);
-    history_regress(&doc->history);
+    int group = e->group;
+    int last_row = e->cursor_row;
+    int last_col = e->cursor_col;
+    do {
+        if (e->type == OP_INSERT) {
+            buffer_delete(&doc->buffer, e->pos, e->len);
+        } else {
+            buffer_insert(&doc->buffer, e->pos, e->text, e->len);
+        }
+        last_row = e->cursor_row;
+        last_col = e->cursor_col;
+        history_regress(&doc->history);
+        e = history_peek_undo(&doc->history);
+    } while (group && e && e->group == group);
+    cursor_move_to(cur, last_row, last_col);
     document_mark_dirty(doc);
 }
 
@@ -607,17 +636,22 @@ void document_redo(Document *doc) {
     HistoryEntry *e = history_peek_redo(&doc->history);
     if (!e) return;
     Cursor *cur = &doc->cursors[0];
-    if (e->type == OP_INSERT) {
-        buffer_insert(&doc->buffer, e->pos, e->text, e->len);
-    } else {
-        buffer_delete(&doc->buffer, e->pos, e->len);
-    }
+    int group = e->group;
     size_t new_pos = e->pos;
-    if (e->type == OP_INSERT) new_pos += e->len;
+    do {
+        if (e->type == OP_INSERT) {
+            buffer_insert(&doc->buffer, e->pos, e->text, e->len);
+        } else {
+            buffer_delete(&doc->buffer, e->pos, e->len);
+        }
+        new_pos = e->pos;
+        if (e->type == OP_INSERT) new_pos += e->len;
+        history_advance(&doc->history);
+        e = history_peek_redo(&doc->history);
+    } while (group && e && e->group == group);
     int row, col;
     buffer_row_col_from_pos(&doc->buffer, new_pos, &row, &col);
     cursor_move_to(cur, row, col);
-    history_advance(&doc->history);
     document_mark_dirty(doc);
 }
 
@@ -833,6 +867,7 @@ void document_clear_cursors(Document *doc) {
 
 void document_insert_char_multi(Document *doc, char c) {
     if (!doc) return;
+    history_begin_group(&doc->history);
     document_delete_selection(doc);
     if (doc->cursor_count < 1) doc->cursor_count = 1;
     if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
@@ -853,8 +888,10 @@ void document_insert_char_multi(Document *doc, char c) {
         Cursor *cur = &doc->cursors[order[i]];
         size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
         buffer_insert(&doc->buffer, pos, &c, 1);
+        history_push_insert(&doc->history, pos, &c, 1, cur->row, cur->col);
         cur->col++;
     }
+    history_end_group(&doc->history);
     document_mark_dirty(doc);
 }
 
@@ -862,7 +899,9 @@ void document_delete_char_multi(Document *doc) {
     if (!doc) return;
     for (int i = 0; i < doc->cursor_count; i++) {
         if (doc->cursors[i].has_selection) {
+            history_begin_group(&doc->history);
             document_delete_selection(doc);
+            history_end_group(&doc->history);
             return;
         }
     }
@@ -879,12 +918,15 @@ void document_delete_char_multi(Document *doc) {
             else break;
         }
     }
+    history_begin_group(&doc->history);
     for (int i = doc->cursor_count - 1; i >= 0; i--) {
         Cursor *cur = &doc->cursors[order[i]];
         if (cur->row == 0 && cur->col == 0) continue;
         size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
         if (pos == 0) continue;
+        char deleted = doc->buffer.text[pos - 1];
         buffer_delete(&doc->buffer, pos - 1, 1);
+        history_push_delete(&doc->history, pos - 1, &deleted, 1, cur->row, cur->col);
         if (cur->col > 0) cur->col--;
         else {
             cur->row--;
@@ -892,6 +934,7 @@ void document_delete_char_multi(Document *doc) {
             cur->col = len;
         }
     }
+    history_end_group(&doc->history);
     document_mark_dirty(doc);
 }
 
@@ -910,14 +953,17 @@ void document_newline_multi(Document *doc) {
             else break;
         }
     }
+    history_begin_group(&doc->history);
     for (int i = doc->cursor_count - 1; i >= 0; i--) {
         Cursor *cur = &doc->cursors[order[i]];
         char nl = '\n';
         size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
         buffer_insert(&doc->buffer, pos, &nl, 1);
+        history_push_insert(&doc->history, pos, &nl, 1, cur->row, cur->col);
         cur->row++;
         cur->col = 0;
     }
+    history_end_group(&doc->history);
     document_mark_dirty(doc);
 }
 
@@ -1417,9 +1463,9 @@ void document_scroll_center(Document *doc) {
 }
 
 void document_scroll_horizontal_center(Document *doc) {
+    if (!doc) return;
     Cursor *cur = &doc->cursors[0];
-    /* Center horizontally - assume average viewport width of 80 chars */
-    int viewport_width = 80;
+    int viewport_width = doc->viewport_cols > 0 ? doc->viewport_cols : 80;
     doc->scroll_x = cur->col - viewport_width / 2;
     if (doc->scroll_x < 0) doc->scroll_x = 0;
 }

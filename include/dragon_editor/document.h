@@ -43,6 +43,7 @@ typedef struct {
     int     scroll_y;
     int     scroll_x;
     int     viewport_lines;
+    int     viewport_cols;
     History history;
     char   *clipboard;
     size_t  clipboard_len;

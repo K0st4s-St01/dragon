@@ -247,6 +247,12 @@
 },
 {
   "directory": "/home/xator/dragon/build",
+  "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -I/home/xator/dragon/vendor/tomlc99 -O3 -DNDEBUG -std=gnu11 -Wall -Wextra -o CMakeFiles/dragon_editor.dir/src/gui/panels/terminal.c.o -c /home/xator/dragon/src/gui/panels/terminal.c",
+  "file": "/home/xator/dragon/src/gui/panels/terminal.c",
+  "output": "CMakeFiles/dragon_editor.dir/src/gui/panels/terminal.c.o"
+},
+{
+  "directory": "/home/xator/dragon/build",
   "command": "/usr/bin/cc  -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -O3 -DNDEBUG -std=gnu11 -o CMakeFiles/dragon_core.dir/src/editor/buffer.c.o -c /home/xator/dragon/src/editor/buffer.c",
   "file": "/home/xator/dragon/src/editor/buffer.c",
   "output": "CMakeFiles/dragon_core.dir/src/editor/buffer.c.o"
