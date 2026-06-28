@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <GLFW/glfw3.h>
 
 #define FB_PATH_MAX     1024
@@ -29,6 +30,10 @@ typedef enum {
     FB_MODE_SAVE_AS,
     FB_MODE_CHANGE_DIR,
     FB_MODE_WORKSPACE,
+    FB_MODE_NEW_FILE,
+    FB_MODE_NEW_FOLDER,
+    FB_MODE_RENAME,
+    FB_MODE_DELETE,
 } FbMode;
 
 static bool    fb_open = false;
@@ -40,6 +45,7 @@ static char    fb_path_input[FB_PATH_MAX];
 static int     fb_path_len = 0;
 static FbEntry fb_entries[FB_MAX_ENTRIES];
 static int     fb_count = 0;
+static int     fb_action_index = -1;
 
 /* Set of expanded directory paths */
 static char fb_expanded[FB_MAX_EXPANDED][FB_PATH_MAX];
@@ -227,10 +233,61 @@ bool panel_file_browser_is_open(void) {
 
 void panel_file_browser_input(App *app, unsigned int c) {
     (void)app;
-    if (!fb_open || fb_mode != FB_MODE_SAVE_AS) return;
-    if (c >= 32 && c < 127 && fb_path_len < FB_PATH_MAX - 1) {
-        fb_path_input[fb_path_len++] = (char)c;
-        fb_path_input[fb_path_len] = '\0';
+    if (!fb_open) return;
+
+    /* Handle delete confirmation */
+    if (fb_mode == FB_MODE_DELETE) {
+        if (c == 'y' || c == 'Y') {
+            if (fb_action_index >= 0 && fb_action_index < fb_count) {
+                FbEntry *e = &fb_entries[fb_action_index];
+                if (e->is_dir)
+                    rmdir(e->path);
+                else
+                    remove(e->path);
+                fb_rebuild();
+            }
+        }
+        fb_mode = FB_MODE_OPEN_FILE;
+        fb_action_index = -1;
+        return;
+    }
+
+    /* Handle action triggers in OPEN_FILE mode */
+    if (fb_mode == FB_MODE_OPEN_FILE) {
+        if (c == 'a') {
+            fb_mode = FB_MODE_NEW_FILE;
+            fb_path_input[0] = '\0';
+            fb_path_len = 0;
+            return;
+        }
+        if (c == 'A') {
+            fb_mode = FB_MODE_NEW_FOLDER;
+            fb_path_input[0] = '\0';
+            fb_path_len = 0;
+            return;
+        }
+        if (c == 'r' && fb_count > 0) {
+            fb_action_index = fb_selected;
+            fb_mode = FB_MODE_RENAME;
+            snprintf(fb_path_input, sizeof(fb_path_input), "%s", fb_entries[fb_selected].name);
+            fb_path_len = (int)strlen(fb_path_input);
+            return;
+        }
+        if (c == 'd' && fb_count > 0) {
+            fb_action_index = fb_selected;
+            fb_mode = FB_MODE_DELETE;
+            return;
+        }
+        return;
+    }
+
+    /* Text input for SAVE_AS, NEW_FILE, NEW_FOLDER, RENAME */
+    if (fb_mode == FB_MODE_SAVE_AS || fb_mode == FB_MODE_NEW_FILE ||
+        fb_mode == FB_MODE_NEW_FOLDER || fb_mode == FB_MODE_RENAME) {
+        if (c >= 32 && c < 127 && fb_path_len < FB_PATH_MAX - 1) {
+            fb_path_input[fb_path_len++] = (char)c;
+            fb_path_input[fb_path_len] = '\0';
+        }
     }
 }
 
@@ -239,7 +296,8 @@ void panel_file_browser_key(App *app, int key) {
 
     switch (key) {
     case GLFW_KEY_BACKSPACE:
-        if (fb_mode == FB_MODE_SAVE_AS && fb_path_len > 0) {
+        if ((fb_mode == FB_MODE_SAVE_AS || fb_mode == FB_MODE_NEW_FILE ||
+             fb_mode == FB_MODE_NEW_FOLDER || fb_mode == FB_MODE_RENAME) && fb_path_len > 0) {
             fb_path_input[--fb_path_len] = '\0';
         }
         break;
@@ -294,6 +352,47 @@ void panel_file_browser_key(App *app, int key) {
         break;
     }
     case GLFW_KEY_ENTER: {
+        if (fb_mode == FB_MODE_NEW_FILE) {
+            if (fb_path_len > 0) {
+                char fullpath[FB_PATH_MAX];
+                snprintf(fullpath, sizeof(fullpath), "%s/%s", fb_root, fb_path_input);
+                int fd = open(fullpath, O_CREAT | O_EXCL | O_WRONLY, 0644);
+                if (fd >= 0) close(fd);
+            }
+            fb_mode = FB_MODE_OPEN_FILE;
+            fb_rebuild();
+            break;
+        }
+        if (fb_mode == FB_MODE_NEW_FOLDER) {
+            if (fb_path_len > 0) {
+                char fullpath[FB_PATH_MAX];
+                snprintf(fullpath, sizeof(fullpath), "%s/%s", fb_root, fb_path_input);
+                mkdir(fullpath, 0755);
+            }
+            fb_mode = FB_MODE_OPEN_FILE;
+            fb_rebuild();
+            break;
+        }
+        if (fb_mode == FB_MODE_RENAME) {
+            if (fb_path_len > 0 && fb_action_index >= 0 && fb_action_index < fb_count) {
+                FbEntry *e = &fb_entries[fb_action_index];
+                char newpath[FB_PATH_MAX];
+                char dir[FB_PATH_MAX];
+                snprintf(dir, sizeof(dir), "%s", e->path);
+                char *last_slash = strrchr(dir, '/');
+                if (last_slash) {
+                    *last_slash = '\0';
+                    snprintf(newpath, sizeof(newpath), "%s/%s", dir, fb_path_input);
+                } else {
+                    snprintf(newpath, sizeof(newpath), "%s/%s", fb_root, fb_path_input);
+                }
+                rename(e->path, newpath);
+            }
+            fb_mode = FB_MODE_OPEN_FILE;
+            fb_action_index = -1;
+            fb_rebuild();
+            break;
+        }
         if (fb_mode == FB_MODE_SAVE_AS) {
             Document *doc = (Document *)app_get_doc(app);
             if (doc && fb_path_len > 0) {
@@ -398,13 +497,18 @@ void panel_file_browser_render(Gui *g, App *app) {
     if (fb_mode == FB_MODE_SAVE_AS) prefix = "Save as";
     else if (fb_mode == FB_MODE_CHANGE_DIR) prefix = "Change dir";
     else if (fb_mode == FB_MODE_WORKSPACE) prefix = "Workspace";
+    else if (fb_mode == FB_MODE_NEW_FILE) prefix = "New file";
+    else if (fb_mode == FB_MODE_NEW_FOLDER) prefix = "New folder";
+    else if (fb_mode == FB_MODE_RENAME) prefix = "Rename";
+    else if (fb_mode == FB_MODE_DELETE) prefix = "Delete";
     snprintf(title, sizeof(title), "%s: %s", prefix, root_name);
     font_draw(&g->font, r, title, px + 14, py + 10,
               t->accent[0], t->accent[1], t->accent[2], 1.0f);
 
     /* List */
     float list_y = py + 40;
-    if (fb_mode == FB_MODE_SAVE_AS) {
+    if (fb_mode == FB_MODE_SAVE_AS || fb_mode == FB_MODE_NEW_FILE ||
+        fb_mode == FB_MODE_NEW_FOLDER || fb_mode == FB_MODE_RENAME) {
         renderer_draw_rect(r, px + 14, list_y - 2, pw - 28, g->font.glyph_h + 8,
                            t->gutter_bg[0], t->gutter_bg[1], t->gutter_bg[2], t->gutter_bg[3]);
         char input[FB_PATH_MAX + 2];
@@ -470,7 +574,11 @@ void panel_file_browser_render(Gui *g, App *app) {
     font_draw(&g->font, r,
               fb_mode == FB_MODE_SAVE_AS
                   ? "type path  Enter save  j/k move  l expand  Esc close"
-                  : "j/k move  Enter choose  l open  h collapse  w workspace  Esc close",
+                  : fb_mode == FB_MODE_DELETE
+                  ? "y confirm delete  other cancel"
+                  : (fb_mode == FB_MODE_NEW_FILE || fb_mode == FB_MODE_NEW_FOLDER || fb_mode == FB_MODE_RENAME)
+                  ? "type name  Enter confirm  Backspace del  Esc close"
+                  : "j/k move  Enter choose  l open  h collapse  a new file  A new folder  r rename  d delete  Esc close",
               px + 14, footer_y,
               t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 }
