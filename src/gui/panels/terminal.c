@@ -35,6 +35,8 @@ static int term_line_count = 1;
 static int term_scroll = 0;
 static int term_col = 0;
 static int term_cursor_line = 0;
+static int term_saved_col = 0;
+static int term_saved_cursor_line = 0;
 static int esc_state = 0;
 static char csi_buf[CSI_BUF_MAX];
 static int csi_len = 0;
@@ -47,6 +49,8 @@ static void terminal_reset_buffer(void) {
     term_scroll = 0;
     term_col = 0;
     term_cursor_line = 0;
+    term_saved_col = 0;
+    term_saved_cursor_line = 0;
     esc_state = 0;
     csi_len = 0;
 }
@@ -88,6 +92,50 @@ static void terminal_clear_screen(void) {
     term_scroll = 0;
     term_col = 0;
     term_cursor_line = 0;
+    term_saved_col = 0;
+    term_saved_cursor_line = 0;
+}
+
+static void terminal_clamp_cursor(void) {
+    if (term_line_count < 1) {
+        term_line_count = 1;
+        term_lines[0][0] = '\0';
+    }
+    if (term_cursor_line < 0) term_cursor_line = 0;
+    while (term_cursor_line >= term_line_count && term_line_count < TERM_MAX_LINES) {
+        term_lines[term_line_count][0] = '\0';
+        term_line_count++;
+    }
+    if (term_cursor_line >= term_line_count) term_cursor_line = term_line_count - 1;
+    if (term_col < 0) term_col = 0;
+    if (term_col >= TERM_MAX_COLS) term_col = TERM_MAX_COLS - 1;
+}
+
+static int terminal_screen_origin(void) {
+    int origin = term_line_count - term_rows;
+    return origin > 0 ? origin : 0;
+}
+
+static void terminal_set_cursor_position(int row, int col) {
+    if (row < 1) row = 1;
+    if (col < 1) col = 1;
+    int target = terminal_screen_origin() + row - 1;
+    if (target >= TERM_MAX_LINES) target = TERM_MAX_LINES - 1;
+    term_cursor_line = target;
+    term_col = col - 1;
+    terminal_clamp_cursor();
+}
+
+static void terminal_save_cursor(void) {
+    terminal_clamp_cursor();
+    term_saved_cursor_line = term_cursor_line;
+    term_saved_col = term_col;
+}
+
+static void terminal_restore_cursor(void) {
+    term_cursor_line = term_saved_cursor_line;
+    term_col = term_saved_col;
+    terminal_clamp_cursor();
 }
 
 static void terminal_clear_line_from_cursor(void) {
@@ -126,8 +174,7 @@ static void terminal_clear_line(void) {
 }
 
 static void terminal_append_byte(char c) {
-    if (term_cursor_line < 0) term_cursor_line = 0;
-    if (term_cursor_line >= term_line_count) term_cursor_line = term_line_count - 1;
+    terminal_clamp_cursor();
     char *line = term_lines[term_cursor_line];
     size_t len = strlen(line);
     if (c == '\n') {
@@ -171,18 +218,91 @@ static void terminal_append_byte(char c) {
         line[term_col] = '\0';
 }
 
-static int csi_param(int fallback) {
+static int csi_param_at(int index, int fallback) {
     int value = 0;
     bool any = false;
+    int current = 0;
     for (int i = 0; i < csi_len; i++) {
         if (csi_buf[i] >= '0' && csi_buf[i] <= '9') {
-            value = value * 10 + (csi_buf[i] - '0');
-            any = true;
+            if (current == index) {
+                value = value * 10 + (csi_buf[i] - '0');
+                any = true;
+            }
         } else if (csi_buf[i] == ';') {
-            break;
+            if (current == index)
+                break;
+            current++;
+            value = 0;
+            any = false;
         }
     }
     return any ? value : fallback;
+}
+
+static int csi_param(int fallback) {
+    return csi_param_at(0, fallback);
+}
+
+static void terminal_delete_chars(int n) {
+    terminal_clamp_cursor();
+    if (n < 1) n = 1;
+    char *line = term_lines[term_cursor_line];
+    size_t len = strlen(line);
+    int col = term_col;
+    if (col < 0) col = 0;
+    if (col >= TERM_MAX_COLS) col = TERM_MAX_COLS - 1;
+    if (col >= (int)len) return;
+    if (col + n >= (int)len) {
+        line[col] = '\0';
+        return;
+    }
+    memmove(line + col, line + col + n, len - (size_t)col - (size_t)n + 1);
+}
+
+static void terminal_insert_spaces(int n) {
+    terminal_clamp_cursor();
+    if (n < 1) n = 1;
+    if (n > TERM_MAX_COLS - 1) n = TERM_MAX_COLS - 1;
+    char *line = term_lines[term_cursor_line];
+    size_t len = strlen(line);
+    int col = term_col;
+    if (col < 0) col = 0;
+    if (col >= TERM_MAX_COLS) col = TERM_MAX_COLS - 1;
+    if (col > (int)len) {
+        int pad_to = col;
+        if (pad_to > TERM_MAX_COLS - 2) pad_to = TERM_MAX_COLS - 2;
+        while ((int)len < pad_to) {
+            line[len++] = ' ';
+            line[len] = '\0';
+        }
+    }
+    int max_len = TERM_MAX_COLS - 1;
+    if ((int)len + n > max_len)
+        n = max_len - (int)len;
+    if (n <= 0) return;
+    memmove(line + col + n, line + col, len - (size_t)col + 1);
+    memset(line + col, ' ', (size_t)n);
+}
+
+static void terminal_erase_chars(int n) {
+    terminal_clamp_cursor();
+    if (n < 1) n = 1;
+    char *line = term_lines[term_cursor_line];
+    size_t len = strlen(line);
+    int col = term_col;
+    if (col < 0) col = 0;
+    if (col >= TERM_MAX_COLS - 1) return;
+    int end = col + n;
+    if (end > TERM_MAX_COLS - 1) end = TERM_MAX_COLS - 1;
+    while ((int)len < end) {
+        line[len++] = ' ';
+        line[len] = '\0';
+    }
+    memset(line + col, ' ', (size_t)(end - col));
+    while (len > 0 && line[len - 1] == ' ') {
+        line[len - 1] = '\0';
+        len--;
+    }
 }
 
 static void terminal_move_cursor_line(int delta) {
@@ -219,6 +339,11 @@ static void terminal_handle_csi(char final) {
         if (term_col < 0) term_col = 0;
         if (term_col >= TERM_MAX_COLS) term_col = TERM_MAX_COLS - 1;
         break;
+    case '`':
+        term_col = n - 1;
+        if (term_col < 0) term_col = 0;
+        if (term_col >= TERM_MAX_COLS) term_col = TERM_MAX_COLS - 1;
+        break;
     case 'E':
         terminal_move_cursor_line(n);
         term_col = 0;
@@ -229,7 +354,19 @@ static void terminal_handle_csi(char final) {
         break;
     case 'H':
     case 'f':
-        term_col = 0;
+        terminal_set_cursor_position(csi_param_at(0, 1), csi_param_at(1, 1));
+        break;
+    case 'd':
+        terminal_set_cursor_position(csi_param_at(0, 1), term_col + 1);
+        break;
+    case '@':
+        terminal_insert_spaces(n);
+        break;
+    case 'P':
+        terminal_delete_chars(n);
+        break;
+    case 'X':
+        terminal_erase_chars(n);
         break;
     case 'J':
         n = csi_param(0);
@@ -244,6 +381,12 @@ static void terminal_handle_csi(char final) {
             terminal_clear_line_to_cursor();
         else if (n == 2)
             terminal_clear_line();
+        break;
+    case 's':
+        terminal_save_cursor();
+        break;
+    case 'u':
+        terminal_restore_cursor();
         break;
     default:
         break;
@@ -262,6 +405,15 @@ static void terminal_consume_output(const char *buf, ssize_t len) {
                     esc_state = 3;
                 } else if (c == '(' || c == ')') {
                     esc_state = 5;
+                } else if (c == '7') {
+                    terminal_save_cursor();
+                    esc_state = 0;
+                } else if (c == '8') {
+                    terminal_restore_cursor();
+                    esc_state = 0;
+                } else if (c == 'c') {
+                    terminal_clear_screen();
+                    esc_state = 0;
                 } else {
                     esc_state = 0;
                 }
@@ -518,9 +670,52 @@ void panel_terminal_key(App *app, int key, int mods) {
     default: break;
     }
 
+    if (mods & GLFW_MOD_CONTROL) {
+        char c = 0;
+        switch (key) {
+        case GLFW_KEY_SPACE:
+        case GLFW_KEY_2:
+            c = 0;
+            terminal_write_bytes(&c, 1);
+            return;
+        case GLFW_KEY_LEFT_BRACKET:
+        case GLFW_KEY_3:
+            c = 0x1b;
+            terminal_write_bytes(&c, 1);
+            return;
+        case GLFW_KEY_BACKSLASH:
+        case GLFW_KEY_4:
+            c = 0x1c;
+            terminal_write_bytes(&c, 1);
+            return;
+        case GLFW_KEY_RIGHT_BRACKET:
+        case GLFW_KEY_5:
+            c = 0x1d;
+            terminal_write_bytes(&c, 1);
+            return;
+        case GLFW_KEY_6:
+            c = 0x1e;
+            terminal_write_bytes(&c, 1);
+            return;
+        case GLFW_KEY_MINUS:
+        case GLFW_KEY_SLASH:
+        case GLFW_KEY_7:
+            c = 0x1f;
+            terminal_write_bytes(&c, 1);
+            return;
+        case GLFW_KEY_8:
+            c = 0x7f;
+            terminal_write_bytes(&c, 1);
+            return;
+        default:
+            break;
+        }
+    }
+
     if ((mods & GLFW_MOD_CONTROL) && key >= GLFW_KEY_A && key <= GLFW_KEY_Z) {
         char c = (char)(key - GLFW_KEY_A + 1);
         terminal_write_bytes(&c, 1);
+        return;
     }
 }
 
