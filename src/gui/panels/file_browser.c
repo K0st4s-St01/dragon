@@ -304,30 +304,44 @@ void panel_file_browser_key(App *app, int key) {
     case GLFW_KEY_DOWN:
     case GLFW_KEY_J:
     case GLFW_KEY_N: /* Ctrl-n routed as plain n here */
+        if (fb_mode != FB_MODE_OPEN_FILE && fb_mode != FB_MODE_CHANGE_DIR &&
+            fb_mode != FB_MODE_WORKSPACE) break;
         if (fb_selected < fb_count - 1) fb_selected++;
         break;
     case GLFW_KEY_UP:
     case GLFW_KEY_K:
     case GLFW_KEY_P:
+        if (fb_mode != FB_MODE_OPEN_FILE && fb_mode != FB_MODE_CHANGE_DIR &&
+            fb_mode != FB_MODE_WORKSPACE) break;
         if (fb_selected > 0) fb_selected--;
         break;
     case GLFW_KEY_PAGE_DOWN:
+        if (fb_mode != FB_MODE_OPEN_FILE && fb_mode != FB_MODE_CHANGE_DIR &&
+            fb_mode != FB_MODE_WORKSPACE) break;
         fb_selected += 10;
         if (fb_selected >= fb_count) fb_selected = fb_count > 0 ? fb_count - 1 : 0;
         break;
     case GLFW_KEY_PAGE_UP:
+        if (fb_mode != FB_MODE_OPEN_FILE && fb_mode != FB_MODE_CHANGE_DIR &&
+            fb_mode != FB_MODE_WORKSPACE) break;
         fb_selected -= 10;
         if (fb_selected < 0) fb_selected = 0;
         break;
     case GLFW_KEY_HOME:
+        if (fb_mode != FB_MODE_OPEN_FILE && fb_mode != FB_MODE_CHANGE_DIR &&
+            fb_mode != FB_MODE_WORKSPACE) break;
         fb_selected = 0;
         break;
     case GLFW_KEY_END:
+        if (fb_mode != FB_MODE_OPEN_FILE && fb_mode != FB_MODE_CHANGE_DIR &&
+            fb_mode != FB_MODE_WORKSPACE) break;
         fb_selected = fb_count > 0 ? fb_count - 1 : 0;
         break;
     case GLFW_KEY_LEFT:
     case GLFW_KEY_H: {
         /* Collapse current dir, or jump to parent entry */
+        if (fb_mode != FB_MODE_OPEN_FILE && fb_mode != FB_MODE_CHANGE_DIR &&
+            fb_mode != FB_MODE_WORKSPACE) break;
         if (fb_count == 0) break;
         FbEntry *e = &fb_entries[fb_selected];
         if (e->is_dir && fb_is_expanded(e->path)) {
@@ -343,6 +357,8 @@ void panel_file_browser_key(App *app, int key) {
     }
     case GLFW_KEY_RIGHT:
     case GLFW_KEY_L: {
+        if (fb_mode != FB_MODE_OPEN_FILE && fb_mode != FB_MODE_CHANGE_DIR &&
+            fb_mode != FB_MODE_WORKSPACE) break;
         if (fb_count == 0) break;
         FbEntry *e = &fb_entries[fb_selected];
         if (e->is_dir && !fb_is_expanded(e->path)) {
@@ -469,6 +485,8 @@ void panel_file_browser_key(App *app, int key) {
     }
     case GLFW_KEY_W: {
         /* Set workspace root to selected directory */
+        if (fb_mode != FB_MODE_OPEN_FILE && fb_mode != FB_MODE_CHANGE_DIR &&
+            fb_mode != FB_MODE_WORKSPACE) break;
         if (fb_count == 0) break;
         FbEntry *e = &fb_entries[fb_selected];
         if (e->is_dir) {
