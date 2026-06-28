@@ -1232,6 +1232,55 @@ static void test_lsp_publish_diagnostics_empty(void) {
     PASS();
 }
 
+static void test_lsp_completion_insert_text(void) {
+    TEST(lsp_completion_insert_text);
+    const char *json =
+        "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isIncomplete\":false,\"items\":["
+        "{\"label\":\"printf\",\"insertText\":\"printf($1);\",\"detail\":\"function\"}]}}";
+    LSPCompletionItems *items = lsp_parse_completion_response(json);
+    ASSERT(items != NULL);
+    ASSERT_EQ_INT(items->count, 1);
+    ASSERT_EQ_STR(items->items[0].label, "printf");
+    ASSERT_EQ_STR(items->items[0].insert_text, "printf($1);");
+    ASSERT_EQ_STR(items->items[0].detail, "function");
+    lsp_free_completion_items(items);
+    PASS();
+}
+
+static void test_lsp_formatting_response_parse(void) {
+    TEST(lsp_formatting_response_parse);
+    const char *json =
+        "{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":["
+        "{\"range\":{\"start\":{\"line\":0,\"character\":0},"
+        "\"end\":{\"line\":0,\"character\":3}},\"newText\":\"int\"}]}";
+    LSPWorkspaceEdit *edit = lsp_parse_formatting_response(json);
+    ASSERT(edit != NULL);
+    ASSERT_EQ_INT(edit->count, 1);
+    ASSERT_EQ_INT(edit->changes[0].range.start.line, 0);
+    ASSERT_EQ_INT(edit->changes[0].range.end.character, 3);
+    ASSERT_EQ_STR(edit->changes[0].new_text, "int");
+    lsp_free_workspace_edit(edit);
+    PASS();
+}
+
+static void test_lsp_code_action_edit_parse(void) {
+    TEST(lsp_code_action_edit_parse);
+    const char *json =
+        "{\"jsonrpc\":\"2.0\",\"id\":3,\"result\":[{\"title\":\"Fix include\","
+        "\"kind\":\"quickfix\",\"edit\":{\"changes\":{\"file:///tmp/a.c\":["
+        "{\"range\":{\"start\":{\"line\":1,\"character\":0},"
+        "\"end\":{\"line\":1,\"character\":0}},\"newText\":\"#include <stdio.h>\\n\"}]}}}]}";
+    LSPCodeActions *actions = lsp_parse_code_actions_response(json);
+    ASSERT(actions != NULL);
+    ASSERT_EQ_INT(actions->count, 1);
+    ASSERT_EQ_STR(actions->actions[0].title, "Fix include");
+    ASSERT(actions->actions[0].edit != NULL);
+    ASSERT_EQ_INT(actions->actions[0].edit->count, 1);
+    ASSERT_EQ_STR(actions->actions[0].edit->changes[0].new_text, "#include <stdio.h>\n");
+    lsp_free_code_actions(actions);
+    PASS();
+}
+
 /* ================================================================
  * DOCUMENT TESTS
  * ================================================================ */
@@ -3796,6 +3845,44 @@ static void test_window_goto_left_right(void) {
     PASS();
 }
 
+static void test_window_swap_left_right(void) {
+    TEST(window_swap_left_right);
+    WindowManager wm;
+    window_manager_init(&wm);
+    int idx = window_split_vertical(&wm, 1);
+    wm.active = idx;
+    int active_x = wm.windows[idx].x;
+    int neighbor_x = wm.windows[0].x;
+    window_swap_left(&wm);
+    ASSERT_EQ_INT(wm.active, idx);
+    ASSERT_EQ_INT(wm.windows[idx].x, neighbor_x);
+    ASSERT_EQ_INT(wm.windows[0].x, active_x);
+    window_swap_right(&wm);
+    ASSERT_EQ_INT(wm.active, idx);
+    ASSERT_EQ_INT(wm.windows[idx].x, active_x);
+    ASSERT_EQ_INT(wm.windows[0].x, neighbor_x);
+    PASS();
+}
+
+static void test_window_swap_up_down(void) {
+    TEST(window_swap_up_down);
+    WindowManager wm;
+    window_manager_init(&wm);
+    int idx = window_split_horizontal(&wm, 1);
+    wm.active = idx;
+    int active_y = wm.windows[idx].y;
+    int neighbor_y = wm.windows[0].y;
+    window_swap_up(&wm);
+    ASSERT_EQ_INT(wm.active, idx);
+    ASSERT_EQ_INT(wm.windows[idx].y, neighbor_y);
+    ASSERT_EQ_INT(wm.windows[0].y, active_y);
+    window_swap_down(&wm);
+    ASSERT_EQ_INT(wm.active, idx);
+    ASSERT_EQ_INT(wm.windows[idx].y, active_y);
+    ASSERT_EQ_INT(wm.windows[0].y, neighbor_y);
+    PASS();
+}
+
 static void test_window_maximize(void) {
     TEST(window_maximize);
     WindowManager wm;
@@ -3995,6 +4082,9 @@ int main(void) {
     printf("\n[LSP Tests]\n");
     test_lsp_publish_diagnostics_parse();
     test_lsp_publish_diagnostics_empty();
+    test_lsp_completion_insert_text();
+    test_lsp_formatting_response_parse();
+    test_lsp_code_action_edit_parse();
 
     printf("\n[Document Tests]\n");
     test_document_init();
@@ -4244,6 +4334,8 @@ int main(void) {
     test_window_close();
     test_window_next_prev();
     test_window_goto_left_right();
+    test_window_swap_left_right();
+    test_window_swap_up_down();
     test_window_maximize();
     test_window_equalize();
 

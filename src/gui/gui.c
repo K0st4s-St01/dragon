@@ -16,6 +16,7 @@
 #include "panel_about.h"
 #include "panel_buffer_picker.h"
 #include "panel_jumplist_picker.h"
+#include "panel_changed_files.h"
 #include "panel_lsp_goto.h"
 #include "panel_lsp_hover.h"
 #include "panel_lsp_diagnostics.h"
@@ -577,6 +578,7 @@ void gui_render(Gui *g, App *app, Document *doc, ModeState *mode) {
      panel_about_render(g, app);
      panel_buffer_picker_render(g, app);
      panel_jumplist_picker_render(g, app);
+      panel_changed_files_render(g, app);
       panel_lsp_goto_render(g, app);
       panel_lsp_diagnostics_render(g, app);
       panel_lsp_hover_render(g, app);

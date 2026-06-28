@@ -342,7 +342,7 @@ Enter with `Ctrl-w`.
 - [x] ~~`Ctrl-w h/j/k/l` — move to neighboring split.~~
 - [x] ~~`Ctrl-w q` / `Ctrl-w Ctrl-q` — close current window.~~
 - [x] ~~`Ctrl-w o` / `Ctrl-w Ctrl-o` — keep only current window.~~
-- [ ] `Ctrl-w H/J/K/L` — swap current window left/down/up/right.
+- [x] ~~`Ctrl-w H/J/K/L` — swap current window left/down/up/right.~~
 
 ---
 
@@ -356,7 +356,7 @@ Enter with `Space`.
 - [x] ~~`Space o` — file picker at $HOME directory.~~
 - [x] ~~`Space b` — buffer picker.~~
 - [x] ~~`Space j` — jumplist picker.~~
-- [ ] `Space g` — changed-file picker.
+- [x] ~~`Space g` — changed-file picker.~~
 - [x] ~~`Space k` — hover documentation.~~
 - [x] ~~`Space s` — document symbol picker.~~
 - [x] ~~`Space S` — workspace symbol picker.~~
@@ -698,27 +698,27 @@ Corrected:
   - [x] ~~spinner~~
   - [x] ~~file-name~~
   - [ ] file-absolute-path
-  - [ ] file-base-name
+  - [x] ~~file-base-name~~
   - [x] ~~file-modification-indicator~~
-  - [ ] file-encoding
-  - [ ] file-line-ending
-  - [ ] file-type
+  - [x] ~~file-encoding~~
+  - [x] ~~file-line-ending~~
+  - [x] ~~file-type~~
   - [x] ~~diagnostics~~
   - [x] ~~workspace-diagnostics~~
-  - [ ] selections
-  - [ ] primary-selection-length
+  - [x] ~~selections~~
+  - [x] ~~primary-selection-length~~
   - [x] ~~position~~
-  - [ ] position-percentage
+  - [x] ~~position-percentage~~
   - [x] ~~total-line-numbers~~
   - [ ] register
   - [ ] version
-- [ ] Show macro recording indicator.
-- [ ] Show current language/file type.
-- [ ] Show line ending style.
-- [ ] Show file encoding.
+- [x] ~~Show macro recording indicator.~~
+- [x] ~~Show current language/file type.~~
+- [x] ~~Show line ending style.~~
+- [x] ~~Show file encoding.~~
 
 Optional extension:
-- [ ] Current git branch in statusline.
+- [x] ~~Current git branch in statusline.~~
 
 ---
 
@@ -728,7 +728,7 @@ Optional extension:
 - [ ] `]g` / `[g` — next/previous change.
 - [ ] `]G` / `[G` — last/first change.
 - [ ] `:reset-diff-change`, `:diffget`, `:diffg` — reset diff change at cursor.
-- [ ] Changed-file picker with `Space-g`.
+- [x] ~~Changed-file picker with `Space-g`.~~
 
 Optional extension:
 - [ ] Full diff view.

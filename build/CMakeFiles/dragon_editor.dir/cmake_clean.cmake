@@ -36,6 +36,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o.d"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o.d"
+  "CMakeFiles/dragon_editor.dir/src/gui/panels/changed_files.c.o"
+  "CMakeFiles/dragon_editor.dir/src/gui/panels/changed_files.c.o.d"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o.d"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o"

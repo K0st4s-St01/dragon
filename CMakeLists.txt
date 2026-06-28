@@ -44,6 +44,7 @@ set(EDITOR_SOURCES
     src/gui/panels/about.c
     src/gui/panels/buffer_picker.c
     src/gui/panels/jumplist_picker.c
+    src/gui/panels/changed_files.c
     src/gui/panels/lsp_goto_picker.c
     src/gui/panels/lsp_hover_panel.c
     src/gui/panels/lsp_diagnostics_picker.c

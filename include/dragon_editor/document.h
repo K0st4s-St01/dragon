@@ -321,6 +321,10 @@ void window_goto_left(WindowManager *wm);
 void window_goto_right(WindowManager *wm);
 void window_goto_up(WindowManager *wm);
 void window_goto_down(WindowManager *wm);
+void window_swap_left(WindowManager *wm);
+void window_swap_right(WindowManager *wm);
+void window_swap_up(WindowManager *wm);
+void window_swap_down(WindowManager *wm);
 void window_maximize(WindowManager *wm);
 void window_equalize(WindowManager *wm);
 
@@ -341,5 +345,6 @@ void language_settings_detect(Document *doc, LanguageSettings *out);
 /* LSP text editing */
 void document_apply_text_edit(Document *doc, const LSPTextEdit *edit);
 void document_apply_workspace_edit(Document *doc, const LSPWorkspaceEdit *edit);
+bool document_format_with_lsp(Document *doc, void *lsp_manager, int tab_size, bool insert_spaces);
 
 #endif

@@ -10,6 +10,8 @@
 
 #define MAX_CURSORS 64
 
+static char *filepath_to_uri(const char *filepath);
+
 static bool language_is_c_family(const char *lang) {
     return lang && (strcmp(lang, "c") == 0 || strcmp(lang, "cpp") == 0 ||
                     strcmp(lang, "objc") == 0 || strcmp(lang, "objcpp") == 0 ||
@@ -2101,7 +2103,36 @@ void document_comment_toggle(Document *doc) {
 }
 
 void document_format_selection(Document *doc) {
-    (void)doc;
+    if (!doc) return;
+    document_trim_whitespace(doc);
+}
+
+bool document_format_with_lsp(Document *doc, void *lsp_manager, int tab_size, bool insert_spaces) {
+    if (!doc || !doc->filepath || !doc->language_id || !lsp_manager) return false;
+    LSPManager *manager = (LSPManager *)lsp_manager;
+    LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
+    if (!client || client->status != LSP_STATUS_INITIALIZED) return false;
+
+    char *uri = filepath_to_uri(doc->filepath);
+    if (!uri) return false;
+    lsp_client_send_formatting_request(client, uri, tab_size, insert_spaces);
+    free(uri);
+
+    for (int i = 0; i < 5; i++) {
+        usleep(40000);
+        char *response = lsp_client_read_response(client);
+        if (!response) continue;
+        LSPWorkspaceEdit *edit = lsp_parse_formatting_response(response);
+        free(response);
+        if (edit && edit->count > 0) {
+            document_apply_workspace_edit(doc, edit);
+            lsp_free_workspace_edit(edit);
+            document_notify_lsp_change(doc, manager);
+            return true;
+        }
+        lsp_free_workspace_edit(edit);
+    }
+    return false;
 }
 
 void document_page_down_extend(Document *doc) {
@@ -4790,6 +4821,61 @@ void window_goto_down(WindowManager *wm) {
         }
     }
     if (best >= 0) wm->active = best;
+}
+
+static int window_neighbor(WindowManager *wm, int dx, int dy) {
+    if (!wm || wm->active < 0 || wm->active >= wm->count) return -1;
+    Window *w = &wm->windows[wm->active];
+    int best = -1;
+    int best_dist = 0;
+    for (int i = 0; i < MAX_WINDOWS; i++) {
+        if (i == wm->active || !wm->windows[i].visible) continue;
+        Window *s = &wm->windows[i];
+        bool overlaps = dx != 0 ?
+            (s->y < w->y + w->height && s->y + s->height > w->y) :
+            (s->x < w->x + w->width && s->x + s->width > w->x);
+        int dist = 0;
+        if (dx < 0) dist = w->x - (s->x + s->width);
+        else if (dx > 0) dist = s->x - (w->x + w->width);
+        else if (dy < 0) dist = w->y - (s->y + s->height);
+        else if (dy > 0) dist = s->y - (w->y + w->height);
+        if (overlaps && dist >= 0 && (best < 0 || dist < best_dist)) {
+            best = i;
+            best_dist = dist;
+        }
+    }
+    return best;
+}
+
+static void window_swap_geometry(WindowManager *wm, int neighbor) {
+    if (!wm || neighbor < 0 || neighbor >= wm->count) return;
+    Window *a = &wm->windows[wm->active];
+    Window *b = &wm->windows[neighbor];
+    int x = a->x, y = a->y, width = a->width, height = a->height;
+    a->x = b->x;
+    a->y = b->y;
+    a->width = b->width;
+    a->height = b->height;
+    b->x = x;
+    b->y = y;
+    b->width = width;
+    b->height = height;
+}
+
+void window_swap_left(WindowManager *wm) {
+    window_swap_geometry(wm, window_neighbor(wm, -1, 0));
+}
+
+void window_swap_right(WindowManager *wm) {
+    window_swap_geometry(wm, window_neighbor(wm, 1, 0));
+}
+
+void window_swap_up(WindowManager *wm) {
+    window_swap_geometry(wm, window_neighbor(wm, 0, -1));
+}
+
+void window_swap_down(WindowManager *wm) {
+    window_swap_geometry(wm, window_neighbor(wm, 0, 1));
 }
 
 void window_maximize(WindowManager *wm) {

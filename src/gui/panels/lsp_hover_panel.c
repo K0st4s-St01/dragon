@@ -24,16 +24,12 @@ static bool hover_open = false;
 static int hover_scroll = 0;
 static HoverDisplay hover_display = {0};
 static double hover_open_time = 0;
+static bool hover_loading = false;
+static LSPClient *hover_pending_client = NULL;
+static int hover_pending_id = -1;
 static const double HOVER_TIMEOUT = 10.0;  /* 10 seconds */
 
-void panel_lsp_hover_open(App *app) {
-    Document *doc = (Document *)app_get_doc(app);
-    
-    if (!doc->hover_result) {
-        return;
-    }
-    
-    /* Clear old display */
+static void hover_clear_display(void) {
     if (hover_display.content) {
         free(hover_display.content);
         if (hover_display.lines) {
@@ -44,29 +40,28 @@ void panel_lsp_hover_open(App *app) {
         }
         memset(&hover_display, 0, sizeof(hover_display));
     }
-    
-    /* Get hover content */
-    const char *content = lsp_hover_get_contents((LSPHover *)doc->hover_result);
-    if (!content || strlen(content) == 0) {
+}
+
+static void hover_set_content(const char *content) {
+    hover_clear_display();
+    if (!content || strlen(content) == 0) return;
+
+    hover_display.content = strdup(content);
+    if (!hover_display.content) return;
+    hover_display.max_width = 80;
+
+    char *copy = strdup(content);
+    if (!copy) {
+        hover_clear_display();
         return;
     }
-    
-    /* Store content */
-    hover_display.content = strdup(content);
-    hover_display.max_width = 80;
-    
-    /* Split into lines */
-    char *copy = strdup(content);
     hover_display.line_count = 1;
-    
     for (char *p = copy; *p; p++) {
-        if (*p == '\n') {
+        if (*p == '\n')
             hover_display.line_count++;
-        }
     }
-    
+
     hover_display.lines = malloc(hover_display.line_count * sizeof(char *));
-    
     char *line_start = copy;
     int line_idx = 0;
     for (char *p = copy; *p; p++) {
@@ -80,9 +75,49 @@ void panel_lsp_hover_open(App *app) {
     if (line_idx < hover_display.line_count) {
         hover_display.lines[line_idx] = strdup(line_start);
     }
-    
     free(copy);
-    
+}
+
+static char *hover_file_uri(const char *path) {
+    if (!path) return NULL;
+    size_t len = strlen(path) + 8;
+    char *uri = malloc(len);
+    if (!uri) return NULL;
+    snprintf(uri, len, "file://%s", path);
+    return uri;
+}
+
+void panel_lsp_hover_request(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    if (!doc || !doc->language_id || !doc->filepath) return;
+    LSPManager *manager = (LSPManager *)app_get_lsp_manager(app);
+    LSPClient *client = lsp_manager_get_client(manager, doc->language_id);
+    if (!client || client->status != LSP_STATUS_INITIALIZED) return;
+
+    char *uri = hover_file_uri(doc->filepath);
+    if (!uri) return;
+    Cursor *cur = &doc->cursors[0];
+    lsp_client_send_hover_request(client, uri, cur->row, cur->col);
+    free(uri);
+
+    hover_clear_display();
+    hover_pending_client = client;
+    hover_pending_id = client->id - 1;
+    hover_loading = true;
+    hover_open = true;
+    hover_scroll = 0;
+    hover_open_time = glfwGetTime();
+}
+
+void panel_lsp_hover_open(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    if (!doc || !doc->hover_result) return;
+    const char *content = lsp_hover_get_contents((LSPHover *)doc->hover_result);
+    hover_set_content(content);
+    if (!hover_display.content) return;
+    hover_loading = false;
+    hover_pending_client = NULL;
+    hover_pending_id = -1;
     hover_open = true;
     hover_scroll = 0;
     hover_open_time = glfwGetTime();
@@ -91,6 +126,9 @@ void panel_lsp_hover_open(App *app) {
 void panel_lsp_hover_close(App *app) {
     (void)app;
     hover_open = false;
+    hover_loading = false;
+    hover_pending_client = NULL;
+    hover_pending_id = -1;
 }
 
 bool panel_lsp_hover_is_open(void) {
@@ -117,6 +155,32 @@ bool panel_lsp_hover_key(App *app, int key, int mods) {
     return false;
 }
 
+bool panel_lsp_hover_handle_lsp_response(App *app, LSPClient *client, int response_id, const char *response) {
+    if (!hover_pending_client || client != hover_pending_client || response_id != hover_pending_id)
+        return false;
+
+    Document *doc = (Document *)app_get_doc(app);
+    LSPHover *hover = lsp_parse_hover_response(response);
+    if (doc) {
+        if (doc->hover_result)
+            lsp_free_hover((LSPHover *)doc->hover_result);
+        doc->hover_result = hover;
+    } else {
+        lsp_free_hover(hover);
+        hover = NULL;
+    }
+    const char *content = hover ? lsp_hover_get_contents(hover) : NULL;
+    hover_set_content(content);
+    hover_loading = false;
+    hover_pending_client = NULL;
+    hover_pending_id = -1;
+    if (!hover_display.content)
+        hover_open = false;
+    else
+        hover_open_time = glfwGetTime();
+    return true;
+}
+
 void panel_lsp_hover_render(Gui *g, App *app) {
     if (!hover_open) return;
     
@@ -127,6 +191,24 @@ void panel_lsp_hover_render(Gui *g, App *app) {
         return;
     }
     
+    if (hover_loading) {
+        Renderer *r = app_get_renderer(app);
+        Theme *t = theme_get();
+        int w = app_get_width(app);
+        int h = app_get_height(app);
+        float pw = 260.0f;
+        float ph = 56.0f;
+        float px = (float)w / 2.0f - pw / 2.0f;
+        float py = (float)h / 2.0f - ph / 2.0f;
+        renderer_draw_rect(r, px, py, pw, ph,
+                           t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], t->menu_bg[3]);
+        renderer_draw_rect(r, px, py, pw, 2.0f,
+                           t->accent[0], t->accent[1], t->accent[2], 1.0f);
+        font_draw(&g->font, r, "Loading hover...", px + 12.0f, py + 20.0f,
+                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], 1.0f);
+        return;
+    }
+
     if (!hover_display.content || hover_display.line_count == 0) {
         return;
     }

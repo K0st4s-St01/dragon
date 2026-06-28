@@ -9,6 +9,7 @@
 #include "panel_about.h"
 #include "panel_buffer_picker.h"
 #include "panel_jumplist_picker.h"
+#include "panel_changed_files.h"
 #include "panel_lsp_goto.h"
 #include "panel_lsp_hover.h"
 #include "panel_lsp_diagnostics.h"
@@ -39,6 +40,11 @@ static void input_save_all_buffers(App *app) {
         if (doc && doc->filepath)
             document_save(doc);
     }
+}
+
+static void input_format_document(App *app, Document *doc) {
+    (void)doc;
+    app_format_document(app);
 }
 
 void input_cmd_reset(void) {
@@ -146,18 +152,42 @@ static bool handle_window_key(App *app, int key, int mods) {
         app_maximize_window(app);
         return true;
     case GLFW_KEY_H:
+        if (mods & GLFW_MOD_SHIFT) {
+            app_swap_window_left(app);
+            return true;
+        }
+        app_goto_window_left(app);
+        return true;
     case GLFW_KEY_LEFT:
         app_goto_window_left(app);
         return true;
     case GLFW_KEY_L:
+        if (mods & GLFW_MOD_SHIFT) {
+            app_swap_window_right(app);
+            return true;
+        }
+        app_goto_window_right(app);
+        return true;
     case GLFW_KEY_RIGHT:
         app_goto_window_right(app);
         return true;
     case GLFW_KEY_K:
+        if (mods & GLFW_MOD_SHIFT) {
+            app_swap_window_up(app);
+            return true;
+        }
+        app_goto_window_up(app);
+        return true;
     case GLFW_KEY_UP:
         app_goto_window_up(app);
         return true;
     case GLFW_KEY_J:
+        if (mods & GLFW_MOD_SHIFT) {
+            app_swap_window_down(app);
+            return true;
+        }
+        app_goto_window_down(app);
+        return true;
     case GLFW_KEY_DOWN:
         app_goto_window_down(app);
         return true;
@@ -180,7 +210,6 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
             panel_terminal_close(app);
         else
             panel_terminal_open(app);
-        mode->suppress_next_char = true;
         return;
     }
 
@@ -193,6 +222,7 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
         if (panel_about_is_open()) { panel_about_close(app); return; }
         if (panel_buffer_picker_is_open()) { panel_buffer_picker_close(app); return; }
         if (panel_jumplist_picker_is_open()) { panel_jumplist_picker_close(app); return; }
+        if (panel_changed_files_is_open()) { panel_changed_files_close(app); return; }
         if (panel_lsp_goto_is_open()) { panel_lsp_goto_close(app); return; }
         if (panel_lsp_diagnostics_is_open()) { panel_lsp_diagnostics_close(app); return; }
         if (panel_lsp_hover_is_open()) { panel_lsp_hover_close(app); return; }
@@ -259,6 +289,11 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
 
     if (panel_workspace_diagnostics_is_open()) {
         panel_workspace_diagnostics_key(app, key);
+        return;
+    }
+
+    if (panel_changed_files_is_open()) {
+        panel_changed_files_key(app, key);
         return;
     }
 
@@ -748,6 +783,12 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                 mode->pending_len = 0;
                 return;
             }
+            if (key == GLFW_KEY_G) {
+                /* Space g - changed-file picker */
+                panel_changed_files_open(app);
+                mode->pending_len = 0;
+                return;
+            }
              if (key == GLFW_KEY_C) {
                  document_comment_toggle(doc);
                  mode->pending_len = 0;
@@ -755,9 +796,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
              }
              if (key == GLFW_KEY_K) {
                  /* Space k - hover documentation */
-                 extern void document_lsp_hover(Document *, void *);
-                 document_lsp_hover(doc, app_get_lsp_manager(app));
-                 panel_lsp_hover_open(app);
+                 panel_lsp_hover_request(app);
                  mode->pending_len = 0;
                  return;
              }
@@ -785,7 +824,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
               }
               if (key == GLFW_KEY_H) {
                   /* Space h - select references under cursor */
-                  document_lsp_select_references(doc, app_get_lsp_manager(app));
+                  app_lsp_select_references(app);
                   mode->pending_len = 0;
                   return;
               }
@@ -882,27 +921,19 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             app_prev_buffer(app); /* gp - go to previous buffer */
         else if (key == GLFW_KEY_D) {
             /* gd - go to definition (LSP) */
-            extern void document_lsp_goto_definition(Document *, void *);
-            document_lsp_goto_definition(doc, app_get_lsp_manager(app));
-            panel_lsp_goto_open(app);
+            app_lsp_request_goto(app, APP_LSP_GOTO_DEFINITION);
         }
         else if (key == GLFW_KEY_Y) {
             /* gy - go to type definition (LSP) */
-            extern void document_lsp_goto_type_definition(Document *, void *);
-            document_lsp_goto_type_definition(doc, app_get_lsp_manager(app));
-            panel_lsp_goto_open(app);
+            app_lsp_request_goto(app, APP_LSP_GOTO_TYPE_DEFINITION);
         }
         else if (key == GLFW_KEY_R) {
             /* gr - go to references (LSP) */
-            extern void document_lsp_goto_references(Document *, void *);
-            document_lsp_goto_references(doc, app_get_lsp_manager(app));
-            panel_lsp_goto_open(app);
+            app_lsp_request_goto(app, APP_LSP_GOTO_REFERENCES);
         }
         else if (key == GLFW_KEY_I) {
             /* gi - go to implementation (LSP) */
-            extern void document_lsp_goto_implementation(Document *, void *);
-            document_lsp_goto_implementation(doc, app_get_lsp_manager(app));
-            panel_lsp_goto_open(app);
+            app_lsp_request_goto(app, APP_LSP_GOTO_IMPLEMENTATION);
         }
         else if (key == GLFW_KEY_PERIOD)
             document_goto_last_modification(doc); /* g. - go to last modification */
@@ -1460,7 +1491,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         document_trim_whitespace(doc);
         break;
     case GLFW_KEY_EQUAL:
-        document_format_selection(doc);
+        input_format_document(app, doc);
         break;
     case GLFW_KEY_M:
         mode->pending_key = 'm';
@@ -1772,7 +1803,7 @@ static void handle_command_key(App *app, int key, int action, int mods) {
     } else if (strcmp(cmd_buf, "sort") == 0) {
         document_sort_selection(doc);
     } else if (strcmp(cmd_buf, "fmt") == 0 || strcmp(cmd_buf, "format") == 0) {
-        document_format_selection(doc);
+        input_format_document(app, doc);
     } else if (strncmp(cmd_buf, "reflow ", 7) == 0) {
         int width = atoi(cmd_buf + 7);
         if (width > 0) document_reflow(doc, width);
@@ -2197,7 +2228,7 @@ static void handle_select_key(App *app, int key, int action, int mods) {
         break;
 
     case GLFW_KEY_EQUAL:
-        document_format_selection(doc);
+        input_format_document(app, doc);
         break;
 
     default: break;

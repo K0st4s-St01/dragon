@@ -653,6 +653,30 @@ src/gui/panels/buffer_picker.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.s
 .PHONY : src/gui/panels/buffer_picker.c.s
 
+src/gui/panels/changed_files.o: src/gui/panels/changed_files.c.o
+.PHONY : src/gui/panels/changed_files.o
+
+# target to build an object file
+src/gui/panels/changed_files.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/changed_files.c.o
+.PHONY : src/gui/panels/changed_files.c.o
+
+src/gui/panels/changed_files.i: src/gui/panels/changed_files.c.i
+.PHONY : src/gui/panels/changed_files.i
+
+# target to preprocess a source file
+src/gui/panels/changed_files.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/changed_files.c.i
+.PHONY : src/gui/panels/changed_files.c.i
+
+src/gui/panels/changed_files.s: src/gui/panels/changed_files.c.s
+.PHONY : src/gui/panels/changed_files.s
+
+# target to generate assembly for a file
+src/gui/panels/changed_files.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/changed_files.c.s
+.PHONY : src/gui/panels/changed_files.c.s
+
 src/gui/panels/code_actions.o: src/gui/panels/code_actions.c.o
 .PHONY : src/gui/panels/code_actions.o
 
@@ -1321,6 +1345,9 @@ help:
 	@echo "... src/gui/panels/buffer_picker.o"
 	@echo "... src/gui/panels/buffer_picker.i"
 	@echo "... src/gui/panels/buffer_picker.s"
+	@echo "... src/gui/panels/changed_files.o"
+	@echo "... src/gui/panels/changed_files.i"
+	@echo "... src/gui/panels/changed_files.s"
 	@echo "... src/gui/panels/code_actions.o"
 	@echo "... src/gui/panels/code_actions.i"
 	@echo "... src/gui/panels/code_actions.s"

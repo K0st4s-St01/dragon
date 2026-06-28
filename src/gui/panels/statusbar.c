@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include "panel_statusbar.h"
 #include "app.h"
 #include "document.h"
@@ -59,6 +60,102 @@ static float draw_right_label(Gui *g, Renderer *r, const char *text,
     if (x > 0.0f)
         font_draw(&g->font, r, text, x, y, cr, cg, cb, ca);
     return x - gap;
+}
+
+static float draw_left_label(Gui *g, Renderer *r, const char *text,
+                             float left, float right, float y, float gap,
+                             float cr, float cg, float cb, float ca) {
+    if (!text || !*text) return left;
+    float w = font_text_width(&g->font, text);
+    if (left + w < right) {
+        font_draw(&g->font, r, text, left, y, cr, cg, cb, ca);
+        left += w + gap;
+    }
+    return left;
+}
+
+static int selection_length(Document *doc, const Cursor *cur) {
+    if (!doc || !cur || !cur->has_selection) return 0;
+    int sr, sc, er, ec;
+    Cursor copy = *cur;
+    cursor_normalize(&copy, &sr, &sc, &er, &ec);
+    size_t start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
+    size_t end = buffer_pos_from_row_col(&doc->buffer, er, ec);
+    return end > start ? (int)(end - start) : 0;
+}
+
+static const char *line_ending_label(Document *doc) {
+    if (!doc) return "LF";
+    return strstr(doc->buffer.text, "\r\n") ? "CRLF" : "LF";
+}
+
+static int git_head_path(const char *root, char *out, size_t out_size) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/.git/HEAD", root);
+    FILE *f = fopen(path, "r");
+    if (f) {
+        fclose(f);
+        snprintf(out, out_size, "%s", path);
+        return 1;
+    }
+
+    snprintf(path, sizeof(path), "%s/.git", root);
+    f = fopen(path, "r");
+    if (!f) return 0;
+    char line[1024];
+    if (!fgets(line, sizeof(line), f)) {
+        fclose(f);
+        return 0;
+    }
+    fclose(f);
+    if (strncmp(line, "gitdir:", 7) != 0) return 0;
+
+    char *gitdir = line + 7;
+    while (*gitdir == ' ' || *gitdir == '\t') gitdir++;
+    gitdir[strcspn(gitdir, "\r\n")] = '\0';
+    if (gitdir[0] == '/')
+        snprintf(out, out_size, "%s/HEAD", gitdir);
+    else
+        snprintf(out, out_size, "%s/%s/HEAD", root, gitdir);
+    return 1;
+}
+
+static const char *git_branch_label(App *app) {
+    static char cached_root[512];
+    static char cached_branch[128];
+    static time_t cached_at = 0;
+
+    const char *root = app_get_workspace_root(app);
+    if (!root || !*root) return NULL;
+    time_t now = time(NULL);
+    if (cached_at == now && strcmp(cached_root, root) == 0)
+        return cached_branch[0] ? cached_branch : NULL;
+
+    cached_at = now;
+    snprintf(cached_root, sizeof(cached_root), "%s", root);
+    cached_branch[0] = '\0';
+
+    char head_path[1024];
+    if (!git_head_path(root, head_path, sizeof(head_path))) return NULL;
+
+    FILE *f = fopen(head_path, "r");
+    if (!f) return NULL;
+    char line[256];
+    if (!fgets(line, sizeof(line), f)) {
+        fclose(f);
+        return NULL;
+    }
+    fclose(f);
+    line[strcspn(line, "\r\n")] = '\0';
+
+    const char *prefix = "ref: refs/heads/";
+    if (strncmp(line, prefix, strlen(prefix)) == 0) {
+        snprintf(cached_branch, sizeof(cached_branch), "%.*s",
+                 (int)sizeof(cached_branch) - 1, line + strlen(prefix));
+    } else if (line[0]) {
+        snprintf(cached_branch, sizeof(cached_branch), "%.7s", line);
+    }
+    return cached_branch[0] ? cached_branch : NULL;
 }
 
 void panel_statusbar(Gui *g, App *app, Document *doc, ModeState *mode) {
@@ -144,12 +241,37 @@ void panel_statusbar(Gui *g, App *app, Document *doc, ModeState *mode) {
 
     char count_buf[32];
     snprintf(count_buf, sizeof(count_buf), "%zu lines", buffer_line_count(&doc->buffer));
+    size_t line_count = buffer_line_count(&doc->buffer);
+    int pct = line_count > 1 ? (int)(((cur->row + 1) * 100) / line_count) : 100;
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+    char pct_buf[16];
+    snprintf(pct_buf, sizeof(pct_buf), "%d%%", pct);
 
     float right = (float)w - 10.0f;
     right = draw_right_label(g, r, count_buf, right, text_y, 18.0f,
                              t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+    right = draw_right_label(g, r, pct_buf, right, text_y, 18.0f,
+                             t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
     right = draw_right_label(g, r, pos_buf, right, text_y, 18.0f,
                              t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
+
+    char selection_buf[48];
+    int primary_len = selection_length(doc, cur);
+    if (doc->cursor_count > 1 || primary_len > 0) {
+        snprintf(selection_buf, sizeof(selection_buf), "Sel %d Len %d", doc->cursor_count, primary_len);
+        right = draw_right_label(g, r, selection_buf, right, text_y, 18.0f,
+                                 t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+    }
+
+    const char *branch = git_branch_label(app);
+    char branch_buf[160];
+    if (branch) {
+        snprintf(branch_buf, sizeof(branch_buf), "git:%s", branch);
+        right = draw_right_label(g, r, branch_buf, right, text_y, 18.0f,
+                                 t->namespace_color[0], t->namespace_color[1],
+                                 t->namespace_color[2], 1.0f);
+    }
 
     float lsp_r = lsp_errors || errors ? t->error[0] : (warnings ? t->warning[0] : t->gutter_fg[0]);
     float lsp_g = lsp_errors || errors ? t->error[1] : (warnings ? t->warning[1] : t->gutter_fg[1]);
@@ -162,18 +284,22 @@ void panel_statusbar(Gui *g, App *app, Document *doc, ModeState *mode) {
     }
 
     const char *fname = file_label(doc->filepath);
-    float file_w = font_text_width(&g->font, fname);
-    if (left + file_w < right) {
-        font_draw(&g->font, r, fname, left, text_y,
-                  t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
-        left += file_w + 10.0f;
-    }
+    left = draw_left_label(g, r, fname, left, right, text_y, 10.0f,
+                           t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
 
     if (doc->dirty && left + font_text_width(&g->font, "+") < right) {
         font_draw(&g->font, r, "+", left, text_y,
                   t->warning[0], t->warning[1], t->warning[2], t->warning[3]);
         left += font_text_width(&g->font, "+") + 12.0f;
     }
+
+    if (doc->language_id && doc->language_id[0])
+        left = draw_left_label(g, r, doc->language_id, left, right, text_y, 10.0f,
+                               t->type_color[0], t->type_color[1], t->type_color[2], 1.0f);
+    left = draw_left_label(g, r, line_ending_label(doc), left, right, text_y, 10.0f,
+                           t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+    left = draw_left_label(g, r, "UTF-8", left, right, text_y, 12.0f,
+                           t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 
     if (line_diag && line_diag->message) {
         char diag_buf[180];

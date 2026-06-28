@@ -8,6 +8,13 @@
 
 typedef struct App App;
 
+typedef enum {
+    APP_LSP_GOTO_DEFINITION,
+    APP_LSP_GOTO_TYPE_DEFINITION,
+    APP_LSP_GOTO_REFERENCES,
+    APP_LSP_GOTO_IMPLEMENTATION
+} AppLSPGotoKind;
+
 App  *app_create(int width, int height, const char *title);
 void  app_destroy(App *app);
 void  app_run(App *app);
@@ -44,6 +51,10 @@ void app_goto_window_left(App *app);
 void app_goto_window_right(App *app);
 void app_goto_window_up(App *app);
 void app_goto_window_down(App *app);
+void app_swap_window_left(App *app);
+void app_swap_window_right(App *app);
+void app_swap_window_up(App *app);
+void app_swap_window_down(App *app);
 void app_maximize_window(App *app);
 void app_equalize_windows(App *app);
 
@@ -53,6 +64,9 @@ void app_set_workspace_root(App *app, const char *path);
 
 /* LSP management */
 void *app_get_lsp_manager(App *app);
+void  app_lsp_request_goto(App *app, AppLSPGotoKind kind);
+void  app_lsp_select_references(App *app);
+void  app_format_document(App *app);
 
 /* Tree-Sitter management */
 void *app_get_treesitter_manager(App *app);

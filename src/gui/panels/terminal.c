@@ -34,6 +34,7 @@ static char term_lines[TERM_MAX_LINES][TERM_MAX_COLS];
 static int term_line_count = 1;
 static int term_scroll = 0;
 static int term_col = 0;
+static int term_cursor_line = 0;
 static int esc_state = 0;
 static char csi_buf[CSI_BUF_MAX];
 static int csi_len = 0;
@@ -45,6 +46,7 @@ static void terminal_reset_buffer(void) {
     term_line_count = 1;
     term_scroll = 0;
     term_col = 0;
+    term_cursor_line = 0;
     esc_state = 0;
     csi_len = 0;
 }
@@ -65,12 +67,16 @@ static bool terminal_running(void) {
 }
 
 static void terminal_append_newline(void) {
-    if (term_line_count < TERM_MAX_LINES) {
+    if (term_cursor_line < term_line_count - 1) {
+        term_cursor_line++;
+    } else if (term_line_count < TERM_MAX_LINES) {
         term_lines[term_line_count][0] = '\0';
         term_line_count++;
+        term_cursor_line = term_line_count - 1;
     } else {
         memmove(term_lines, term_lines + 1, sizeof(term_lines[0]) * (TERM_MAX_LINES - 1));
         term_lines[TERM_MAX_LINES - 1][0] = '\0';
+        term_cursor_line = TERM_MAX_LINES - 1;
     }
     if (term_scroll > 0) term_scroll++;
     term_col = 0;
@@ -81,18 +87,48 @@ static void terminal_clear_screen(void) {
     term_line_count = 1;
     term_scroll = 0;
     term_col = 0;
+    term_cursor_line = 0;
 }
 
 static void terminal_clear_line_from_cursor(void) {
-    char *line = term_lines[term_line_count - 1];
+    if (term_cursor_line < 0) term_cursor_line = 0;
+    if (term_cursor_line >= term_line_count) term_cursor_line = term_line_count - 1;
+    char *line = term_lines[term_cursor_line];
     size_t len = strlen(line);
     if (term_col < 0) term_col = 0;
     if (term_col < (int)len)
         line[term_col] = '\0';
 }
 
+static void terminal_clear_line_to_cursor(void) {
+    if (term_cursor_line < 0) term_cursor_line = 0;
+    if (term_cursor_line >= term_line_count) term_cursor_line = term_line_count - 1;
+    char *line = term_lines[term_cursor_line];
+    size_t len = strlen(line);
+    int end = term_col;
+    if (end < 0) end = 0;
+    if (end >= TERM_MAX_COLS) end = TERM_MAX_COLS - 1;
+    if (end >= (int)len)
+        end = (int)len - 1;
+    for (int i = 0; i <= end; i++)
+        line[i] = ' ';
+    while (len > 0 && line[len - 1] == ' ') {
+        line[len - 1] = '\0';
+        len--;
+    }
+}
+
+static void terminal_clear_line(void) {
+    if (term_cursor_line < 0) term_cursor_line = 0;
+    if (term_cursor_line >= term_line_count) term_cursor_line = term_line_count - 1;
+    term_lines[term_cursor_line][0] = '\0';
+    term_col = 0;
+}
+
 static void terminal_append_byte(char c) {
-    char *line = term_lines[term_line_count - 1];
+    if (term_cursor_line < 0) term_cursor_line = 0;
+    if (term_cursor_line >= term_line_count) term_cursor_line = term_line_count - 1;
+    char *line = term_lines[term_cursor_line];
     size_t len = strlen(line);
     if (c == '\n') {
         terminal_append_newline();
@@ -118,7 +154,7 @@ static void terminal_append_byte(char c) {
     if ((unsigned char)c < 32) return;
     if (term_col >= TERM_MAX_COLS - 1 || term_col >= term_cols) {
         terminal_append_newline();
-        line = term_lines[term_line_count - 1];
+        line = term_lines[term_cursor_line];
         len = 0;
         term_col = 0;
     }
@@ -149,11 +185,27 @@ static int csi_param(int fallback) {
     return any ? value : fallback;
 }
 
+static void terminal_move_cursor_line(int delta) {
+    term_cursor_line += delta;
+    if (term_cursor_line < 0) term_cursor_line = 0;
+    while (term_cursor_line >= term_line_count && term_line_count < TERM_MAX_LINES) {
+        term_lines[term_line_count][0] = '\0';
+        term_line_count++;
+    }
+    if (term_cursor_line >= term_line_count) term_cursor_line = term_line_count - 1;
+}
+
 static void terminal_handle_csi(char final) {
     int n = csi_param(1);
     if (n < 1) n = 1;
 
     switch (final) {
+    case 'A':
+        terminal_move_cursor_line(-n);
+        break;
+    case 'B':
+        terminal_move_cursor_line(n);
+        break;
     case 'C':
         term_col += n;
         if (term_col >= TERM_MAX_COLS) term_col = TERM_MAX_COLS - 1;
@@ -167,16 +219,31 @@ static void terminal_handle_csi(char final) {
         if (term_col < 0) term_col = 0;
         if (term_col >= TERM_MAX_COLS) term_col = TERM_MAX_COLS - 1;
         break;
+    case 'E':
+        terminal_move_cursor_line(n);
+        term_col = 0;
+        break;
+    case 'F':
+        terminal_move_cursor_line(-n);
+        term_col = 0;
+        break;
     case 'H':
     case 'f':
         term_col = 0;
         break;
     case 'J':
+        n = csi_param(0);
         if (n == 2 || n == 3)
             terminal_clear_screen();
         break;
     case 'K':
-        terminal_clear_line_from_cursor();
+        n = csi_param(0);
+        if (n == 0)
+            terminal_clear_line_from_cursor();
+        else if (n == 1)
+            terminal_clear_line_to_cursor();
+        else if (n == 2)
+            terminal_clear_line();
         break;
     default:
         break;
@@ -191,8 +258,10 @@ static void terminal_consume_output(const char *buf, ssize_t len) {
                 if (c == '[') {
                     esc_state = 2;
                     csi_len = 0;
-                } else if (c == ']' || c == '(' || c == ')') {
+                } else if (c == ']') {
                     esc_state = 3;
+                } else if (c == '(' || c == ')') {
+                    esc_state = 5;
                 } else {
                     esc_state = 0;
                 }
@@ -209,7 +278,19 @@ static void terminal_consume_output(const char *buf, ssize_t len) {
                 }
                 continue;
             }
-            if ((c >= '@' && c <= '~') || c == '\a')
+            if (esc_state == 3) {
+                if (c == '\a') {
+                    esc_state = 0;
+                } else if (c == 0x1b) {
+                    esc_state = 4;
+                }
+                continue;
+            }
+            if (esc_state == 4) {
+                esc_state = c == '\\' ? 0 : 3;
+                continue;
+            }
+            if (esc_state == 5 && (c >= '@' && c <= '~'))
                 esc_state = 0;
             continue;
         }
@@ -394,7 +475,7 @@ void panel_terminal_key(App *app, int key, int mods) {
         term_scroll = 0;
         return;
     }
-    if ((mods & GLFW_MOD_CONTROL) && key == GLFW_KEY_R) {
+    if ((mods & GLFW_MOD_CONTROL) && (mods & GLFW_MOD_SHIFT) && key == GLFW_KEY_R) {
         terminal_restart(app);
         return;
     }
@@ -405,15 +486,35 @@ void panel_terminal_key(App *app, int key, int mods) {
 
     switch (key) {
     case GLFW_KEY_ENTER: terminal_write_bytes("\r", 1); return;
-    case GLFW_KEY_BACKSPACE: terminal_write_bytes("\x7f", 1); return;
-    case GLFW_KEY_TAB: terminal_write_bytes("\t", 1); return;
+    case GLFW_KEY_BACKSPACE:
+        if (mods & GLFW_MOD_ALT) terminal_write_bytes("\x1b\x7f", 2);
+        else terminal_write_bytes("\x7f", 1);
+        return;
+    case GLFW_KEY_TAB:
+        if (mods & GLFW_MOD_SHIFT) terminal_write_bytes("\x1b[Z", 3);
+        else terminal_write_bytes("\t", 1);
+        return;
     case GLFW_KEY_UP: terminal_write_bytes("\x1b[A", 3); return;
     case GLFW_KEY_DOWN: terminal_write_bytes("\x1b[B", 3); return;
-    case GLFW_KEY_RIGHT: terminal_write_bytes("\x1b[C", 3); return;
-    case GLFW_KEY_LEFT: terminal_write_bytes("\x1b[D", 3); return;
+    case GLFW_KEY_RIGHT:
+        if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5C", 6);
+        else if (mods & GLFW_MOD_ALT) terminal_write_bytes("\033f", 2);
+        else terminal_write_bytes("\x1b[C", 3);
+        return;
+    case GLFW_KEY_LEFT:
+        if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5D", 6);
+        else if (mods & GLFW_MOD_ALT) terminal_write_bytes("\033b", 2);
+        else terminal_write_bytes("\x1b[D", 3);
+        return;
     case GLFW_KEY_DELETE: terminal_write_bytes("\x1b[3~", 4); return;
-    case GLFW_KEY_HOME: terminal_write_bytes("\x1b[H", 3); return;
-    case GLFW_KEY_END: terminal_write_bytes("\x1b[F", 3); return;
+    case GLFW_KEY_HOME:
+        if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5H", 6);
+        else terminal_write_bytes("\x1b[H", 3);
+        return;
+    case GLFW_KEY_END:
+        if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5F", 6);
+        else terminal_write_bytes("\x1b[F", 3);
+        return;
     default: break;
     }
 
@@ -517,7 +618,7 @@ void panel_terminal_render(Gui *g, App *app) {
     glDisable(GL_SCISSOR_TEST);
 
     if (term_scroll == 0 && term_line_count > 0) {
-        int cursor_line = term_line_count - 1 - start;
+        int cursor_line = term_cursor_line - start;
         if (cursor_line >= 0 && cursor_line < visible) {
             float cx = body_x + (float)term_col * g->font.glyph_w;
             float cy = body_y + (float)cursor_line * line_h;
@@ -542,11 +643,11 @@ void panel_terminal_render(Gui *g, App *app) {
 
     char footer[160];
     if (term_scroll > 0)
-        snprintf(footer, sizeof(footer), "scrolled +%d  PageDown: newer  Ctrl-End: live  Ctrl-r: restart  Esc: hide", term_scroll);
+        snprintf(footer, sizeof(footer), "scrolled +%d  PageDown: newer  Ctrl-End: live  Ctrl-Shift-r: restart  Esc: hide", term_scroll);
     else if (!running)
-        snprintf(footer, sizeof(footer), "stopped  Enter/Ctrl-r: restart  Ctrl-~: toggle  Esc: hide");
+        snprintf(footer, sizeof(footer), "stopped  Enter/Ctrl-Shift-r: restart  Ctrl-~: toggle  Esc: hide");
     else
-        snprintf(footer, sizeof(footer), "live  PageUp/PageDown: scrollback  Ctrl-r: restart  Ctrl-~: toggle  Esc: hide");
+        snprintf(footer, sizeof(footer), "live  PageUp/PageDown: scrollback  Ctrl-Shift-r: restart  Ctrl-~: toggle  Esc: hide");
     font_draw(&g->font, r, footer, px + pad_x, py + ph - footer_h + 5.0f,
               0.62f, 0.66f, 0.68f, 0.95f);
 }

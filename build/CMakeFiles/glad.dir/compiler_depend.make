@@ -19,9 +19,7 @@ CMakeFiles/glad.dir/vendor/glad/src/glad.c.o: /home/xator/dragon/vendor/glad/src
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
-  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
-  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -85,37 +83,25 @@ CMakeFiles/glad.dir/vendor/glad/src/glad.c.o: /home/xator/dragon/vendor/glad/src
 
 /usr/include/strings.h:
 
-/usr/include/stdlib.h:
-
-/usr/include/string.h:
-
-/usr/include/bits/time64.h:
-
-/usr/include/bits/byteswap.h:
-
 /usr/include/bits/types.h:
 
-/usr/include/bits/stdlib-bsearch.h:
-
-/usr/include/bits/types/sigset_t.h:
+/usr/include/bits/byteswap.h:
 
 /usr/include/bits/thread-shared-types.h:
 
 /usr/include/bits/wchar.h:
 
-/usr/include/bits/stdio.h:
-
-/usr/include/features.h:
-
 /usr/include/bits/stdint-least.h:
 
 /usr/include/alloca.h:
 
+/usr/include/bits/types/__fpos64_t.h:
+
+/usr/include/bits/select.h:
+
+/usr/include/features-time64.h:
+
 /usr/include/bits/types/FILE.h:
-
-/usr/include/bits/stdlib-float.h:
-
-/usr/include/bits/types/__FILE.h:
 
 /usr/include/bits/stdint-intn.h:
 
@@ -123,17 +109,13 @@ CMakeFiles/glad.dir/vendor/glad/src/glad.c.o: /home/xator/dragon/vendor/glad/src
 
 /usr/include/gnu/stubs-64.h:
 
-/usr/include/bits/select.h:
-
-/usr/include/bits/types/__fpos64_t.h:
-
-/usr/include/features-time64.h:
-
 /home/xator/dragon/vendor/glad/src/glad.c:
 
 /usr/include/bits/struct_rwlock.h:
 
 /usr/include/bits/types/time_t.h:
+
+/usr/include/stdlib.h:
 
 /home/xator/dragon/vendor/glad/include/glad/gl.h:
 
@@ -150,6 +132,12 @@ CMakeFiles/glad.dir/vendor/glad/src/glad.c.o: /home/xator/dragon/vendor/glad/src
 /usr/include/bits/types/__sigset_t.h:
 
 /usr/include/bits/waitflags.h:
+
+/usr/include/bits/types/__FILE.h:
+
+/usr/include/bits/stdlib-float.h:
+
+/usr/include/bits/types/sigset_t.h:
 
 /usr/include/bits/floatn-common.h:
 
@@ -181,6 +169,10 @@ CMakeFiles/glad.dir/vendor/glad/src/glad.c.o: /home/xator/dragon/vendor/glad/src
 
 /usr/include/bits/typesizes.h:
 
+/usr/include/bits/time64.h:
+
+/usr/include/string.h:
+
 /usr/include/bits/types/locale_t.h:
 
 /usr/include/bits/types/struct_FILE.h:
@@ -198,6 +190,8 @@ CMakeFiles/glad.dir/vendor/glad/src/glad.c.o: /home/xator/dragon/vendor/glad/src
 /usr/include/endian.h:
 
 /usr/include/bits/waitstatus.h:
+
+/usr/include/features.h:
 
 /usr/include/gnu/stubs.h:
 

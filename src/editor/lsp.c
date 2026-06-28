@@ -815,6 +815,22 @@ void lsp_client_send_code_action_request(LSPClient *client, const char *file_uri
     free(uri);
 }
 
+void lsp_client_send_formatting_request(LSPClient *client, const char *file_uri, int tab_size, bool insert_spaces) {
+    if (client->status != LSP_STATUS_INITIALIZED) {
+        return;
+    }
+
+    char *uri = json_escape_string(file_uri);
+    if (!uri) return;
+    if (tab_size <= 0) tab_size = 4;
+    lsp_client_write_jsonf(client,
+        "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/formatting\","
+        "\"params\":{\"textDocument\":{\"uri\":\"%s\"},"
+        "\"options\":{\"tabSize\":%d,\"insertSpaces\":%s}}}",
+        client->id++, uri, tab_size, insert_spaces ? "true" : "false");
+    free(uri);
+}
+
 void lsp_client_send_type_definition_request(LSPClient *client, const char *file_uri, int line, int character) {
     lsp_client_send_position_request(client, "textDocument/typeDefinition", file_uri, line, character, NULL);
 }
@@ -1117,6 +1133,11 @@ LSPCompletionItems *lsp_parse_completion_response(const char *response) {
         if (label && label[0]) {
             LSPCompletionItem *it = &items->items[items->count++];
             it->label = label;
+            it->insert_text = json_extract_string(p, "insertText");
+            if (!it->insert_text || !it->insert_text[0]) {
+                free(it->insert_text);
+                it->insert_text = json_extract_string(p, "newText");
+            }
             it->detail = json_extract_string(p, "detail");
             it->documentation = json_extract_string(p, "documentation");
         } else {
@@ -1137,6 +1158,7 @@ void lsp_free_completion_items(LSPCompletionItems *items) {
     if (!items) return;
     for (int i = 0; i < items->count; i++) {
         free(items->items[i].label);
+        free(items->items[i].insert_text);
         free(items->items[i].detail);
         free(items->items[i].documentation);
     }
@@ -1236,97 +1258,92 @@ LSPDiagnostics *lsp_parse_publish_diagnostics_notification(const char *response)
     return diag;
 }
 
-LSPWorkspaceEdit *lsp_parse_rename_response(const char *response) {
-    if (!response) return NULL;
-    
-    /* Parse: {"result": {"changes": {"file://...": [{"range": {...}, "newText": "..."}]}}} */
-    LSPWorkspaceEdit *edit = malloc(sizeof(LSPWorkspaceEdit));
-    memset(edit, 0, sizeof(LSPWorkspaceEdit));
-    
-    /* Check if result exists and is not null */
-    const char *result_start = strstr(response, "\"result\"");
-    if (!result_start) return edit;
-    
-    if (strstr(result_start, "\"result\":null") || strstr(result_start, "\"result\": null")) {
-        return edit;
+static void workspace_edit_append(LSPWorkspaceEdit *edit, LSPTextEdit item) {
+    if (!edit) return;
+    LSPTextEdit *changes = realloc(edit->changes, sizeof(LSPTextEdit) * (size_t)(edit->count + 1));
+    if (!changes) {
+        free(item.new_text);
+        return;
     }
-    
-    /* Find changes array - allocate reasonable capacity for edits */
-    const char *changes_start = strstr(result_start, "\"changes\"");
-    if (!changes_start) return edit;
-    
-    /* Pre-allocate space for edits (max 100 edits per file) */
-    edit->changes = malloc(sizeof(LSPTextEdit) * 100);
-    edit->count = 0;
-    
-    /* Parser: extract range and newText pairs */
-    const char *p = changes_start;
-    while (edit->count < 100) {
-        /* Find next range object */
-        const char *range_start = strstr(p, "\"range\"");
-        if (!range_start) break;
-        
-        const char *range_brace = strchr(range_start, '{');
-        if (!range_brace) break;
-        
-        /* Parse start position: "start":{"line":X,"character":Y} */
-        const char *start_pos = strstr(range_brace, "\"start\"");
-        if (!start_pos) break;
-        
-        int start_line = 0, start_char = 0;
-        sscanf(start_pos, "\"start\":{\"line\":%d,\"character\":%d", &start_line, &start_char);
-        
-        /* Parse end position: "end":{"line":X,"character":Y} */
-        const char *end_pos = strstr(range_brace, "\"end\"");
-        if (!end_pos) break;
-        
-        int end_line = 0, end_char = 0;
-        sscanf(end_pos, "\"end\":{\"line\":%d,\"character\":%d", &end_line, &end_char);
-        
-        /* Find newText after this range */
-        const char *newtext_ptr = strstr(range_brace, "\"newText\"");
-        if (!newtext_ptr) break;
-        
-        const char *colon = strchr(newtext_ptr, ':');
-        if (!colon) break;
-        
-        const char *quote_start = strchr(colon, '"');
-        if (!quote_start) break;
-        quote_start++;
-        
-        /* Find closing quote (handle escapes) */
-        const char *quote_end = quote_start;
-        while (*quote_end && *quote_end != '"') {
-            if (*quote_end == '\\') quote_end += 2;
-            else quote_end++;
-        }
-        
-        if (*quote_end != '"') break;
-        
-        size_t text_len = quote_end - quote_start;
-        if (text_len > 0 && text_len < 2048) {
-            edit->changes[edit->count].new_text = malloc(text_len + 1);
-            memcpy(edit->changes[edit->count].new_text, quote_start, text_len);
-            edit->changes[edit->count].new_text[text_len] = '\0';
-            
-            /* Store range */
-            edit->changes[edit->count].range.start.line = start_line;
-            edit->changes[edit->count].range.start.character = start_char;
-            edit->changes[edit->count].range.end.line = end_line;
-            edit->changes[edit->count].range.end.character = end_char;
-            
-            edit->count++;
-        }
-        
-        p = quote_end + 1;
+    edit->changes = changes;
+    edit->changes[edit->count++] = item;
+}
+
+static bool parse_text_edit_at_range(const char *range_key, const char *limit, LSPTextEdit *out) {
+    memset(out, 0, sizeof(*out));
+    const char *range_start = strchr(range_key, '{');
+    if (!range_start || range_start >= limit) return false;
+    const char *range_end = json_matching_delim(range_start, limit, '{', '}');
+    if (!range_end) return false;
+    range_end++;
+
+    const char *start_start = NULL, *start_end = NULL;
+    const char *end_start = NULL, *end_end = NULL;
+    if (json_object_after_key_range(range_start, range_end, "start", &start_start, &start_end)) {
+        out->range.start.line = json_number_in_range(start_start, start_end, "line", 0);
+        out->range.start.character = json_number_in_range(start_start, start_end, "character", 0);
     }
-    
-    if (edit->count == 0) {
-        free(edit->changes);
-        edit->changes = NULL;
+    if (json_object_after_key_range(range_start, range_end, "end", &end_start, &end_end)) {
+        out->range.end.line = json_number_in_range(end_start, end_end, "line", out->range.start.line);
+        out->range.end.character = json_number_in_range(end_start, end_end, "character", out->range.start.character);
     }
-    
+
+    const char *next_range = json_find_range(range_end, limit, "\"range\"");
+    const char *text_limit = next_range ? next_range : limit;
+    if (!json_value_after_key_range(range_end, text_limit, "newText"))
+        return false;
+    out->new_text = json_string_in_range(range_end, text_limit, "newText");
+    if (!out->new_text) out->new_text = strdup("");
+    return true;
+}
+
+static LSPWorkspaceEdit *parse_workspace_edits_in_range(const char *start, const char *end) {
+    LSPWorkspaceEdit *edit = calloc(1, sizeof(LSPWorkspaceEdit));
+    if (!edit || !start || !end || start >= end) return edit;
+
+    const char *p = start;
+    while ((p = json_find_range(p, end, "\"range\"")) && edit->count < 200) {
+        LSPTextEdit item;
+        if (parse_text_edit_at_range(p, end, &item))
+            workspace_edit_append(edit, item);
+        p += 7;
+    }
     return edit;
+}
+
+static LSPWorkspaceEdit *parse_result_workspace_edit(const char *response) {
+    LSPWorkspaceEdit *edit = calloc(1, sizeof(LSPWorkspaceEdit));
+    if (!response) return edit;
+    const char *result = strstr(response, "\"result\"");
+    if (!result || strstr(result, "\"result\":null") || strstr(result, "\"result\": null"))
+        return edit;
+
+    const char *value = json_value_after_key_range(result, response + strlen(response), "result");
+    if (!value) return edit;
+
+    const char *end = response + strlen(response);
+    if (*value == '[') {
+        const char *array_end = json_matching_delim(value, end, '[', ']');
+        if (array_end) {
+            lsp_free_workspace_edit(edit);
+            return parse_workspace_edits_in_range(value, array_end + 1);
+        }
+    } else if (*value == '{') {
+        const char *obj_end = json_matching_delim(value, end, '{', '}');
+        if (obj_end) {
+            lsp_free_workspace_edit(edit);
+            return parse_workspace_edits_in_range(value, obj_end + 1);
+        }
+    }
+    return edit;
+}
+
+LSPWorkspaceEdit *lsp_parse_rename_response(const char *response) {
+    return parse_result_workspace_edit(response);
+}
+
+LSPWorkspaceEdit *lsp_parse_formatting_response(const char *response) {
+    return parse_result_workspace_edit(response);
 }
 
 LSPCodeActions *lsp_parse_code_actions_response(const char *response) {
@@ -1352,38 +1369,26 @@ LSPCodeActions *lsp_parse_code_actions_response(const char *response) {
     actions->actions = malloc(sizeof(LSPCodeAction) * 50);
     actions->count = 0;
     
-    /* Simple parser: find all "title" fields */
     const char *p = array_start;
-    while ((p = strstr(p, "\"title\"")) && actions->count < 50) {
-        /* Find the quoted string value */
-        const char *colon = strchr(p, ':');
-        if (!colon) break;
-        
-        const char *quote_start = strchr(colon, '"');
-        if (!quote_start) break;
-        quote_start++;
-        
-        const char *quote_end = quote_start;
-        while (*quote_end && *quote_end != '"') {
-            if (*quote_end == '\\') quote_end += 2;
-            else quote_end++;
+    const char *array_end = json_matching_delim(array_start, response + strlen(response), '[', ']');
+    if (!array_end) array_end = response + strlen(response);
+    while ((p = json_find_range(p, array_end, "{")) && actions->count < 50) {
+        const char *obj_end = json_matching_delim(p, array_end, '{', '}');
+        if (!obj_end) break;
+        obj_end++;
+        char *title = json_string_in_range(p, obj_end, "title");
+        if (title && title[0]) {
+            LSPCodeAction *action = &actions->actions[actions->count++];
+            action->title = title;
+            action->kind = json_string_in_range(p, obj_end, "kind");
+            const char *edit_start = NULL, *edit_end = NULL;
+            if (json_object_after_key_range(p, obj_end, "edit", &edit_start, &edit_end))
+                action->edit = parse_workspace_edits_in_range(edit_start, edit_end);
         }
-        
-        if (*quote_end != '"') break;
-        
-        size_t title_len = quote_end - quote_start;
-        if (title_len > 0 && title_len < 256) {
-            actions->actions[actions->count].title = malloc(title_len + 1);
-            memcpy(actions->actions[actions->count].title, quote_start, title_len);
-            actions->actions[actions->count].title[title_len] = '\0';
-            
-            actions->actions[actions->count].kind = NULL;  /* Could parse kind too */
-            actions->actions[actions->count].edit = NULL;  /* Could parse edit too */
-            
-            actions->count++;
+        else {
+            free(title);
         }
-        
-        p = quote_end + 1;
+        p = obj_end;
     }
     
     if (actions->count == 0) {

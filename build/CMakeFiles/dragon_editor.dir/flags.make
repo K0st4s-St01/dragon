@@ -6,5 +6,5 @@ C_DEFINES =
 
 C_INCLUDES = -I/home/xator/dragon/include -I/home/xator/dragon/include/dragon_editor -I/home/xator/dragon/vendor/glad/include -I/home/xator/dragon/vendor/stb -I/usr/include/tree_sitter -I/home/xator/dragon/vendor/tomlc99
 
-C_FLAGS = -O3 -DNDEBUG -std=gnu11 -Wall -Wextra
+C_FLAGS = -g -std=gnu11 -Wall -Wextra
 

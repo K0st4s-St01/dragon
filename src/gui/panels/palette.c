@@ -14,7 +14,8 @@ static bool   palette_open = false;
 static char   palette_query[256] = {0};
 static int    palette_len = 0;
 static int    palette_selected = 0;
-static Command *palette_results[32];
+#define PALETTE_MAX_RESULTS 128
+static Command *palette_results[PALETTE_MAX_RESULTS];
 static int    palette_result_count = 0;
 
 typedef struct {
@@ -102,8 +103,8 @@ void panel_palette_open(App *app) {
     palette_query[0] = '\0';
     palette_len = 0;
     palette_selected = 0;
-    palette_result_count = ENTRY_COUNT;
-    for (int i = 0; i < ENTRY_COUNT; i++)
+    palette_result_count = ENTRY_COUNT < PALETTE_MAX_RESULTS ? ENTRY_COUNT : PALETTE_MAX_RESULTS;
+    for (int i = 0; i < palette_result_count; i++)
         palette_results[i] = (Command *)&entries[i];
 }
 
@@ -118,12 +119,12 @@ bool panel_palette_is_open(void) {
 
 static void update_results(void) {
     if (palette_query[0] == '\0') {
-        palette_result_count = ENTRY_COUNT;
-        for (int i = 0; i < ENTRY_COUNT; i++)
+        palette_result_count = ENTRY_COUNT < PALETTE_MAX_RESULTS ? ENTRY_COUNT : PALETTE_MAX_RESULTS;
+        for (int i = 0; i < palette_result_count; i++)
             palette_results[i] = (Command *)&entries[i];
     } else {
         palette_result_count = 0;
-        for (int i = 0; i < ENTRY_COUNT && palette_result_count < 32; i++) {
+        for (int i = 0; i < ENTRY_COUNT && palette_result_count < PALETTE_MAX_RESULTS; i++) {
             if (strstr(entries[i].label, palette_query) ||
                 strstr(entries[i].category, palette_query)) {
                 palette_results[palette_result_count++] = (Command *)&entries[i];

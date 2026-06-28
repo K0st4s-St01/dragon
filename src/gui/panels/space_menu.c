@@ -27,6 +27,7 @@ static SpaceCommand commands[] = {
     {"o", "File picker ($HOME)", true},
     {"b", "Buffer picker", true},
     {"j", "Jumplist picker", true},
+    {"g", "Changed-file picker", true},
 
     /* Search */
     {"/", "Global search", true},
@@ -77,16 +78,6 @@ static SpaceCommand window_cmds[] = {
 };
 
 #define WIN_CMD_COUNT (int)(sizeof(window_cmds) / sizeof(window_cmds[0]))
-
-static const char *get_category(int idx) {
-    if (idx == 0)  return "Files & Buffers";
-    if (idx == 5)  return "Search";
-    if (idx == 7)  return "LSP Features";
-    if (idx == 17) return "Editing";
-    if (idx == 19) return "Clipboard (System)";
-    if (idx == 24) return "Window";
-    return "";
-}
 
 void panel_space_menu_open(App *app) {
     (void)app;
@@ -205,6 +196,9 @@ void panel_space_menu_input(App *app, unsigned int c) {
             } else if (strcmp(key_str, "j") == 0) {
                 extern void panel_jumplist_picker_open(App *);
                 panel_jumplist_picker_open(app);
+            } else if (strcmp(key_str, "g") == 0) {
+                extern void panel_changed_files_open(App *);
+                panel_changed_files_open(app);
             } else if (strcmp(key_str, "/") == 0) {
                 extern void panel_find_open(App *, Document *);
                 panel_find_open(app, doc);
@@ -212,10 +206,8 @@ void panel_space_menu_input(App *app, unsigned int c) {
                 extern void panel_palette_open(App *);
                 panel_palette_open(app);
             } else if (strcmp(key_str, "k") == 0) {
-                extern void document_lsp_hover(Document *, void *);
-                extern void panel_lsp_hover_open(App *);
-                document_lsp_hover(doc, app_get_lsp_manager(app));
-                panel_lsp_hover_open(app);
+                extern void panel_lsp_hover_request(App *);
+                panel_lsp_hover_request(app);
             } else if (strcmp(key_str, "s") == 0) {
                 extern void panel_symbols_picker_open(App *);
                 panel_symbols_picker_open(app);
@@ -235,7 +227,7 @@ void panel_space_menu_input(App *app, unsigned int c) {
                 extern void panel_code_actions_open(App *);
                 panel_code_actions_open(app);
             } else if (strcmp(key_str, "h") == 0) {
-                document_lsp_select_references(doc, app_get_lsp_manager(app));
+                app_lsp_select_references(app);
             } else if (strcmp(key_str, "t") == 0) {
                 extern void panel_treesitter_inspector_open(App *);
                 panel_treesitter_inspector_open(app);

@@ -17,12 +17,13 @@ static int rename_col = 0;
 static char rename_file_uri[1024] = {0};
 static char *rename_language_id = NULL;
 static LSPClient *rename_pending_client = NULL;  /* Track pending LSP request */
+static int rename_pending_id = -1;
 static char rename_status[256] = {0};  /* Status message for the user */
 static double rename_status_time = 0;  /* Time when status was set */
 
 void panel_rename_open(App *app) {
     Document *doc = (Document *)app_get_doc(app);
-    if (!doc) return;
+    if (!doc || !doc->filepath) return;
     
     /* Get cursor position from the first cursor */
     rename_line = doc->cursors[0].row;
@@ -38,6 +39,8 @@ void panel_rename_open(App *app) {
     /* Clear input buffer */
     memset(rename_buffer, 0, sizeof(rename_buffer));
     rename_cursor = 0;
+    rename_status[0] = '\0';
+    rename_status_time = 0;
     
     rename_open = true;
 }
@@ -47,6 +50,10 @@ void panel_rename_close(App *app) {
     rename_open = false;
     memset(rename_buffer, 0, sizeof(rename_buffer));
     rename_cursor = 0;
+    rename_pending_client = NULL;
+    rename_pending_id = -1;
+    rename_status[0] = '\0';
+    rename_status_time = 0;
 }
 
 bool panel_rename_is_open(void) {
@@ -63,9 +70,10 @@ void panel_rename_key(App *app, int key) {
             LSPManager *lsp_manager = app_get_lsp_manager(app);
             if (lsp_manager && rename_language_id) {
                 LSPClient *client = lsp_manager_get_client(lsp_manager, rename_language_id);
-                if (client) {
+                if (client && client->status == LSP_STATUS_INITIALIZED) {
                     lsp_client_send_rename_request(client, rename_file_uri, rename_line, rename_col, rename_buffer);
                     rename_pending_client = client;
+                    rename_pending_id = client->id - 1;
                     char display_name[128];
                     size_t display_len = strlen(rename_buffer);
                     bool truncated = display_len >= sizeof(display_name);
@@ -106,33 +114,33 @@ void panel_rename_key(App *app, int key) {
     }
 }
 
+bool panel_rename_handle_lsp_response(App *app, LSPClient *client, int response_id, const char *response) {
+    if (!rename_pending_client || client != rename_pending_client || response_id != rename_pending_id)
+        return false;
+
+    LSPWorkspaceEdit *edit = lsp_parse_rename_response(response);
+    if (edit && edit->count > 0) {
+        Document *doc = (Document *)app_get_doc(app);
+        if (doc) {
+            document_apply_workspace_edit(doc, edit);
+            document_notify_lsp_change(doc, app_get_lsp_manager(app));
+            snprintf(rename_status, sizeof(rename_status),
+                     "Renamed successfully! (%d locations)", edit->count);
+        }
+    } else {
+        snprintf(rename_status, sizeof(rename_status), "Rename completed (no changes)");
+    }
+
+    lsp_free_workspace_edit(edit);
+    rename_pending_client = NULL;
+    rename_pending_id = -1;
+    rename_status_time = 3.0;
+    return true;
+}
+
 void panel_rename_render(Gui *g, App *app) {
     if (!rename_open || !g) return;
-    
-    /* Poll for LSP response if we have a pending request */
-    if (rename_pending_client) {
-        char *response = lsp_client_read_response(rename_pending_client);
-        if (response) {
-            /* Parse the rename response */
-            LSPWorkspaceEdit *edit = lsp_parse_rename_response(response);
-            if (edit && edit->count > 0) {
-                /* Apply the edits to the document */
-                Document *doc = (Document *)app_get_doc(app);
-                if (doc) {
-                    document_apply_workspace_edit(doc, edit);
-                    snprintf(rename_status, sizeof(rename_status), "Renamed successfully! (%d locations)", edit->count);
-                }
-                lsp_free_workspace_edit(edit);
-            } else {
-                snprintf(rename_status, sizeof(rename_status), "Rename completed (no changes)");
-            }
-            
-            free(response);
-            rename_pending_client = NULL;
-            rename_status_time = 3.0;  /* Show message for 3 seconds */
-        }
-    }
-    
+
     /* Auto-close after status is shown */
     if (rename_status_time > 0) {
         rename_status_time -= (double)app_get_dt(app);

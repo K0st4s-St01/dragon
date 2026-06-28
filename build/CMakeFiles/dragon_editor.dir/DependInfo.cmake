@@ -26,6 +26,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/xator/dragon/src/gui/panel_notification.c" "CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.o.d"
   "/home/xator/dragon/src/gui/panels/about.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o.d"
   "/home/xator/dragon/src/gui/panels/buffer_picker.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o.d"
+  "/home/xator/dragon/src/gui/panels/changed_files.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/changed_files.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/changed_files.c.o.d"
   "/home/xator/dragon/src/gui/panels/code_actions.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o.d"
   "/home/xator/dragon/src/gui/panels/completion.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o.d"
   "/home/xator/dragon/src/gui/panels/file_browser.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o.d"

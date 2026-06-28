@@ -55,6 +55,7 @@ typedef struct {
 
 typedef struct {
     char *label;
+    char *insert_text;
     char *detail;
     char *documentation;
 } LSPCompletionItem;
@@ -139,6 +140,7 @@ void lsp_client_send_hover_request(LSPClient *client, const char *file_uri, int 
 void lsp_client_send_completion_request(LSPClient *client, const char *file_uri, int line, int character);
 void lsp_client_send_rename_request(LSPClient *client, const char *file_uri, int line, int character, const char *new_name);
 void lsp_client_send_code_action_request(LSPClient *client, const char *file_uri, int start_line, int start_character, int end_line, int end_character);
+void lsp_client_send_formatting_request(LSPClient *client, const char *file_uri, int tab_size, bool insert_spaces);
 void lsp_client_send_semantic_tokens_request(LSPClient *client, const char *file_uri);
 void lsp_client_send_didOpen(LSPClient *client, const char *file_uri, const char *language_id, const char *text);
 void lsp_client_send_didChange(LSPClient *client, const char *file_uri, int version, const char *text);
@@ -152,6 +154,7 @@ LSPCompletionItems *lsp_parse_completion_response(const char *response);
 LSPDiagnostics *lsp_parse_diagnostics_response(const char *response);
 LSPDiagnostics *lsp_parse_publish_diagnostics_notification(const char *response);
 LSPWorkspaceEdit *lsp_parse_rename_response(const char *response);
+LSPWorkspaceEdit *lsp_parse_formatting_response(const char *response);
 LSPCodeActions *lsp_parse_code_actions_response(const char *response);
 void lsp_free_locations(LSPLocation *locations, int count);
 void lsp_free_hover(LSPHover *hover);

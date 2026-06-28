@@ -11,6 +11,11 @@
 #include "dragon_editor/config.h"
 #include "dragon_editor/theme.h"
 #include "dragon_editor/panel_notification.h"
+#include "dragon_editor/panel_completion.h"
+#include "dragon_editor/panel_code_actions.h"
+#include "dragon_editor/panel_lsp_hover.h"
+#include "dragon_editor/panel_lsp_goto.h"
+#include "dragon_editor/panel_rename.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -20,6 +25,7 @@
 #include <unistd.h>
 
 #define MAX_BUFFERS 64
+#define APP_MAX_CURSORS 64
 
 struct App {
     GLFWwindow *window;
@@ -39,6 +45,18 @@ struct App {
     int         syntax_update_timer;  /* Frame counter for throttled updates */
     Config     *config;
     WindowManager window_mgr;
+    LSPClient  *pending_goto_client;
+    int         pending_goto_id;
+    int         pending_goto_doc;
+    LSPClient  *pending_select_refs_client;
+    int         pending_select_refs_id;
+    int         pending_select_refs_doc;
+    LSPClient  *pending_format_client;
+    int         pending_format_id;
+    int         pending_format_doc;
+    LSPClient  *pending_semantic_client;
+    int         pending_semantic_id;
+    int         pending_semantic_doc;
 };
 
 static void framebuffer_cb(GLFWwindow *win, int w, int h) {
@@ -81,6 +99,45 @@ static char *app_absolute_path(const char *path) {
         snprintf(absolute, len, "%s/%s", cwd, path);
     free(cwd);
     return absolute ? absolute : strdup(path);
+}
+
+static char *app_filepath_to_uri(const char *filepath) {
+    if (!filepath) return NULL;
+
+    char *absolute = app_absolute_path(filepath);
+    if (!absolute) return NULL;
+
+    size_t cap = strlen(absolute) * 3 + strlen("file://") + 1;
+    char *uri = malloc(cap);
+    if (!uri) {
+        free(absolute);
+        return NULL;
+    }
+
+    strcpy(uri, "file://");
+    size_t out = strlen(uri);
+    for (const unsigned char *p = (const unsigned char *)absolute; *p && out + 4 < cap; p++) {
+        if ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+            (*p >= '0' && *p <= '9') || *p == '/' || *p == '-' ||
+            *p == '_' || *p == '.' || *p == '~') {
+            uri[out++] = (char)*p;
+        } else {
+            snprintf(uri + out, cap - out, "%%%02X", *p);
+            out += 3;
+        }
+    }
+    uri[out] = '\0';
+    free(absolute);
+    return uri;
+}
+
+static int app_document_index(App *app, Document *doc) {
+    if (!app || !doc) return -1;
+    for (int i = 0; i < app->doc_count; i++) {
+        if (&app->documents[i] == doc)
+            return i;
+    }
+    return -1;
 }
 
 static void app_set_active_buffer(App *app, int index) {
@@ -267,7 +324,160 @@ static void app_store_diagnostics(App *app, LSPDiagnostics *diagnostics) {
     }
 }
 
-static void app_update_diagnostics_from_lsp(App *app) {
+static int lsp_response_id(const char *response) {
+    if (!response) return -1;
+    const char *id = strstr(response, "\"id\"");
+    if (!id) return -1;
+    const char *colon = strchr(id, ':');
+    if (!colon) return -1;
+    colon++;
+    while (*colon == ' ' || *colon == '\t' || *colon == '\n' || *colon == '\r') colon++;
+    if (*colon < '0' || *colon > '9') return -1;
+    return atoi(colon);
+}
+
+static void document_clear_goto_results(Document *doc) {
+    if (!doc) return;
+    if (doc->goto_results) {
+        for (int i = 0; i < doc->goto_result_count; i++)
+            free(doc->goto_results[i].uri);
+        free(doc->goto_results);
+    }
+    doc->goto_results = NULL;
+    doc->goto_result_count = 0;
+}
+
+static bool app_handle_goto_response(App *app, LSPClient *client, int response_id, const char *response) {
+    if (!app || client != app->pending_goto_client || response_id != app->pending_goto_id)
+        return false;
+
+    int doc_index = app->pending_goto_doc;
+    app->pending_goto_client = NULL;
+    app->pending_goto_id = -1;
+    app->pending_goto_doc = -1;
+
+    if (doc_index < 0 || doc_index >= app->doc_count)
+        return true;
+
+    Document *doc = &app->documents[doc_index];
+    document_clear_goto_results(doc);
+
+    int count = 0;
+    LSPLocation *locations = lsp_parse_definition_response(response, &count);
+    if (!locations || count <= 0) {
+        lsp_free_locations(locations, count);
+        notification_push(NOTIF_INFO, "No LSP locations found");
+        return true;
+    }
+
+    doc->goto_results = calloc((size_t)count, sizeof(LSPGotoResult));
+    if (!doc->goto_results) {
+        lsp_free_locations(locations, count);
+        return true;
+    }
+
+    doc->goto_result_count = count;
+    for (int i = 0; i < count; i++) {
+        doc->goto_results[i].uri = strdup(locations[i].uri ? locations[i].uri : "");
+        doc->goto_results[i].line = locations[i].range.start.line;
+        doc->goto_results[i].character = locations[i].range.start.character;
+    }
+    lsp_free_locations(locations, count);
+
+    if (doc_index == app->current_doc)
+        panel_lsp_goto_open(app);
+    return true;
+}
+
+static bool app_handle_select_refs_response(App *app, LSPClient *client, int response_id, const char *response) {
+    if (!app || client != app->pending_select_refs_client || response_id != app->pending_select_refs_id)
+        return false;
+
+    int doc_index = app->pending_select_refs_doc;
+    app->pending_select_refs_client = NULL;
+    app->pending_select_refs_id = -1;
+    app->pending_select_refs_doc = -1;
+
+    if (doc_index < 0 || doc_index >= app->doc_count)
+        return true;
+
+    Document *doc = &app->documents[doc_index];
+    char *uri = app_filepath_to_uri(doc->filepath);
+    if (!uri)
+        return true;
+
+    int count = 0;
+    LSPLocation *locations = lsp_parse_definition_response(response, &count);
+    Cursor *cur = &doc->cursors[0];
+    doc->cursor_count = 1;
+    cur->has_selection = false;
+
+    for (int i = 0; locations && i < count && doc->cursor_count < APP_MAX_CURSORS; i++) {
+        if (!locations[i].uri || strcmp(locations[i].uri, uri) != 0) continue;
+        Cursor *target = doc->cursor_count == 1 && !cur->has_selection ?
+            cur : &doc->cursors[doc->cursor_count++];
+        cursor_init(target);
+        cursor_move_to(target, locations[i].range.start.line, locations[i].range.start.character);
+        target->anchor_row = locations[i].range.end.line;
+        target->anchor_col = locations[i].range.end.character;
+        target->has_selection = true;
+    }
+
+    if (doc->cursor_count == 1 && !cur->has_selection)
+        notification_push(NOTIF_INFO, "No references in current buffer");
+
+    lsp_free_locations(locations, count);
+    free(uri);
+    return true;
+}
+
+static bool app_handle_format_response(App *app, LSPClient *client, int response_id, const char *response) {
+    if (!app || client != app->pending_format_client || response_id != app->pending_format_id)
+        return false;
+
+    int doc_index = app->pending_format_doc;
+    app->pending_format_client = NULL;
+    app->pending_format_id = -1;
+    app->pending_format_doc = -1;
+
+    if (doc_index < 0 || doc_index >= app->doc_count)
+        return true;
+
+    Document *doc = &app->documents[doc_index];
+    LSPWorkspaceEdit *edit = lsp_parse_formatting_response(response);
+    if (edit && edit->count > 0) {
+        document_apply_workspace_edit(doc, edit);
+        document_notify_lsp_change(doc, &app->lsp_manager);
+        notification_push(NOTIF_SUCCESS, "Formatted with LSP");
+    } else {
+        document_format_selection(doc);
+        notification_push(NOTIF_INFO, "LSP formatter returned no edits");
+    }
+    lsp_free_workspace_edit(edit);
+    return true;
+}
+
+static bool app_handle_semantic_tokens_response(App *app, LSPClient *client, int response_id, const char *response) {
+    if (!app || client != app->pending_semantic_client || response_id != app->pending_semantic_id)
+        return false;
+
+    int doc_index = app->pending_semantic_doc;
+    app->pending_semantic_client = NULL;
+    app->pending_semantic_id = -1;
+    app->pending_semantic_doc = -1;
+
+    if (doc_index < 0 || doc_index >= app->doc_count)
+        return true;
+
+    Document *doc = &app->documents[doc_index];
+    int before = doc->syntax.token_count;
+    syntax_update_from_lsp(&doc->syntax, response);
+    if (doc->syntax.token_count > before || doc->syntax.token_count > 0)
+        doc->syntax_dirty = false;
+    return true;
+}
+
+static void app_lsp_tick(App *app) {
     if (!app) return;
 
     for (int i = 0; i < app->lsp_manager.client_count; i++) {
@@ -275,8 +485,6 @@ static void app_update_diagnostics_from_lsp(App *app) {
         if (client->status != LSP_STATUS_INITIALIZED)
             continue;
 
-        char *deferred[16] = {0};
-        int deferred_count = 0;
         for (int frame = 0; frame < 16; frame++) {
             char *response = lsp_client_read_response(client);
             if (!response)
@@ -288,18 +496,22 @@ static void app_update_diagnostics_from_lsp(App *app) {
                 free(response);
                 continue;
             }
-            if (deferred_count < (int)(sizeof(deferred) / sizeof(deferred[0]))) {
-                deferred[deferred_count++] = response;
-            } else {
-                lsp_client_unread_response(client, response);
-                free(response);
-                break;
-            }
-        }
 
-        for (int d = deferred_count - 1; d >= 0; d--) {
-            lsp_client_unread_response(client, deferred[d]);
-            free(deferred[d]);
+            int response_id = lsp_response_id(response);
+            bool handled =
+                panel_completion_handle_lsp_response(client, response_id, response) ||
+                panel_code_actions_handle_lsp_response(client, response_id, response) ||
+                panel_lsp_hover_handle_lsp_response(app, client, response_id, response) ||
+                panel_rename_handle_lsp_response(app, client, response_id, response) ||
+                app_handle_goto_response(app, client, response_id, response) ||
+                app_handle_select_refs_response(app, client, response_id, response) ||
+                app_handle_format_response(app, client, response_id, response) ||
+                app_handle_semantic_tokens_response(app, client, response_id, response);
+            if (!handled) {
+                free(response);
+                continue;
+            }
+            free(response);
         }
     }
 }
@@ -317,6 +529,105 @@ Renderer *app_get_renderer(App *app) { return &app->renderer; }
 void *app_get_lsp_manager(App *app) { return &app->lsp_manager; }
 void *app_get_treesitter_manager(App *app) { return app->ts_manager; }
 Config *app_get_config(App *app) { return app->config; }
+
+static LSPClient *app_client_for_doc(App *app, Document *doc) {
+    if (!app || !doc || !doc->language_id || !doc->filepath)
+        return NULL;
+    LSPClient *client = lsp_manager_get_client(&app->lsp_manager, doc->language_id);
+    if (!client || client->status != LSP_STATUS_INITIALIZED)
+        return NULL;
+    return client;
+}
+
+void app_lsp_request_goto(App *app, AppLSPGotoKind kind) {
+    Document *doc = (Document *)app_get_doc(app);
+    LSPClient *client = app_client_for_doc(app, doc);
+    if (!client) {
+        notification_push(NOTIF_INFO, "No initialized LSP client");
+        return;
+    }
+
+    char *uri = app_filepath_to_uri(doc->filepath);
+    if (!uri) return;
+
+    Cursor *cur = &doc->cursors[0];
+    document_clear_goto_results(doc);
+    switch (kind) {
+    case APP_LSP_GOTO_DEFINITION:
+        lsp_client_send_definition_request(client, uri, cur->row, cur->col);
+        break;
+    case APP_LSP_GOTO_TYPE_DEFINITION:
+        lsp_client_send_type_definition_request(client, uri, cur->row, cur->col);
+        break;
+    case APP_LSP_GOTO_REFERENCES:
+        lsp_client_send_references_request(client, uri, cur->row, cur->col);
+        break;
+    case APP_LSP_GOTO_IMPLEMENTATION:
+        lsp_client_send_implementation_request(client, uri, cur->row, cur->col);
+        break;
+    }
+
+    app->pending_goto_client = client;
+    app->pending_goto_id = client->id - 1;
+    app->pending_goto_doc = app_document_index(app, doc);
+    free(uri);
+}
+
+void app_lsp_select_references(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    LSPClient *client = app_client_for_doc(app, doc);
+    if (!client) {
+        notification_push(NOTIF_INFO, "No initialized LSP client");
+        return;
+    }
+
+    char *uri = app_filepath_to_uri(doc->filepath);
+    if (!uri) return;
+
+    Cursor *cur = &doc->cursors[0];
+    lsp_client_send_references_request(client, uri, cur->row, cur->col);
+    app->pending_select_refs_client = client;
+    app->pending_select_refs_id = client->id - 1;
+    app->pending_select_refs_doc = app_document_index(app, doc);
+    free(uri);
+}
+
+void app_format_document(App *app) {
+    Document *doc = (Document *)app_get_doc(app);
+    LSPClient *client = app_client_for_doc(app, doc);
+    if (!client) {
+        document_format_selection(doc);
+        return;
+    }
+
+    char *uri = app_filepath_to_uri(doc->filepath);
+    if (!uri) {
+        document_format_selection(doc);
+        return;
+    }
+
+    Config *cfg = app_get_config(app);
+    int tab_size = cfg && cfg->tab_width > 0 ? cfg->tab_width : 4;
+    lsp_client_send_formatting_request(client, uri, tab_size, true);
+    app->pending_format_client = client;
+    app->pending_format_id = client->id - 1;
+    app->pending_format_doc = app_document_index(app, doc);
+    free(uri);
+}
+
+static void app_request_semantic_tokens(App *app, Document *doc) {
+    LSPClient *client = app_client_for_doc(app, doc);
+    if (!client || app->pending_semantic_client)
+        return;
+
+    char *uri = app_filepath_to_uri(doc->filepath);
+    if (!uri) return;
+    lsp_client_send_semantic_tokens_request(client, uri);
+    app->pending_semantic_client = client;
+    app->pending_semantic_id = client->id - 1;
+    app->pending_semantic_doc = app_document_index(app, doc);
+    free(uri);
+}
 
 void app_set_clipboard(App *app, const char *text) {
     free(app->clipboard);
@@ -370,6 +681,14 @@ App *app_create(int width, int height, const char *title) {
     lsp_config_load_defaults(&app->lsp_manager);
     app->ts_manager = treesitter_manager_new();
     window_manager_init(&app->window_mgr);
+    app->pending_goto_id = -1;
+    app->pending_goto_doc = -1;
+    app->pending_select_refs_id = -1;
+    app->pending_select_refs_doc = -1;
+    app->pending_format_id = -1;
+    app->pending_format_doc = -1;
+    app->pending_semantic_id = -1;
+    app->pending_semantic_doc = -1;
     
     /* Initialize workspace to current directory */
     app->workspace_root = getcwd(NULL, 0);
@@ -439,13 +758,10 @@ void app_run(App *app) {
         app->syntax_update_timer++;
         if (app->syntax_update_timer >= 30 && doc && doc->language_id && doc->syntax_dirty && !doc->ts_parsed) {
             app->syntax_update_timer = 0;
-            document_update_syntax_from_lsp(doc, &app->lsp_manager);
-            if (doc->syntax.token_count > 0)
-                doc->syntax_dirty = false;
+            app_request_semantic_tokens(app, doc);
         }
         
-        /* Check for LSP diagnostics notifications (non-blocking) */
-        app_update_diagnostics_from_lsp(app);
+        app_lsp_tick(app);
 
         renderer_clear(&app->renderer);
         gui_begin(&app->gui);
@@ -621,6 +937,26 @@ void app_goto_window_up(App *app) {
 
 void app_goto_window_down(App *app) {
     window_goto_down(&app->window_mgr);
+    app_sync_buffer_from_active_window(app);
+}
+
+void app_swap_window_left(App *app) {
+    window_swap_left(&app->window_mgr);
+    app_sync_buffer_from_active_window(app);
+}
+
+void app_swap_window_right(App *app) {
+    window_swap_right(&app->window_mgr);
+    app_sync_buffer_from_active_window(app);
+}
+
+void app_swap_window_up(App *app) {
+    window_swap_up(&app->window_mgr);
+    app_sync_buffer_from_active_window(app);
+}
+
+void app_swap_window_down(App *app) {
+    window_swap_down(&app->window_mgr);
     app_sync_buffer_from_active_window(app);
 }
 

@@ -23,16 +23,26 @@ static CodeAction *code_actions = NULL;
 static int code_actions_count = 0;
 static int code_actions_capacity = 0;
 static LSPClient *code_actions_pending_client = NULL;
+static int code_actions_pending_id = -1;
+
+static void clear_code_actions(void) {
+    for (int i = 0; i < code_actions_count; i++) {
+        free(code_actions[i].title);
+        free(code_actions[i].kind);
+        if (code_actions[i].edit)
+            lsp_free_workspace_edit((LSPWorkspaceEdit *)code_actions[i].edit);
+    }
+    free(code_actions);
+    code_actions = NULL;
+    code_actions_count = 0;
+    code_actions_capacity = 0;
+}
 
 void panel_code_actions_open(App *app) {
     Document *doc = (Document *)app_get_doc(app);
     if (!doc || !doc->language_id) return;
-    
-    /* Clear previous actions */
-    for (int i = 0; i < code_actions_count; i++) {
-        free(code_actions[i].title);
-    }
-    code_actions_count = 0;
+
+    clear_code_actions();
     code_actions_scroll = 0;
     code_actions_selected = 0;
     
@@ -63,6 +73,7 @@ void panel_code_actions_open(App *app) {
             
              lsp_client_send_code_action_request(client, file_uri, start_line, start_col, end_line, end_col);
              code_actions_pending_client = client;
+             code_actions_pending_id = client->id - 1;
         }
     }
     
@@ -73,19 +84,8 @@ void panel_code_actions_close(App *app) {
     (void)app;
     code_actions_open = false;
     code_actions_pending_client = NULL;
-    
-    /* Free code actions */
-    for (int i = 0; i < code_actions_count; i++) {
-        free(code_actions[i].title);
-        free(code_actions[i].kind);
-        if (code_actions[i].edit) {
-            lsp_free_workspace_edit((LSPWorkspaceEdit *)code_actions[i].edit);
-        }
-    }
-    free(code_actions);
-    code_actions = NULL;
-    code_actions_count = 0;
-    code_actions_capacity = 0;
+    code_actions_pending_id = -1;
+    clear_code_actions();
 }
 
 bool panel_code_actions_is_open(void) {
@@ -123,6 +123,7 @@ void panel_code_actions_key(App *app, int key) {
                  if (doc) {
                      LSPWorkspaceEdit *edit = (LSPWorkspaceEdit *)code_actions[code_actions_selected].edit;
                      document_apply_workspace_edit(doc, edit);
+                     document_notify_lsp_change(doc, app_get_lsp_manager(app));
                  }
              }
              panel_code_actions_close(app);
@@ -136,37 +137,39 @@ void panel_code_actions_key(App *app, int key) {
     }
 }
 
-void panel_code_actions_render(Gui *g, App *app) {
-    if (!code_actions_open || !g) return;
-    
-    /* Poll for LSP response if we have a pending request */
-    if (code_actions_pending_client && code_actions_count == 0) {
-        char *response = lsp_client_read_response(code_actions_pending_client);
-        if (response) {
-            /* Parse the code actions response */
-            LSPCodeActions *actions = lsp_parse_code_actions_response(response);
-            if (actions && actions->count > 0) {
-                /* Store actions for display */
-                code_actions_count = actions->count;
-                code_actions_capacity = actions->count;
-                code_actions = (CodeAction *)malloc(code_actions_capacity * sizeof(CodeAction));
-                
-                for (int i = 0; i < actions->count; i++) {
-                    code_actions[i].title = actions->actions[i].title;
-                    code_actions[i].kind = actions->actions[i].kind;
-                    code_actions[i].edit = actions->actions[i].edit;
-                    /* Prevent double-free by clearing the actions struct */
-                    actions->actions[i].title = NULL;
-                    actions->actions[i].kind = NULL;
-                    actions->actions[i].edit = NULL;
-                }
+bool panel_code_actions_handle_lsp_response(LSPClient *client, int response_id, const char *response) {
+    if (!code_actions_pending_client || client != code_actions_pending_client ||
+        response_id != code_actions_pending_id) {
+        return false;
+    }
+
+    LSPCodeActions *actions = lsp_parse_code_actions_response(response);
+    if (actions && actions->count > 0) {
+        code_actions_count = actions->count;
+        code_actions_capacity = actions->count;
+        code_actions = (CodeAction *)calloc((size_t)code_actions_capacity, sizeof(CodeAction));
+        if (code_actions) {
+            for (int i = 0; i < actions->count; i++) {
+                code_actions[i].title = actions->actions[i].title;
+                code_actions[i].kind = actions->actions[i].kind;
+                code_actions[i].edit = actions->actions[i].edit;
+                actions->actions[i].title = NULL;
+                actions->actions[i].kind = NULL;
+                actions->actions[i].edit = NULL;
             }
-            
-            if (actions) lsp_free_code_actions(actions);
-            free(response);
-            code_actions_pending_client = NULL;
+        } else {
+            code_actions_count = 0;
+            code_actions_capacity = 0;
         }
     }
+    if (actions) lsp_free_code_actions(actions);
+    code_actions_pending_client = NULL;
+    code_actions_pending_id = -1;
+    return true;
+}
+
+void panel_code_actions_render(Gui *g, App *app) {
+    if (!code_actions_open || !g) return;
     
     /* Show loading state while waiting */
     if (code_actions_count == 0) {

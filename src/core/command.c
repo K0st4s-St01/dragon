@@ -344,8 +344,7 @@ void cmd_sort(App *app) {
 }
 
 void cmd_format(App *app) {
-    Document *doc = (Document *)app_get_doc(app);
-    document_format_selection(doc);
+    app_format_document(app);
 }
 
 void cmd_yank_clipboard(App *app) {
