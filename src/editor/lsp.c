@@ -600,32 +600,67 @@ bool lsp_client_initialize(LSPClient *client, const char *workspace_root) {
         }
     }
     
-    /* Send initialize request */
-    char init_params[1024];
-    snprintf(init_params, sizeof(init_params), "{"
-        "\"processId\":null,"
-        "\"rootPath\":\"%s\","
-        "\"rootUri\":\"file://%s\","
-        "\"capabilities\":{"
-            "\"textDocument\":{"
-                "\"synchronization\":{\"didOpen\":true,\"didChange\":true,\"didSave\":true},"
-                "\"semanticTokens\":{\"requests\":{\"full\":true}}"
-            "}"
-        "}"
-    "}", workspace_root ? workspace_root : ".", workspace_root ? workspace_root : ".");
-    
-    char buffer[4096];
-    snprintf(buffer, sizeof(buffer),
-             "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"initialize\",\"params\":%s}",
-             client->id++, init_params);
-    
-    int content_len = strlen(buffer);
-    if (!lsp_client_write_message(client, buffer, content_len))
+    const char *root = workspace_root ? workspace_root : ".";
+    char *root_path = json_escape_string(root);
+    char *root_uri_path = json_escape_string(root);
+    if (!root_path || !root_uri_path) {
+        free(root_path);
+        free(root_uri_path);
         return false;
+    }
+
+    int init_id = client->id++;
+    if (!lsp_client_write_jsonf(client,
+        "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"initialize\","
+        "\"params\":{\"processId\":null,\"rootPath\":\"%s\",\"rootUri\":\"file://%s\","
+        "\"capabilities\":{\"textDocument\":{\"synchronization\":{\"didOpen\":true,"
+        "\"didChange\":true,\"didSave\":true},\"semanticTokens\":{\"requests\":{\"full\":true}},"
+        "\"publishDiagnostics\":{\"relatedInformation\":true}}}}}",
+        init_id, root_path, root_uri_path)) {
+        free(root_path);
+        free(root_uri_path);
+        return false;
+    }
+    free(root_path);
+    free(root_uri_path);
+
+    char id_pattern[64];
+    snprintf(id_pattern, sizeof(id_pattern), "\"id\":%d", init_id);
+    char *deferred[32] = {0};
+    int deferred_count = 0;
+    bool initialized = false;
+    time_t start = time(NULL);
+    while (difftime(time(NULL), start) < 2.0) {
+        char *response = lsp_client_read_response(client);
+        if (!response) {
+            usleep(10000);
+            continue;
+        }
+        if (strstr(response, id_pattern) && strstr(response, "\"result\"")) {
+            initialized = true;
+            free(response);
+            break;
+        }
+        if (deferred_count < (int)(sizeof(deferred) / sizeof(deferred[0]))) {
+            deferred[deferred_count++] = response;
+        } else {
+            free(response);
+        }
+    }
+
+    for (int i = deferred_count - 1; i >= 0; i--) {
+        lsp_client_unread_response(client, deferred[i]);
+        free(deferred[i]);
+    }
+
+    if (!initialized) {
+        client->status = LSP_STATUS_ERROR;
+        return false;
+    }
     
     /* Send initialized notification */
     const char *initialized_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"initialized\",\"params\":{}}";
-    content_len = strlen(initialized_msg);
+    int content_len = strlen(initialized_msg);
     if (!lsp_client_write_message(client, initialized_msg, content_len))
         return false;
     
@@ -783,7 +818,7 @@ void lsp_client_send_didChange(LSPClient *client, const char *file_uri, const ch
 }
 
 char *lsp_client_read_response(LSPClient *client) {
-    if (client->status != LSP_STATUS_INITIALIZED) {
+    if (!client || client->status == LSP_STATUS_DISCONNECTED || client->status == LSP_STATUS_ERROR) {
         return NULL;
     }
 

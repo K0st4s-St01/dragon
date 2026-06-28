@@ -2934,10 +2934,41 @@ void document_detect_language(Document *doc) {
 /* File path to file:// URI conversion */
 static char *filepath_to_uri(const char *filepath) {
     if (!filepath) return NULL;
-    
-    /* Simple conversion: prepend file:// and handle only absolute paths */
-    char *uri = malloc(strlen(filepath) + 8);
-    snprintf(uri, strlen(filepath) + 8, "file://%s", filepath);
+
+    char *absolute = NULL;
+    if (filepath[0] == '/') {
+        absolute = strdup(filepath);
+    } else {
+        char *cwd = getcwd(NULL, 0);
+        if (!cwd) return NULL;
+        size_t len = strlen(cwd) + 1 + strlen(filepath) + 1;
+        absolute = malloc(len);
+        if (absolute)
+            snprintf(absolute, len, "%s/%s", cwd, filepath);
+        free(cwd);
+    }
+    if (!absolute) return NULL;
+
+    size_t cap = strlen(absolute) * 3 + 8;
+    char *uri = malloc(cap);
+    if (!uri) {
+        free(absolute);
+        return NULL;
+    }
+    strcpy(uri, "file://");
+    size_t out = strlen(uri);
+    for (const unsigned char *p = (const unsigned char *)absolute; *p && out + 4 < cap; p++) {
+        if ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+            (*p >= '0' && *p <= '9') || *p == '/' || *p == '-' ||
+            *p == '_' || *p == '.' || *p == '~') {
+            uri[out++] = (char)*p;
+        } else {
+            snprintf(uri + out, cap - out, "%%%02X", *p);
+            out += 3;
+        }
+    }
+    uri[out] = '\0';
+    free(absolute);
     return uri;
 }
 
