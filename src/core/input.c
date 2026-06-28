@@ -180,6 +180,7 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
             panel_terminal_close(app);
         else
             panel_terminal_open(app);
+        mode->suppress_next_char = true;
         return;
     }
 
@@ -338,6 +339,10 @@ void input_handle_char(App *app, unsigned int c) {
     ModeState *mode = (ModeState *)app_get_mode(app);
     
     if (panel_terminal_is_open()) {
+        if (mode->suppress_next_char) {
+            mode->suppress_next_char = false;
+            return;
+        }
         panel_terminal_input(app, c);
         return;
     }
@@ -788,6 +793,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
                   if (mods & GLFW_MOD_SHIFT) {
                       /* Space T - terminal panel */
                       panel_terminal_open(app);
+                      mode->suppress_next_char = true;
                   } else {
                       /* Space t - tree-sitter node inspector */
                       panel_treesitter_inspector_open(app);

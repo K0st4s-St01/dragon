@@ -751,7 +751,7 @@ The following features are useful, but they should be marked as extensions, not 
 
 - [ ] Tree file browser.
 - [ ] File create/delete/rename UI.
-- [ ] Integrated terminal.
+- [x] ~~Integrated terminal.~~
 - [ ] First/last buffer commands `:bf` and `:bl`.
 - [ ] `:uniq`.
 - [ ] Current git branch in statusline.
