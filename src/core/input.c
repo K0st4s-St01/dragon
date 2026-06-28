@@ -31,6 +31,15 @@
 static char cmd_buf[CMD_BUF_MAX] = {0};
 static int  cmd_len = 0;
 
+static void input_save_all_buffers(App *app) {
+    int count = app_get_buffer_count(app);
+    for (int i = 0; i < count; i++) {
+        Document *doc = (Document *)app_get_doc_at(app, i);
+        if (doc && doc->filepath)
+            document_save(doc);
+    }
+}
+
 void input_cmd_reset(void) {
     cmd_buf[0] = '\0';
     cmd_len = 0;
@@ -856,7 +865,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
 
     /* Alt combinations */
     if (mods & GLFW_MOD_ALT) {
-        /* Alt-Shift-C - Copy selection above */
+        /* Alt-C - copy selection above / add cursor above */
         if (key == GLFW_KEY_C && (mods & GLFW_MOD_SHIFT)) {
             document_copy_selection_above(doc);
             return;
@@ -919,6 +928,13 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             return;
         default: break;
         }
+    }
+
+    /* C - copy selection below / add cursor below */
+    if (key == GLFW_KEY_C && (mods & GLFW_MOD_SHIFT) &&
+        !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+        document_copy_selection_below(doc);
+        return;
     }
 
     /* Ctrl combinations */
@@ -1094,7 +1110,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
     }
 
     /* Alt-c - Change selection without yanking */
-    if (key == GLFW_KEY_C && (mods & GLFW_MOD_ALT)) {
+    if (key == GLFW_KEY_C && (mods & GLFW_MOD_ALT) && !(mods & GLFW_MOD_SHIFT)) {
         document_delete_selection(doc);
         mode_set(mode, MODE_INSERT);
         return;
@@ -1646,6 +1662,11 @@ static void handle_command_key(App *app, int key, int action, int mods) {
     } else if (strcmp(cmd_buf, "wq!") == 0 || strcmp(cmd_buf, "x!") == 0) {
         document_save(doc);
         cmd_quit(app);
+    } else if (strcmp(cmd_buf, "wqa") == 0 || strcmp(cmd_buf, "wqa!") == 0 ||
+               strcmp(cmd_buf, "write-quit-all") == 0 ||
+               strcmp(cmd_buf, "write-quit-all!") == 0) {
+        input_save_all_buffers(app);
+        cmd_quit(app);
     } else if (strcmp(cmd_buf, "qa") == 0 || strcmp(cmd_buf, "quit-all") == 0 ||
                strcmp(cmd_buf, "qa!") == 0 || strcmp(cmd_buf, "quit-all!") == 0) {
         cmd_quit(app);
@@ -1791,6 +1812,10 @@ static void handle_select_key(App *app, int key, int action, int mods) {
 
     /* Alt combinations in select mode */
     if (mods & GLFW_MOD_ALT) {
+        if (key == GLFW_KEY_C && (mods & GLFW_MOD_SHIFT)) {
+            document_copy_selection_above(doc);
+            return;
+        }
         if (key == GLFW_KEY_SEMICOLON) {
             document_flip_cursor_anchor(doc);
             return;
@@ -1822,6 +1847,12 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             }
             return;
         }
+    }
+
+    if (key == GLFW_KEY_C && (mods & GLFW_MOD_SHIFT) &&
+        !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+        document_copy_selection_below(doc);
+        return;
     }
 
     /* > (Shift+.) - Indent selection */

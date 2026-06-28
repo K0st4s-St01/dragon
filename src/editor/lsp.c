@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -62,6 +63,102 @@ static bool lsp_client_write_message(LSPClient *client, const char *body, int co
     snprintf(header, sizeof(header), "Content-Length: %d\r\n\r\n", content_len);
     return lsp_client_write_all(client, header, strlen(header)) &&
            lsp_client_write_all(client, body, (size_t)content_len);
+}
+
+static bool lsp_client_write_jsonf(LSPClient *client, const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    int len = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+    if (len < 0) return false;
+
+    char *body = malloc((size_t)len + 1);
+    if (!body) return false;
+
+    va_start(args, fmt);
+    vsnprintf(body, (size_t)len + 1, fmt, args);
+    va_end(args);
+
+    bool ok = lsp_client_write_message(client, body, len);
+    free(body);
+    return ok;
+}
+
+static bool json_escape_append(char **out, size_t *len, size_t *cap, const char *s, size_t n) {
+    if (*len + n + 1 > *cap) {
+        size_t next = *cap ? *cap : 256;
+        while (next < *len + n + 1)
+            next *= 2;
+        char *buf = realloc(*out, next);
+        if (!buf) return false;
+        *out = buf;
+        *cap = next;
+    }
+    memcpy(*out + *len, s, n);
+    *len += n;
+    (*out)[*len] = '\0';
+    return true;
+}
+
+static char *json_escape_string(const char *text) {
+    if (!text) text = "";
+    char *out = NULL;
+    size_t len = 0, cap = 0;
+    for (const unsigned char *p = (const unsigned char *)text; *p; p++) {
+        char buf[8];
+        switch (*p) {
+        case '"':
+            if (!json_escape_append(&out, &len, &cap, "\\\"", 2)) goto fail;
+            break;
+        case '\\':
+            if (!json_escape_append(&out, &len, &cap, "\\\\", 2)) goto fail;
+            break;
+        case '\b':
+            if (!json_escape_append(&out, &len, &cap, "\\b", 2)) goto fail;
+            break;
+        case '\f':
+            if (!json_escape_append(&out, &len, &cap, "\\f", 2)) goto fail;
+            break;
+        case '\n':
+            if (!json_escape_append(&out, &len, &cap, "\\n", 2)) goto fail;
+            break;
+        case '\r':
+            if (!json_escape_append(&out, &len, &cap, "\\r", 2)) goto fail;
+            break;
+        case '\t':
+            if (!json_escape_append(&out, &len, &cap, "\\t", 2)) goto fail;
+            break;
+        default:
+            if (*p < 0x20) {
+                snprintf(buf, sizeof(buf), "\\u%04x", *p);
+                if (!json_escape_append(&out, &len, &cap, buf, 6)) goto fail;
+            } else if (!json_escape_append(&out, &len, &cap, (const char *)p, 1)) {
+                goto fail;
+            }
+            break;
+        }
+    }
+    if (!out && !json_escape_append(&out, &len, &cap, "", 0)) goto fail;
+    return out;
+
+fail:
+    free(out);
+    return NULL;
+}
+
+static void lsp_client_send_position_request(LSPClient *client, const char *method,
+                                             const char *file_uri, int line,
+                                             int character, const char *extra_params) {
+    if (client->status != LSP_STATUS_INITIALIZED) return;
+    char *uri = json_escape_string(file_uri);
+    if (!uri) return;
+    lsp_client_write_jsonf(client,
+        "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"%s\","
+        "\"params\":{\"textDocument\":{\"uri\":\"%s\"},"
+        "\"position\":{\"line\":%d,\"character\":%d}%s}}",
+        client->id++, method, uri, line, character,
+        extra_params ? extra_params : "");
+    free(uri);
 }
 
 /* Helper: Extract JSON string value */
@@ -565,240 +662,124 @@ void lsp_manager_status_counts(LSPManager *manager, int *initialized, int *conne
 }
 
 void lsp_client_send_definition_request(LSPClient *client, const char *file_uri, int line, int character) {
-    if (client->status != LSP_STATUS_INITIALIZED) {
-        return;
-    }
-    
-    char params[512];
-    snprintf(params, sizeof(params),
-             "{\"textDocument\":{\"uri\":\"%s\"},\"position\":{\"line\":%d,\"character\":%d}}",
-             file_uri, line, character);
-    
-    char buffer[1024];
-    snprintf(buffer, sizeof(buffer),
-             "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/definition\",\"params\":%s}",
-             client->id++, params);
-    
-    int content_len = strlen(buffer);
-    lsp_client_write_message(client, buffer, content_len);
+    lsp_client_send_position_request(client, "textDocument/definition", file_uri, line, character, NULL);
 }
 
 void lsp_client_send_hover_request(LSPClient *client, const char *file_uri, int line, int character) {
-    if (client->status != LSP_STATUS_INITIALIZED) {
-        return;
-    }
-    
-    char params[512];
-    snprintf(params, sizeof(params),
-             "{\"textDocument\":{\"uri\":\"%s\"},\"position\":{\"line\":%d,\"character\":%d}}",
-             file_uri, line, character);
-    
-    char buffer[1024];
-    snprintf(buffer, sizeof(buffer),
-             "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/hover\",\"params\":%s}",
-             client->id++, params);
-    
-    int content_len = strlen(buffer);
-    lsp_client_write_message(client, buffer, content_len);
+    lsp_client_send_position_request(client, "textDocument/hover", file_uri, line, character, NULL);
 }
 
 void lsp_client_send_completion_request(LSPClient *client, const char *file_uri, int line, int character) {
-    if (client->status != LSP_STATUS_INITIALIZED) {
-        return;
-    }
-
-    char params[640];
-    snprintf(params, sizeof(params),
-             "{\"textDocument\":{\"uri\":\"%s\"},\"position\":{\"line\":%d,\"character\":%d},\"context\":{\"triggerKind\":1}}",
-             file_uri, line, character);
-
-    char buffer[1200];
-    snprintf(buffer, sizeof(buffer),
-             "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/completion\",\"params\":%s}",
-             client->id++, params);
-
-    int content_len = strlen(buffer);
-    lsp_client_write_message(client, buffer, content_len);
+    lsp_client_send_position_request(client, "textDocument/completion", file_uri, line, character,
+                                     ",\"context\":{\"triggerKind\":1}");
 }
 
 void lsp_client_send_semantic_tokens_request(LSPClient *client, const char *file_uri) {
     if (client->status != LSP_STATUS_INITIALIZED) {
         return;
     }
-    
-    char params[512];
-    snprintf(params, sizeof(params), "{\"textDocument\":{\"uri\":\"%s\"}}", file_uri);
-    
-    char buffer[1024];
-    snprintf(buffer, sizeof(buffer),
-             "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/semanticTokens/full\",\"params\":%s}",
-             client->id++, params);
-    
-    int content_len = strlen(buffer);
-    lsp_client_write_message(client, buffer, content_len);
+    char *uri = json_escape_string(file_uri);
+    if (!uri) return;
+    lsp_client_write_jsonf(client,
+        "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/semanticTokens/full\","
+        "\"params\":{\"textDocument\":{\"uri\":\"%s\"}}}",
+        client->id++, uri);
+    free(uri);
 }
 
 void lsp_client_send_rename_request(LSPClient *client, const char *file_uri, int line, int character, const char *new_name) {
     if (client->status != LSP_STATUS_INITIALIZED) {
         return;
     }
-    
-    char params[1024];
-    snprintf(params, sizeof(params),
-             "{\"textDocument\":{\"uri\":\"%s\"},\"position\":{\"line\":%d,\"character\":%d},\"newName\":\"%s\"}",
-             file_uri, line, character, new_name);
-    
-    char buffer[2048];
-    snprintf(buffer, sizeof(buffer),
-             "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/rename\",\"params\":%s}",
-             client->id++, params);
-    
-    int content_len = strlen(buffer);
-    lsp_client_write_message(client, buffer, content_len);
+
+    char *uri = json_escape_string(file_uri);
+    char *name = json_escape_string(new_name);
+    if (!uri || !name) {
+        free(uri);
+        free(name);
+        return;
+    }
+    lsp_client_write_jsonf(client,
+        "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/rename\","
+        "\"params\":{\"textDocument\":{\"uri\":\"%s\"},"
+        "\"position\":{\"line\":%d,\"character\":%d},\"newName\":\"%s\"}}",
+        client->id++, uri, line, character, name);
+    free(uri);
+    free(name);
 }
 
 void lsp_client_send_code_action_request(LSPClient *client, const char *file_uri, int start_line, int start_character, int end_line, int end_character) {
     if (client->status != LSP_STATUS_INITIALIZED) {
         return;
     }
-    
-    char params[1024];
-    snprintf(params, sizeof(params),
-             "{\"textDocument\":{\"uri\":\"%s\"},\"range\":{\"start\":{\"line\":%d,\"character\":%d},\"end\":{\"line\":%d,\"character\":%d}},\"context\":{\"diagnostics\":[]}}",
-             file_uri, start_line, start_character, end_line, end_character);
-    
-    char buffer[2048];
-    snprintf(buffer, sizeof(buffer),
-             "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/codeAction\",\"params\":%s}",
-             client->id++, params);
-    
-    int content_len = strlen(buffer);
-    lsp_client_write_message(client, buffer, content_len);
+
+    char *uri = json_escape_string(file_uri);
+    if (!uri) return;
+    lsp_client_write_jsonf(client,
+        "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/codeAction\","
+        "\"params\":{\"textDocument\":{\"uri\":\"%s\"},"
+        "\"range\":{\"start\":{\"line\":%d,\"character\":%d},"
+        "\"end\":{\"line\":%d,\"character\":%d}},\"context\":{\"diagnostics\":[]}}}",
+        client->id++, uri, start_line, start_character, end_line, end_character);
+    free(uri);
 }
 
 void lsp_client_send_type_definition_request(LSPClient *client, const char *file_uri, int line, int character) {
-    if (client->status != LSP_STATUS_INITIALIZED) {
-        return;
-    }
-    
-    char params[512];
-    snprintf(params, sizeof(params),
-             "{\"textDocument\":{\"uri\":\"%s\"},\"position\":{\"line\":%d,\"character\":%d}}",
-             file_uri, line, character);
-    
-    char buffer[1024];
-    snprintf(buffer, sizeof(buffer),
-             "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/typeDefinition\",\"params\":%s}",
-             client->id++, params);
-    
-    int content_len = strlen(buffer);
-    lsp_client_write_message(client, buffer, content_len);
+    lsp_client_send_position_request(client, "textDocument/typeDefinition", file_uri, line, character, NULL);
 }
 
 void lsp_client_send_references_request(LSPClient *client, const char *file_uri, int line, int character) {
-    if (client->status != LSP_STATUS_INITIALIZED) {
-        return;
-    }
-    
-    char params[512];
-    snprintf(params, sizeof(params),
-             "{\"textDocument\":{\"uri\":\"%s\"},\"position\":{\"line\":%d,\"character\":%d},\"context\":{\"includeDeclaration\":true}}",
-             file_uri, line, character);
-    
-    char buffer[1024];
-    snprintf(buffer, sizeof(buffer),
-             "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/references\",\"params\":%s}",
-             client->id++, params);
-    
-    int content_len = strlen(buffer);
-    lsp_client_write_message(client, buffer, content_len);
+    lsp_client_send_position_request(client, "textDocument/references", file_uri, line, character,
+                                     ",\"context\":{\"includeDeclaration\":true}");
 }
 
 void lsp_client_send_implementation_request(LSPClient *client, const char *file_uri, int line, int character) {
-    if (client->status != LSP_STATUS_INITIALIZED) {
-        return;
-    }
-    
-    char params[512];
-    snprintf(params, sizeof(params),
-             "{\"textDocument\":{\"uri\":\"%s\"},\"position\":{\"line\":%d,\"character\":%d}}",
-             file_uri, line, character);
-    
-    char buffer[1024];
-    snprintf(buffer, sizeof(buffer),
-             "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"textDocument/implementation\",\"params\":%s}",
-             client->id++, params);
-    
-    int content_len = strlen(buffer);
-    lsp_client_write_message(client, buffer, content_len);
+    lsp_client_send_position_request(client, "textDocument/implementation", file_uri, line, character, NULL);
 }
 
 void lsp_client_send_didOpen(LSPClient *client, const char *file_uri, const char *language_id, const char *text) {
     if (client->status != LSP_STATUS_INITIALIZED) return;
-    
-    /* Escape text for JSON */
-    size_t text_len = strlen(text);
-    size_t escaped_len = text_len * 2 + 1;
-    char *escaped = malloc(escaped_len);
-    size_t j = 0;
-    for (size_t i = 0; i < text_len; i++) {
-        char c = text[i];
-        if (c == '"') { escaped[j++] = '\\'; escaped[j++] = '"'; }
-        else if (c == '\\') { escaped[j++] = '\\'; escaped[j++] = '\\'; }
-        else if (c == '\n') { escaped[j++] = '\\'; escaped[j++] = 'n'; }
-        else if (c == '\r') { escaped[j++] = '\\'; escaped[j++] = 'r'; }
-        else if (c == '\t') { escaped[j++] = '\\'; escaped[j++] = 't'; }
-        else { escaped[j++] = c; }
+
+    char *uri = json_escape_string(file_uri);
+    char *lang = json_escape_string(language_id);
+    char *escaped_text = json_escape_string(text);
+    if (!uri || !lang || !escaped_text) {
+        free(uri);
+        free(lang);
+        free(escaped_text);
+        return;
     }
-    escaped[j] = '\0';
-    
-    char params[4096];
-    snprintf(params, sizeof(params),
-             "{\"textDocument\":{\"uri\":\"%s\",\"languageId\":\"%s\",\"version\":1,\"text\":\"%s\"}}",
-             file_uri, language_id, escaped);
-    free(escaped);
-    
-    char buffer[8192];
-    snprintf(buffer, sizeof(buffer),
-             "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":%s}",
-             params);
-    
-    int content_len = strlen(buffer);
-    lsp_client_write_message(client, buffer, content_len);
+
+    lsp_client_write_jsonf(client,
+        "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\","
+        "\"params\":{\"textDocument\":{\"uri\":\"%s\",\"languageId\":\"%s\","
+        "\"version\":1,\"text\":\"%s\"}}}",
+        uri, lang, escaped_text);
+
+    free(uri);
+    free(lang);
+    free(escaped_text);
 }
 
 void lsp_client_send_didChange(LSPClient *client, const char *file_uri, const char *text) {
     if (client->status != LSP_STATUS_INITIALIZED) return;
-    
-    /* Escape text for JSON */
-    size_t text_len = strlen(text);
-    size_t escaped_len = text_len * 2 + 1;
-    char *escaped = malloc(escaped_len);
-    size_t j = 0;
-    for (size_t i = 0; i < text_len; i++) {
-        char c = text[i];
-        if (c == '"') { escaped[j++] = '\\'; escaped[j++] = '"'; }
-        else if (c == '\\') { escaped[j++] = '\\'; escaped[j++] = '\\'; }
-        else if (c == '\n') { escaped[j++] = '\\'; escaped[j++] = 'n'; }
-        else if (c == '\r') { escaped[j++] = '\\'; escaped[j++] = 'r'; }
-        else if (c == '\t') { escaped[j++] = '\\'; escaped[j++] = 't'; }
-        else { escaped[j++] = c; }
+
+    char *uri = json_escape_string(file_uri);
+    char *escaped_text = json_escape_string(text);
+    if (!uri || !escaped_text) {
+        free(uri);
+        free(escaped_text);
+        return;
     }
-    escaped[j] = '\0';
-    
-    char params[4096];
-    snprintf(params, sizeof(params),
-             "{\"textDocument\":{\"uri\":\"%s\",\"version\":2},\"contentChanges\":[{\"text\":\"%s\"}]}",
-             file_uri, escaped);
-    free(escaped);
-    
-    char buffer[8192];
-    snprintf(buffer, sizeof(buffer),
-             "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didChange\",\"params\":%s}",
-             params);
-    
-    int content_len = strlen(buffer);
-    lsp_client_write_message(client, buffer, content_len);
+
+    lsp_client_write_jsonf(client,
+        "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didChange\","
+        "\"params\":{\"textDocument\":{\"uri\":\"%s\",\"version\":2},"
+        "\"contentChanges\":[{\"text\":\"%s\"}]}}",
+        uri, escaped_text);
+
+    free(uri);
+    free(escaped_text);
 }
 
 char *lsp_client_read_response(LSPClient *client) {

@@ -259,20 +259,54 @@ void document_delete_char(Document *doc) {
 }
 
 void document_delete_selection(Document *doc) {
-    Cursor *cur = &doc->cursors[0];
-    if (!cur->has_selection) return;
-    int sr, sc, er, ec;
-    cursor_normalize(cur, &sr, &sc, &er, &ec);
-    size_t start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
-    size_t end = buffer_pos_from_row_col(&doc->buffer, er, ec);
-    size_t len = end - start;
-    char *deleted = malloc(len);
-    memcpy(deleted, doc->buffer.text + start, len);
-    buffer_delete(&doc->buffer, start, len);
-    history_push_delete(&doc->history, start, deleted, len, sr, sc);
-    free(deleted);
-    cursor_move_to(cur, sr, sc);
-    cursor_clear_selection(cur);
+    if (!doc) return;
+    if (doc->cursor_count < 1) doc->cursor_count = 1;
+    if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
+
+    int order[MAX_CURSORS];
+    int count = 0;
+    for (int i = 0; i < doc->cursor_count; i++) {
+        if (doc->cursors[i].has_selection)
+            order[count++] = i;
+    }
+    if (count == 0) return;
+
+    for (int i = 1; i < count; i++) {
+        for (int j = i; j > 0; j--) {
+            int ar, ac, ae_r, ae_c;
+            int br, bc, be_r, be_c;
+            cursor_normalize(&doc->cursors[order[j]], &ar, &ac, &ae_r, &ae_c);
+            cursor_normalize(&doc->cursors[order[j - 1]], &br, &bc, &be_r, &be_c);
+            size_t pa = buffer_pos_from_row_col(&doc->buffer, ar, ac);
+            size_t pb = buffer_pos_from_row_col(&doc->buffer, br, bc);
+            if (pa < pb) {
+                int tmp = order[j];
+                order[j] = order[j - 1];
+                order[j - 1] = tmp;
+            } else {
+                break;
+            }
+        }
+    }
+
+    for (int i = count - 1; i >= 0; i--) {
+        Cursor *cur = &doc->cursors[order[i]];
+        int sr, sc, er, ec;
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+        size_t start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
+        size_t end = buffer_pos_from_row_col(&doc->buffer, er, ec);
+        if (end < start) continue;
+        size_t len = end - start;
+        char *deleted = len > 0 ? malloc(len) : NULL;
+        if (len > 0 && deleted)
+            memcpy(deleted, doc->buffer.text + start, len);
+        buffer_delete(&doc->buffer, start, len);
+        if (len > 0 && deleted)
+            history_push_delete(&doc->history, start, deleted, len, sr, sc);
+        free(deleted);
+        cursor_move_to(cur, sr, sc);
+        cursor_clear_selection(cur);
+    }
     document_mark_dirty(doc);
 }
 
@@ -368,8 +402,7 @@ void document_move_line_down(Document *doc) {
     document_mark_dirty(doc);
 }
 
-void document_move_cursor(Document *doc, int dr, int dc) {
-    Cursor *cur = &doc->cursors[0];
+static void document_move_cursor_one(Document *doc, Cursor *cur, int dr, int dc) {
     size_t max_lines = buffer_line_count(&doc->buffer);
     
     cur->row += dr;
@@ -395,7 +428,15 @@ void document_move_cursor(Document *doc, int dr, int dc) {
     size_t max_col = buffer_line_len(&doc->buffer, cur->row);
     if (cur->col > (int)max_col) cur->col = (int)max_col;
     if (cur->col < 0) cur->col = 0;
-    
+}
+
+void document_move_cursor(Document *doc, int dr, int dc) {
+    if (!doc) return;
+    if (doc->cursor_count < 1) doc->cursor_count = 1;
+    if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
+    for (int i = 0; i < doc->cursor_count; i++)
+        document_move_cursor_one(doc, &doc->cursors[i], dr, dc);
+
     /* Keep cursor visible in viewport */
     document_sync_viewport_to_cursor(doc);
 }
@@ -416,13 +457,22 @@ void document_cursor_to(Document *doc, int row, int col) {
 }
 
 void document_cursor_home(Document *doc) {
-    doc->cursors[0].col = 0;
+    if (!doc) return;
+    if (doc->cursor_count < 1) doc->cursor_count = 1;
+    if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
+    for (int i = 0; i < doc->cursor_count; i++)
+        doc->cursors[i].col = 0;
 }
 
 void document_cursor_end(Document *doc) {
-    Cursor *cur = &doc->cursors[0];
-    int len = (int)buffer_line_len(&doc->buffer, cur->row);
-    cur->col = len;
+    if (!doc) return;
+    if (doc->cursor_count < 1) doc->cursor_count = 1;
+    if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
+    for (int i = 0; i < doc->cursor_count; i++) {
+        Cursor *cur = &doc->cursors[i];
+        int len = (int)buffer_line_len(&doc->buffer, cur->row);
+        cur->col = len;
+    }
 }
 
 void document_cursor_page_up(Document *doc) {
@@ -667,16 +717,19 @@ static void get_word_at_cursor(Cursor *cur, Buffer *buf, const char **word, int 
 }
 
 void document_add_cursor(Document *doc) {
-    if (doc->cursor_count >= 64) return;
+    if (!doc) return;
+    if (doc->cursor_count < 1) doc->cursor_count = 1;
+    if (doc->cursor_count >= MAX_CURSORS) return;
 
     Cursor *primary = &doc->cursors[0];
+    Cursor *last = &doc->cursors[doc->cursor_count - 1];
     const char *word;
     int word_len;
     get_word_at_cursor(primary, &doc->buffer, &word, &word_len);
     if (word_len == 0) return;
 
-    /* Search forward from the end of current word for next occurrence */
-    size_t search_start = buffer_pos_from_row_col(&doc->buffer, primary->row, primary->col) + word_len;
+    /* Search forward from the last cursor so repeated calls add the next occurrence. */
+    size_t search_start = buffer_pos_from_row_col(&doc->buffer, last->row, last->col) + word_len;
     const char *text = doc->buffer.text;
     size_t total = doc->buffer.len;
 
@@ -705,6 +758,17 @@ void document_add_cursor(Document *doc) {
 
         int row, col;
         buffer_row_col_from_pos(&doc->buffer, pos, &row, &col);
+        bool duplicate = false;
+        for (int i = 0; i < doc->cursor_count; i++) {
+            if (doc->cursors[i].row == row && doc->cursors[i].col == col) {
+                duplicate = true;
+                break;
+            }
+        }
+        if (duplicate) {
+            search_start = pos + 1;
+            continue;
+        }
         Cursor *new_cur = &doc->cursors[doc->cursor_count];
         cursor_init(new_cur);
         cursor_move_to(new_cur, row, col);
@@ -719,12 +783,20 @@ void document_remove_last_cursor(Document *doc) {
 }
 
 void document_clear_cursors(Document *doc) {
+    if (!doc) return;
+    if (doc->cursor_count < 1) {
+        doc->cursor_count = 1;
+        cursor_init(&doc->cursors[0]);
+        return;
+    }
+    Cursor primary = doc->cursors[0];
     doc->cursor_count = 1;
-    cursor_init(&doc->cursors[0]);
+    doc->cursors[0] = primary;
 }
 
 void document_insert_char_multi(Document *doc, char c) {
     if (!doc) return;
+    document_delete_selection(doc);
     if (doc->cursor_count < 1) doc->cursor_count = 1;
     if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
 
@@ -751,6 +823,12 @@ void document_insert_char_multi(Document *doc, char c) {
 
 void document_delete_char_multi(Document *doc) {
     if (!doc) return;
+    for (int i = 0; i < doc->cursor_count; i++) {
+        if (doc->cursors[i].has_selection) {
+            document_delete_selection(doc);
+            return;
+        }
+    }
     if (doc->cursor_count < 1) doc->cursor_count = 1;
     if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
 
@@ -1148,12 +1226,15 @@ void document_collapse_selection(Document *doc) {
 }
 
 void document_keep_primary_selection(Document *doc) {
+    if (!doc) return;
     Cursor *cur = &doc->cursors[0];
-    if (!cur->has_selection) return;
-    int sr, sc, er, ec;
-    cursor_normalize(cur, &sr, &sc, &er, &ec);
-    cursor_move_to(cur, er, ec);
-    cursor_clear_selection(cur);
+    if (cur->has_selection) {
+        int sr, sc, er, ec;
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+        cursor_move_to(cur, er, ec);
+        cursor_clear_selection(cur);
+    }
+    doc->cursor_count = 1;
 }
 
 void document_flip_cursor_anchor(Document *doc) {
@@ -1169,9 +1250,24 @@ void document_flip_cursor_anchor(Document *doc) {
 }
 
 void document_copy_selection_below(Document *doc) {
+    if (!doc) return;
     Cursor *cur = &doc->cursors[0];
     if (!cur->has_selection) {
-        document_add_cursor(doc);
+        if (doc->cursor_count >= MAX_CURSORS) return;
+        int line_count = (int)buffer_line_count(&doc->buffer);
+        Cursor *base = &doc->cursors[0];
+        for (int i = 1; i < doc->cursor_count; i++) {
+            if (doc->cursors[i].row > base->row)
+                base = &doc->cursors[i];
+        }
+        int row = base->row + 1;
+        if (row >= line_count) return;
+        int col = base->col;
+        int len = (int)buffer_line_len(&doc->buffer, row);
+        if (col > len) col = len;
+        Cursor *new_cur = &doc->cursors[doc->cursor_count++];
+        cursor_init(new_cur);
+        cursor_move_to(new_cur, row, col);
         return;
     }
     int sr, sc, er, ec;
@@ -1836,8 +1932,25 @@ void document_trim_whitespace(Document *doc) {
 }
 
 void document_copy_selection_above(Document *doc) {
+    if (!doc) return;
     Cursor *cur = &doc->cursors[0];
-    if (!cur->has_selection) return;
+    if (!cur->has_selection) {
+        if (doc->cursor_count >= MAX_CURSORS) return;
+        Cursor *base = &doc->cursors[0];
+        for (int i = 1; i < doc->cursor_count; i++) {
+            if (doc->cursors[i].row < base->row)
+                base = &doc->cursors[i];
+        }
+        int row = base->row - 1;
+        if (row < 0) return;
+        int col = base->col;
+        int len = (int)buffer_line_len(&doc->buffer, row);
+        if (col > len) col = len;
+        Cursor *new_cur = &doc->cursors[doc->cursor_count++];
+        cursor_init(new_cur);
+        cursor_move_to(new_cur, row, col);
+        return;
+    }
     int sr, sc, er, ec;
     cursor_normalize(cur, &sr, &sc, &er, &ec);
     size_t start = buffer_pos_from_row_col(&doc->buffer, sr, sc);

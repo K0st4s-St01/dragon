@@ -1847,6 +1847,18 @@ static void test_document_add_cursor(void) {
     PASS();
 }
 
+static void test_document_add_cursor_repeated(void) {
+    TEST(document_add_cursor_repeated);
+    Document *doc = make_doc("foo foo foo");
+    document_add_cursor(doc);
+    document_add_cursor(doc);
+    ASSERT_EQ_INT(doc->cursor_count, 3);
+    ASSERT_EQ_INT(doc->cursors[1].col, 4);
+    ASSERT_EQ_INT(doc->cursors[2].col, 8);
+    free_doc(doc);
+    PASS();
+}
+
 static void test_document_remove_last_cursor(void) {
     TEST(document_remove_last_cursor);
     Document *doc = make_doc("foo bar foo");
@@ -2249,6 +2261,64 @@ static void test_document_insert_char_multi(void) {
     PASS();
 }
 
+static void test_document_move_cursor_multi(void) {
+    TEST(document_move_cursor_multi);
+    Document *doc = make_doc("aaa\nbbb\nccc");
+    doc->cursor_count = 2;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 1);
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 1, 2);
+    document_move_cursor(doc, 1, 0);
+    ASSERT_EQ_INT(doc->cursors[0].row, 1);
+    ASSERT_EQ_INT(doc->cursors[0].col, 1);
+    ASSERT_EQ_INT(doc->cursors[1].row, 2);
+    ASSERT_EQ_INT(doc->cursors[1].col, 2);
+    document_cursor_end(doc);
+    ASSERT_EQ_INT(doc->cursors[0].col, 3);
+    ASSERT_EQ_INT(doc->cursors[1].col, 3);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_delete_selection_multi(void) {
+    TEST(document_delete_selection_multi);
+    Document *doc = make_doc("abc def ghi");
+    doc->cursor_count = 2;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 0);
+    doc->cursors[0].anchor_row = 0;
+    doc->cursors[0].anchor_col = 3;
+    doc->cursors[0].has_selection = true;
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 8);
+    doc->cursors[1].anchor_row = 0;
+    doc->cursors[1].anchor_col = 11;
+    doc->cursors[1].has_selection = true;
+    document_delete_selection(doc);
+    ASSERT_EQ_STR(doc->buffer.text, " def ");
+    ASSERT_FALSE(doc->cursors[0].has_selection);
+    ASSERT_FALSE(doc->cursors[1].has_selection);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_add_cursor_below_above(void) {
+    TEST(document_add_cursor_below_above);
+    Document *doc = make_doc("aaa\nbb\nccc");
+    cursor_move_to(&doc->cursors[0], 1, 2);
+    document_copy_selection_below(doc);
+    ASSERT_EQ_INT(doc->cursor_count, 2);
+    ASSERT_EQ_INT(doc->cursors[1].row, 2);
+    ASSERT_EQ_INT(doc->cursors[1].col, 2);
+    document_copy_selection_above(doc);
+    ASSERT_EQ_INT(doc->cursor_count, 3);
+    ASSERT_EQ_INT(doc->cursors[2].row, 0);
+    ASSERT_EQ_INT(doc->cursors[2].col, 2);
+    free_doc(doc);
+    PASS();
+}
+
 static void test_document_delete_char_multi(void) {
     TEST(document_delete_char_multi);
     Document *doc = make_doc("aaa bbb ccc");
@@ -2312,9 +2382,15 @@ static void test_document_replace_selection_yanked(void) {
 static void test_document_keep_primary_selection(void) {
     TEST(document_keep_primary_selection);
     Document *doc = make_doc("hello");
+    doc->cursor_count = 3;
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 1);
+    cursor_init(&doc->cursors[2]);
+    cursor_move_to(&doc->cursors[2], 0, 2);
     cursor_select_start(&doc->cursors[0]);
     doc->cursors[0].col = 5;
     document_keep_primary_selection(doc);
+    ASSERT_EQ_INT(doc->cursor_count, 1);
     ASSERT_FALSE(doc->cursors[0].has_selection);
     ASSERT_EQ_INT(doc->cursors[0].row, 0);
     ASSERT_EQ_INT(doc->cursors[0].col, 5);
@@ -3818,6 +3894,7 @@ int main(void) {
     test_document_search_prev();
     test_document_search_wraps();
     test_document_add_cursor();
+    test_document_add_cursor_repeated();
     test_document_remove_last_cursor();
     test_document_clear_cursors();
     test_document_collapse_selection();
@@ -3855,6 +3932,9 @@ int main(void) {
 
     printf("\n[Additional Document Tests - Multi-cursor]\n");
     test_document_insert_char_multi();
+    test_document_move_cursor_multi();
+    test_document_delete_selection_multi();
+    test_document_add_cursor_below_above();
     test_document_delete_char_multi();
     test_document_newline_multi();
 
