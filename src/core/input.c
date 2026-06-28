@@ -613,6 +613,12 @@ void input_handle_char(App *app, unsigned int c) {
         mode->suppress_next_char = false;
         return;
     }
+
+    if ((mode_is(mode, MODE_NORMAL) || mode_is(mode, MODE_SELECT)) && c == '~') {
+        Document *doc = (Document *)app_get_doc(app);
+        document_toggle_case(doc);
+        return;
+    }
     
     if (mode_is(mode, MODE_INSERT)) {
         if (c >= 32 && c < 127) {
@@ -784,19 +790,19 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         }
         if (pk == 'm') {
             if (key == GLFW_KEY_S) {
-                mode->pending_key = 'm';
+                mode->pending_key = 's';
                 mode->pending_keys[0] = 's';
                 mode->pending_len = 1;
                 return;
             }
             if (key == GLFW_KEY_D) {
-                mode->pending_key = 'm';
+                mode->pending_key = 'd';
                 mode->pending_keys[0] = 'd';
                 mode->pending_len = 1;
                 return;
             }
             if (key == GLFW_KEY_R) {
-                mode->pending_key = 'm';
+                mode->pending_key = 'r';
                 mode->pending_keys[0] = 'r';
                 mode->pending_len = 1;
                 return;
@@ -818,24 +824,25 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
             }
             return;
         }
-        if (pk == 's' && mode->pending_len == 1 && mode->pending_keys[0] == 'm') {
+        if (pk == 's' && mode->pending_len == 1 && mode->pending_keys[0] == 's') {
             /* ms<char> = surround with char */
             char c = key_to_char(key, mods);
             if (c) document_surround(doc, c);
             mode->pending_len = 0;
             return;
         }
-        if (pk == 'd' && mode->pending_len == 1 && mode->pending_keys[0] == 'm') {
+        if (pk == 'd' && mode->pending_len == 1 && mode->pending_keys[0] == 'd') {
             /* md<char> = delete surrounding char */
             char c = key_to_char(key, mods);
             if (c) document_delete_surround(doc, c);
             mode->pending_len = 0;
             return;
         }
-        if (pk == 'r' && mode->pending_len == 1 && mode->pending_keys[0] == 'm') {
+        if (pk == 'r' && mode->pending_len == 1 && mode->pending_keys[0] == 'r') {
             /* mr<from><to> = replace surrounding delimiter */
             char from = key_to_char(key, mods);
             if (from) {
+                mode->pending_key = 'r';
                 mode->pending_keys[0] = 'r';
                 mode->pending_keys[1] = from;
                 mode->pending_len = 2;
@@ -1660,10 +1667,12 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         document_collapse_selection(doc);
         break;
     case GLFW_KEY_GRAVE_ACCENT:
-        if (mods & GLFW_MOD_SHIFT)
+        if (mods & GLFW_MOD_SHIFT) {
             document_toggle_case(doc);
-        else
+            mode->suppress_next_char = true;
+        } else {
             document_lowercase(doc);
+        }
         break;
     case GLFW_KEY_COMMA:
         document_keep_primary_selection(doc);
@@ -1701,6 +1710,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         break;
     case GLFW_KEY_M:
         mode->pending_key = 'm';
+        mode->pending_len = 0;
         break;
     case GLFW_KEY_7:
         document_align_selections(doc);
@@ -2312,6 +2322,72 @@ static void handle_select_key(App *app, int key, int action, int mods) {
             }
             return;
         }
+        if (pk == 'm') {
+            if (key == GLFW_KEY_S) {
+                mode->pending_key = 's';
+                mode->pending_keys[0] = 's';
+                mode->pending_len = 1;
+                return;
+            }
+            if (key == GLFW_KEY_D) {
+                mode->pending_key = 'd';
+                mode->pending_keys[0] = 'd';
+                mode->pending_len = 1;
+                return;
+            }
+            if (key == GLFW_KEY_R) {
+                mode->pending_key = 'r';
+                mode->pending_keys[0] = 'r';
+                mode->pending_len = 1;
+                return;
+            }
+            if (key == GLFW_KEY_I && !(mods & GLFW_MOD_SHIFT)) {
+                mode->pending_text_obj = 'i';
+                mode->pending_key = 'i';
+                return;
+            }
+            if (key == GLFW_KEY_A && !(mods & GLFW_MOD_SHIFT)) {
+                mode->pending_text_obj = 'a';
+                mode->pending_key = 'i';
+                return;
+            }
+            if (key == GLFW_KEY_M) {
+                document_match_bracket(doc);
+                return;
+            }
+            return;
+        }
+        if (pk == 's' && mode->pending_len == 1 && mode->pending_keys[0] == 's') {
+            char c = key_to_char(key, mods);
+            if (c) document_surround(doc, c);
+            mode->pending_len = 0;
+            return;
+        }
+        if (pk == 'd' && mode->pending_len == 1 && mode->pending_keys[0] == 'd') {
+            char c = key_to_char(key, mods);
+            if (c) document_delete_surround(doc, c);
+            mode->pending_len = 0;
+            return;
+        }
+        if (pk == 'r' && mode->pending_len == 1 && mode->pending_keys[0] == 'r') {
+            char from = key_to_char(key, mods);
+            if (from) {
+                mode->pending_key = 'r';
+                mode->pending_keys[0] = 'r';
+                mode->pending_keys[1] = from;
+                mode->pending_len = 2;
+                return;
+            }
+            mode->pending_len = 0;
+            return;
+        }
+        if (pk == 'r' && mode->pending_len == 2 && mode->pending_keys[0] == 'r') {
+            char from = mode->pending_keys[1];
+            char to = key_to_char(key, mods);
+            if (to) document_replace_surround(doc, from, to);
+            mode->pending_len = 0;
+            return;
+        }
         if (pk == 'i') {
             /* Text object in select mode: extends selection */
             char obj = mode->pending_text_obj;
@@ -2347,6 +2423,11 @@ static void handle_select_key(App *app, int key, int action, int mods) {
     if (key == GLFW_KEY_A && !(mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
         mode->pending_text_obj = 'a';
         mode->pending_key = 'i';
+        return;
+    }
+    if (key == GLFW_KEY_M && !(mods & GLFW_MOD_SHIFT) && !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
+        mode->pending_key = 'm';
+        mode->pending_len = 0;
         return;
     }
 
@@ -2446,10 +2527,12 @@ static void handle_select_key(App *app, int key, int action, int mods) {
 
     /* ~ - Toggle case */
     case GLFW_KEY_GRAVE_ACCENT:
-        if (mods & GLFW_MOD_SHIFT)
+        if (mods & GLFW_MOD_SHIFT) {
             document_toggle_case(doc);
-        else
+            mode->suppress_next_char = true;
+        } else {
             document_lowercase(doc);
+        }
         break;
 
     /* ; - Collapse selection */
