@@ -330,10 +330,17 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
     renderer_draw_rect(r, vx, vy, vw, vh,
                        t->bg[0], t->bg[1], t->bg[2], t->bg[3]);
     if (active) {
-        renderer_draw_rect(r, vx, vy, vw, 2, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-        renderer_draw_rect(r, vx, vy + vh - 2, vw, 2, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-        renderer_draw_rect(r, vx, vy, 2, vh, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-        renderer_draw_rect(r, vx + vw - 2, vy, 2, vh, t->accent[0], t->accent[1], t->accent[2], 1.0f);
+        renderer_draw_rect(r, vx, vy, vw, 2.0f,
+                           t->accent[0], t->accent[1], t->accent[2], 0.95f);
+        renderer_draw_rect(r, vx, vy + 2.0f, vw, 1.0f,
+                           0.0f, 0.0f, 0.0f, 0.35f);
+        renderer_draw_rect(r, vx, vy, 1.0f, vh,
+                           t->accent[0], t->accent[1], t->accent[2], 0.22f);
+        renderer_draw_rect(r, vx + vw - 1.0f, vy, 1.0f, vh,
+                           0.0f, 0.0f, 0.0f, 0.28f);
+    } else {
+        renderer_draw_rect(r, vx, vy, vw, 1.0f,
+                           t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], 0.16f);
     }
 
     int first_line = doc->scroll_y;
@@ -391,8 +398,18 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
         /* Line number - right aligned */
         char num[16];
         snprintf(num, sizeof(num), "%4d", line_num + 1);
+        float nr = t->gutter_fg[0];
+        float ng = t->gutter_fg[1];
+        float nb = t->gutter_fg[2];
+        float na = t->gutter_fg[3];
+        if (line_num == cur->row) {
+            nr = t->accent[0];
+            ng = t->accent[1];
+            nb = t->accent[2];
+            na = 1.0f;
+        }
         font_draw(&g->font, r, num, vx + 10, y + 3,
-                  t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+                  nr, ng, nb, na);
         
         /* Diagnostic markers on gutter */
         if (doc->diagnostics) {

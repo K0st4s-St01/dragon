@@ -25,6 +25,13 @@ static int parse_int(toml_table_t *tbl, const char *key, int default_val) {
     return d.ok ? (int)d.u.i : default_val;
 }
 
+static void set_color(float color[4], float r, float g, float b, float a) {
+    color[0] = r;
+    color[1] = g;
+    color[2] = b;
+    color[3] = a;
+}
+
 Config *config_default(void) {
     Config *cfg = calloc(1, sizeof(Config));
     
@@ -34,81 +41,32 @@ Config *config_default(void) {
     cfg->line_numbers = 1;
     cfg->line_wrapping = 0;
     
-    /* Theme defaults (evil theme - bright colors) */
-    cfg->theme.bg[0] = cfg->theme.bg[1] = cfg->theme.bg[2] = 0.0f;
-    cfg->theme.bg[3] = 1.0f;
-    
-    cfg->theme.fg[0] = cfg->theme.fg[1] = cfg->theme.fg[2] = 1.0f;
-    cfg->theme.fg[3] = 1.0f;
-    
-    cfg->theme.gutter_bg[0] = cfg->theme.gutter_bg[1] = cfg->theme.gutter_bg[2] = 0.0f;
-    cfg->theme.gutter_bg[3] = 1.0f;
-    
-    cfg->theme.gutter_fg[0] = 1.0f; cfg->theme.gutter_fg[1] = 0.0f; cfg->theme.gutter_fg[2] = 1.0f;
-    cfg->theme.gutter_fg[3] = 1.0f;
-    
-    cfg->theme.status_bg[0] = 0.05f; cfg->theme.status_bg[1] = 0.0f; cfg->theme.status_bg[2] = 0.05f;
-    cfg->theme.status_bg[3] = 1.0f;
-    
-    cfg->theme.status_fg[0] = 1.0f; cfg->theme.status_fg[1] = 0.0f; cfg->theme.status_fg[2] = 1.0f;
-    cfg->theme.status_fg[3] = 1.0f;
-    
-    cfg->theme.selection_bg[0] = 1.0f; cfg->theme.selection_bg[1] = 0.0f; cfg->theme.selection_bg[2] = 0.5f;
-    cfg->theme.selection_bg[3] = 1.0f;
-    
-    cfg->theme.cursor_color[0] = 1.0f; cfg->theme.cursor_color[1] = 0.0f; cfg->theme.cursor_color[2] = 0.0f;
-    cfg->theme.cursor_color[3] = 1.0f;
-    
-    cfg->theme.line_highlight[0] = 0.2f; cfg->theme.line_highlight[1] = 0.0f; cfg->theme.line_highlight[2] = 0.0f;
-    cfg->theme.line_highlight[3] = 0.6f;
-    
-    cfg->theme.menu_bg[0] = cfg->theme.menu_bg[1] = cfg->theme.menu_bg[2] = 0.0f;
-    cfg->theme.menu_bg[3] = 0.99f;
-    
-    cfg->theme.menu_fg[0] = 1.0f; cfg->theme.menu_fg[1] = 0.0f; cfg->theme.menu_fg[2] = 1.0f;
-    cfg->theme.menu_fg[3] = 1.0f;
-    
-    cfg->theme.menu_selected[0] = 1.0f; cfg->theme.menu_selected[1] = 0.0f; cfg->theme.menu_selected[2] = 0.5f;
-    cfg->theme.menu_selected[3] = 0.9f;
-    
-    cfg->theme.accent[0] = 1.0f; cfg->theme.accent[1] = 0.0f; cfg->theme.accent[2] = 1.0f;
-    cfg->theme.accent[3] = 1.0f;
-    
-    cfg->theme.error[0] = 1.0f; cfg->theme.error[1] = 0.0f; cfg->theme.error[2] = 0.0f;
-    cfg->theme.error[3] = 1.0f;
-    
-    cfg->theme.warning[0] = 1.0f; cfg->theme.warning[1] = 1.0f; cfg->theme.warning[2] = 0.0f;
-    cfg->theme.warning[3] = 1.0f;
-    
-    cfg->theme.keyword[0] = 1.0f; cfg->theme.keyword[1] = 0.0f; cfg->theme.keyword[2] = 1.0f;
-    cfg->theme.keyword[3] = 1.0f;
-    
-    cfg->theme.string[0] = 1.0f; cfg->theme.string[1] = 1.0f; cfg->theme.string[2] = 0.0f;
-    cfg->theme.string[3] = 1.0f;
-    
-    cfg->theme.number[0] = 0.0f; cfg->theme.number[1] = 1.0f; cfg->theme.number[2] = 1.0f;
-    cfg->theme.number[3] = 1.0f;
-    
-    cfg->theme.comment[0] = 0.5f; cfg->theme.comment[1] = 0.0f; cfg->theme.comment[2] = 0.5f;
-    cfg->theme.comment[3] = 1.0f;
-    
-    cfg->theme.function_color[0] = 0.0f; cfg->theme.function_color[1] = 1.0f; cfg->theme.function_color[2] = 0.0f;
-    cfg->theme.function_color[3] = 1.0f;
-    
-    cfg->theme.type_color[0] = 0.0f; cfg->theme.type_color[1] = 1.0f; cfg->theme.type_color[2] = 1.0f;
-    cfg->theme.type_color[3] = 1.0f;
-    
-    cfg->theme.variable_color[0] = 1.0f; cfg->theme.variable_color[1] = 0.75f; cfg->theme.variable_color[2] = 0.0f;
-    cfg->theme.variable_color[3] = 1.0f;
-    
-    cfg->theme.macro_color[0] = 1.0f; cfg->theme.macro_color[1] = 0.0f; cfg->theme.macro_color[2] = 0.75f;
-    cfg->theme.macro_color[3] = 1.0f;
-    
-    cfg->theme.operator_color[0] = 1.0f; cfg->theme.operator_color[1] = 1.0f; cfg->theme.operator_color[2] = 0.0f;
-    cfg->theme.operator_color[3] = 1.0f;
-    
-    cfg->theme.namespace_color[0] = 0.0f; cfg->theme.namespace_color[1] = 1.0f; cfg->theme.namespace_color[2] = 0.5f;
-    cfg->theme.namespace_color[3] = 1.0f;
+    /* Theme defaults */
+    set_color(cfg->theme.bg,              0.045f, 0.050f, 0.060f, 1.0f);
+    set_color(cfg->theme.fg,              0.82f,  0.84f,  0.86f,  1.0f);
+    set_color(cfg->theme.gutter_bg,       0.035f, 0.040f, 0.050f, 1.0f);
+    set_color(cfg->theme.gutter_fg,       0.38f,  0.42f,  0.48f,  1.0f);
+    set_color(cfg->theme.status_bg,       0.030f, 0.035f, 0.045f, 1.0f);
+    set_color(cfg->theme.status_fg,       0.74f,  0.78f,  0.82f,  1.0f);
+    set_color(cfg->theme.selection_bg,    0.18f,  0.28f,  0.40f,  0.88f);
+    set_color(cfg->theme.cursor_color,    0.95f,  0.76f,  0.32f,  1.0f);
+    set_color(cfg->theme.line_highlight,  0.085f, 0.095f, 0.115f, 0.86f);
+    set_color(cfg->theme.menu_bg,         0.055f, 0.060f, 0.075f, 0.98f);
+    set_color(cfg->theme.menu_fg,         0.82f,  0.84f,  0.86f,  1.0f);
+    set_color(cfg->theme.menu_selected,   0.16f,  0.25f,  0.35f,  0.92f);
+    set_color(cfg->theme.accent,          0.35f,  0.68f,  0.78f,  1.0f);
+    set_color(cfg->theme.error,           0.95f,  0.35f,  0.34f,  1.0f);
+    set_color(cfg->theme.warning,         0.92f,  0.72f,  0.36f,  1.0f);
+    set_color(cfg->theme.keyword,         0.68f,  0.56f,  0.88f,  1.0f);
+    set_color(cfg->theme.string,          0.58f,  0.74f,  0.45f,  1.0f);
+    set_color(cfg->theme.number,          0.84f,  0.62f,  0.44f,  1.0f);
+    set_color(cfg->theme.comment,         0.40f,  0.46f,  0.52f,  1.0f);
+    set_color(cfg->theme.function_color,  0.52f,  0.74f,  0.90f,  1.0f);
+    set_color(cfg->theme.type_color,      0.42f,  0.72f,  0.68f,  1.0f);
+    set_color(cfg->theme.variable_color,  0.80f,  0.82f,  0.84f,  1.0f);
+    set_color(cfg->theme.macro_color,     0.82f,  0.58f,  0.72f,  1.0f);
+    set_color(cfg->theme.operator_color,  0.78f,  0.78f,  0.70f,  1.0f);
+    set_color(cfg->theme.namespace_color, 0.48f,  0.70f,  0.78f,  1.0f);
     
     /* LSP defaults */
     cfg->lsp.auto_format = 0;

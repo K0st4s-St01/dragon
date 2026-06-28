@@ -21,6 +21,11 @@
 #define TERM_MAX_LINES 2048
 #define TERM_MAX_COLS 512
 #define CSI_BUF_MAX 32
+#define TERM_MIN_H 160.0f
+#define TERM_HEADER_H 30.0f
+#define TERM_FOOTER_H 22.0f
+#define TERM_BODY_GAP 10.0f
+#define TERM_PAD_X 12.0f
 
 static bool term_open = false;
 static int term_fd = -1;
@@ -259,7 +264,7 @@ static void terminal_compute_layout(Gui *g, App *app,
     int w = app_get_width(app);
     int h = app_get_height(app);
     float panel_h = (float)h * 0.38f;
-    if (panel_h < 160.0f) panel_h = 160.0f;
+    if (panel_h < TERM_MIN_H) panel_h = TERM_MIN_H;
     if (panel_h > (float)h - 48.0f) panel_h = (float)h - 48.0f;
     if (panel_h < 80.0f) panel_h = 80.0f;
     float line_h = g ? g->font.glyph_h + 4.0f : 18.0f;
@@ -275,7 +280,8 @@ static void terminal_compute_layout(Gui *g, App *app,
         if (*cols > TERM_MAX_COLS - 1) *cols = TERM_MAX_COLS - 1;
     }
     if (rows) {
-        *rows = (int)((panel_h - 42.0f) / line_h);
+        float body_h = panel_h - TERM_HEADER_H - TERM_FOOTER_H - TERM_BODY_GAP;
+        *rows = (int)(body_h / line_h);
         if (*rows < 4) *rows = 4;
     }
 }
@@ -332,6 +338,19 @@ static void terminal_spawn(App *app) {
     if (flags >= 0) fcntl(term_fd, F_SETFL, flags | O_NONBLOCK);
 }
 
+static void terminal_restart(App *app) {
+    if (term_pid > 0) {
+        kill(term_pid, SIGHUP);
+        waitpid(term_pid, NULL, WNOHANG);
+    }
+    if (term_fd >= 0) {
+        close(term_fd);
+        term_fd = -1;
+    }
+    term_pid = -1;
+    terminal_spawn(app);
+}
+
 void panel_terminal_open(App *app) {
     term_open = true;
     terminal_spawn(app);
@@ -373,6 +392,14 @@ void panel_terminal_key(App *app, int key, int mods) {
     }
     if (key == GLFW_KEY_END && (mods & GLFW_MOD_CONTROL)) {
         term_scroll = 0;
+        return;
+    }
+    if ((mods & GLFW_MOD_CONTROL) && key == GLFW_KEY_R) {
+        terminal_restart(app);
+        return;
+    }
+    if (key == GLFW_KEY_ENTER && !terminal_running()) {
+        terminal_spawn(app);
         return;
     }
 
@@ -432,18 +459,41 @@ void panel_terminal_render(Gui *g, App *app) {
     terminal_compute_layout(g, app, &px, &py, &pw, &ph, &cols, &rows);
     terminal_resize(cols, rows);
 
-    renderer_draw_rect(r, px, py, pw, ph, 0.02f, 0.02f, 0.025f, 0.98f);
+    float header_h = TERM_HEADER_H;
+    float footer_h = TERM_FOOTER_H;
+    float pad_x = TERM_PAD_X;
+    float line_h = g->font.glyph_h + 4.0f;
+    float body_x = px + pad_x;
+    float body_y = py + header_h + 6.0f;
+    float body_w = pw - pad_x * 2.0f - 10.0f;
+    float body_h = ph - header_h - footer_h - 10.0f;
+    if (body_h < line_h) body_h = line_h;
+
+    renderer_draw_rect(r, px, py - 6.0f, pw, 6.0f, 0.0f, 0.0f, 0.0f, 0.35f);
+    renderer_draw_rect(r, px, py, pw, ph, 0.015f, 0.016f, 0.020f, 0.98f);
+    renderer_draw_rect(r, px, py, pw, header_h, 0.045f, 0.045f, 0.060f, 0.98f);
+    renderer_draw_rect(r, px, py + ph - footer_h, pw, footer_h, 0.035f, 0.035f, 0.045f, 0.98f);
     renderer_draw_rect(r, px, py, pw, 2.0f, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py + ph - 1.0f, pw, 1.0f, 0, 0, 0, 0.8f);
+    renderer_draw_rect(r, px, py + header_h, pw, 1.0f, t->accent[0], t->accent[1], t->accent[2], 0.28f);
+    renderer_draw_rect(r, px, py + ph - footer_h, pw, 1.0f, t->accent[0], t->accent[1], t->accent[2], 0.18f);
 
     char title[128];
-    snprintf(title, sizeof(title), "Terminal  %s  %dx%d  PageUp/PageDown scroll  Esc hide",
-             terminal_running() ? "running" : "stopped", term_cols, term_rows);
-    font_draw(&g->font, r, title, px + 12.0f, py + 8.0f,
+    bool running = terminal_running();
+    snprintf(title, sizeof(title), "Terminal");
+    font_draw(&g->font, r, title, px + pad_x, py + 7.0f,
               t->accent[0], t->accent[1], t->accent[2], 1.0f);
 
-    float line_h = g->font.glyph_h + 4.0f;
-    float text_y = py + 34.0f;
+    char meta[128];
+    snprintf(meta, sizeof(meta), "%s  %dx%d  %d lines",
+             running ? "running" : "stopped", term_cols, term_rows, term_line_count);
+    float meta_x = px + pw - font_text_width(&g->font, meta) - 14.0f;
+    if (meta_x < px + 120.0f) meta_x = px + 120.0f;
+    font_draw(&g->font, r, meta, meta_x, py + 8.0f,
+              running ? 0.68f : t->warning[0],
+              running ? 0.78f : t->warning[1],
+              running ? 0.72f : t->warning[2],
+              0.95f);
+
     int visible = rows;
     if (visible < 1) visible = 1;
 
@@ -454,11 +504,49 @@ void panel_terminal_render(Gui *g, App *app) {
     int start = term_line_count - visible - term_scroll;
     if (start < 0) start = 0;
 
+    renderer_draw_rect(r, body_x - 4.0f, body_y - 3.0f, body_w + 8.0f, body_h + 6.0f,
+                       0.0f, 0.0f, 0.0f, 0.34f);
+
     glEnable(GL_SCISSOR_TEST);
-    glScissor((int)px, h - (int)(py + ph), (int)pw, (int)ph);
+    glScissor((int)body_x, h - (int)(body_y + body_h), (int)body_w, (int)body_h);
     for (int i = 0; i < visible && start + i < term_line_count; i++) {
-        font_draw(&g->font, r, term_lines[start + i], px + 12.0f, text_y + (float)i * line_h,
-                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], 1.0f);
+        float y = body_y + (float)i * line_h;
+        font_draw(&g->font, r, term_lines[start + i], body_x, y,
+                  0.82f, 0.86f, 0.82f, 1.0f);
     }
     glDisable(GL_SCISSOR_TEST);
+
+    if (term_scroll == 0 && term_line_count > 0) {
+        int cursor_line = term_line_count - 1 - start;
+        if (cursor_line >= 0 && cursor_line < visible) {
+            float cx = body_x + (float)term_col * g->font.glyph_w;
+            float cy = body_y + (float)cursor_line * line_h;
+            if (cx >= body_x && cx < body_x + body_w)
+                renderer_draw_rect(r, cx, cy + 2.0f, 2.0f, line_h - 4.0f,
+                                   t->accent[0], t->accent[1], t->accent[2], 0.85f);
+        }
+    }
+
+    if (max_scroll > 0) {
+        float sb_x = px + pw - 7.0f;
+        float sb_y = body_y;
+        float sb_h = body_h;
+        float thumb_h = sb_h * (float)visible / (float)term_line_count;
+        if (thumb_h < 18.0f) thumb_h = 18.0f;
+        float travel = sb_h - thumb_h;
+        float thumb_y = sb_y + travel * (float)(max_scroll - term_scroll) / (float)max_scroll;
+        renderer_draw_rect(r, sb_x, sb_y, 3.0f, sb_h, 0.12f, 0.12f, 0.14f, 0.65f);
+        renderer_draw_rect(r, sb_x, thumb_y, 3.0f, thumb_h,
+                           t->accent[0], t->accent[1], t->accent[2], 0.72f);
+    }
+
+    char footer[160];
+    if (term_scroll > 0)
+        snprintf(footer, sizeof(footer), "scrolled +%d  PageDown: newer  Ctrl-End: live  Ctrl-r: restart  Esc: hide", term_scroll);
+    else if (!running)
+        snprintf(footer, sizeof(footer), "stopped  Enter/Ctrl-r: restart  Ctrl-~: toggle  Esc: hide");
+    else
+        snprintf(footer, sizeof(footer), "live  PageUp/PageDown: scrollback  Ctrl-r: restart  Ctrl-~: toggle  Esc: hide");
+    font_draw(&g->font, r, footer, px + pad_x, py + ph - footer_h + 5.0f,
+              0.62f, 0.66f, 0.68f, 0.95f);
 }

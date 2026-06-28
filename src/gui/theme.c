@@ -2,32 +2,31 @@
 #include <string.h>
 
 static Theme current_theme = {
-    /* ULTRA EVIL: Pure black background with pure bright colors */
-    .bg            = {0.00f, 0.00f, 0.00f, 1.0f},        /* Pure black - void */
-    .fg            = {1.00f, 0.00f, 0.00f, 1.0f},        /* Pure bright red foreground */
-    .gutter_bg     = {0.00f, 0.00f, 0.00f, 1.0f},        /* Pure black gutter - seamless */
-    .gutter_fg     = {1.00f, 0.00f, 1.00f, 1.0f},        /* Pure bright magenta - evil! */
-    .status_bg     = {0.05f, 0.00f, 0.05f, 1.0f},        /* Deep dark purple status bar */
-    .status_fg     = {1.00f, 0.00f, 1.00f, 1.0f},        /* Pure bright magenta status */
-    .selection_bg  = {1.00f, 0.00f, 0.50f, 1.0f},        /* Bright magenta/pink selection */
-    .cursor_color  = {1.00f, 0.00f, 0.00f, 1.0f},        /* Pure bright red cursor - glowing */
-    .line_highlight = {0.20f, 0.00f, 0.00f, 0.6f},       /* Darker red line highlight */
-    .menu_bg       = {0.00f, 0.00f, 0.00f, 0.99f},       /* Pure black menu - maximum contrast */
-    .menu_fg       = {1.00f, 0.00f, 1.00f, 1.0f},        /* Pure bright magenta menu text */
-    .menu_selected = {1.00f, 0.00f, 0.50f, 0.9f},        /* Bright magenta/pink menu selection */
-    .accent        = {1.00f, 0.00f, 1.00f, 1.0f},        /* Pure bright magenta accent - EVIL! */
-    .error         = {1.00f, 0.00f, 0.00f, 1.0f},        /* Pure bright red errors */
-    .warning       = {1.00f, 1.00f, 0.00f, 1.0f},        /* Pure bright yellow warnings */
-    .keyword       = {1.00f, 0.00f, 1.00f, 1.0f},        /* Pure bright magenta keywords */
-    .string        = {1.00f, 1.00f, 0.00f, 1.0f},        /* Pure bright yellow strings */
-    .number        = {0.00f, 1.00f, 1.00f, 1.0f},        /* Pure bright cyan numbers */
-    .comment       = {0.50f, 0.00f, 0.50f, 1.0f},        /* Dark purple comments - evil */
-    .function_color = {0.00f, 1.00f, 0.00f, 1.0f},       /* Pure bright lime green functions */
-    .type_color    = {0.00f, 1.00f, 1.00f, 1.0f},        /* Pure bright cyan types */
-    .variable_color = {1.00f, 0.75f, 0.00f, 1.0f},       /* Bright orange variables */
-    .macro_color   = {1.00f, 0.00f, 0.75f, 1.0f},        /* Bright magenta/pink macros */
-    .operator_color = {1.00f, 1.00f, 0.00f, 1.0f},       /* Bright yellow operators */
-    .namespace_color = {0.00f, 1.00f, 0.50f, 1.0f},      /* Bright cyan-green namespaces */
+    .bg              = {0.045f, 0.050f, 0.060f, 1.0f},
+    .fg              = {0.82f, 0.84f, 0.86f, 1.0f},
+    .gutter_bg       = {0.035f, 0.040f, 0.050f, 1.0f},
+    .gutter_fg       = {0.38f, 0.42f, 0.48f, 1.0f},
+    .status_bg       = {0.030f, 0.035f, 0.045f, 1.0f},
+    .status_fg       = {0.74f, 0.78f, 0.82f, 1.0f},
+    .selection_bg    = {0.18f, 0.28f, 0.40f, 0.88f},
+    .cursor_color    = {0.95f, 0.76f, 0.32f, 1.0f},
+    .line_highlight  = {0.085f, 0.095f, 0.115f, 0.86f},
+    .menu_bg         = {0.055f, 0.060f, 0.075f, 0.98f},
+    .menu_fg         = {0.82f, 0.84f, 0.86f, 1.0f},
+    .menu_selected   = {0.16f, 0.25f, 0.35f, 0.92f},
+    .accent          = {0.35f, 0.68f, 0.78f, 1.0f},
+    .error           = {0.95f, 0.35f, 0.34f, 1.0f},
+    .warning         = {0.92f, 0.72f, 0.36f, 1.0f},
+    .keyword         = {0.68f, 0.56f, 0.88f, 1.0f},
+    .string          = {0.58f, 0.74f, 0.45f, 1.0f},
+    .number          = {0.84f, 0.62f, 0.44f, 1.0f},
+    .comment         = {0.40f, 0.46f, 0.52f, 1.0f},
+    .function_color  = {0.52f, 0.74f, 0.90f, 1.0f},
+    .type_color      = {0.42f, 0.72f, 0.68f, 1.0f},
+    .variable_color  = {0.80f, 0.82f, 0.84f, 1.0f},
+    .macro_color     = {0.82f, 0.58f, 0.72f, 1.0f},
+    .operator_color  = {0.78f, 0.78f, 0.70f, 1.0f},
+    .namespace_color = {0.48f, 0.70f, 0.78f, 1.0f},
 };
 
 Theme *theme_default(void) {
