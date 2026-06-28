@@ -218,10 +218,12 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
                     /* Draw diagnostic indicator */
                     float diag_x = vx + 6;
                     float diag_y = y + 3;
-                    char indicator = (diag->items[d].severity == LSP_DIAG_ERROR) ? 'E' : 'W';
-                    float color_r = (diag->items[d].severity == LSP_DIAG_ERROR) ? 1.0f : 1.0f;
-                    float color_g = (diag->items[d].severity == LSP_DIAG_ERROR) ? 0.0f : 1.0f;
-                    float color_b = (diag->items[d].severity == LSP_DIAG_ERROR) ? 0.0f : 0.0f;
+                    bool is_error = diag->items[d].severity == LSP_DIAG_ERROR;
+                    bool is_warning = diag->items[d].severity == LSP_DIAG_WARNING;
+                    char indicator = is_error ? 'E' : (is_warning ? 'W' : 'I');
+                    float color_r = is_error ? t->error[0] : (is_warning ? t->warning[0] : t->accent[0]);
+                    float color_g = is_error ? t->error[1] : (is_warning ? t->warning[1] : t->accent[1]);
+                    float color_b = is_error ? t->error[2] : (is_warning ? t->warning[2] : t->accent[2]);
                     char ind_str[2] = {indicator, '\0'};
                     font_draw(&g->font, r, ind_str, diag_x, diag_y, color_r, color_g, color_b, 1.0f);
                     break;  /* Only show first diagnostic per line */
@@ -266,9 +268,22 @@ static void render_editor_view(Gui *g, App *app, Document *doc, ModeState *mode,
                 float dr = diag->items[d].severity == LSP_DIAG_ERROR ? t->error[0] : t->warning[0];
                 float dg = diag->items[d].severity == LSP_DIAG_ERROR ? t->error[1] : t->warning[1];
                 float db = diag->items[d].severity == LSP_DIAG_ERROR ? t->error[2] : t->warning[2];
+                if (diag->items[d].severity != LSP_DIAG_ERROR &&
+                    diag->items[d].severity != LSP_DIAG_WARNING) {
+                    dr = t->accent[0];
+                    dg = t->accent[1];
+                    db = t->accent[2];
+                }
                 int start_col = diag->items[d].start_col < line_len ? diag->items[d].start_col : line_len;
+                int end_col = diag->items[d].end_line == line_num && diag->items[d].end_col > start_col ?
+                    diag->items[d].end_col : start_col + 1;
+                if (end_col > line_len) end_col = line_len;
+                if (end_col <= start_col) end_col = start_col + 1;
                 float dx = text_x + display_col(line, start_col, tab_width) * g->font.glyph_w;
-                renderer_draw_rect(r, dx, y + line_h - 4, g->font.glyph_w * 6, 2, dr, dg, db, 0.85f);
+                float underline_w = (float)(display_col(line, end_col, tab_width) -
+                                            display_col(line, start_col, tab_width)) * g->font.glyph_w;
+                if (underline_w < g->font.glyph_w) underline_w = g->font.glyph_w;
+                renderer_draw_rect(r, dx, y + line_h - 4, underline_w, 2, dr, dg, db, 0.85f);
                 if (line_num == cur->row && diag->items[d].message) {
                     float msg_x = text_x + (float)(line_len + 2) * g->font.glyph_w;
                     font_draw(&g->font, r, diag->items[d].message, msg_x, y + 2, dr, dg, db, 1.0f);

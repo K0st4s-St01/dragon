@@ -194,6 +194,22 @@ static Document *app_find_doc_by_uri(App *app, const char *uri) {
     return NULL;
 }
 
+static void diagnostic_counts(LSPDiagnostics *diagnostics, int *errors, int *warnings, int *info) {
+    if (errors) *errors = 0;
+    if (warnings) *warnings = 0;
+    if (info) *info = 0;
+    if (!diagnostics) return;
+    for (int i = 0; i < diagnostics->count; i++) {
+        if (diagnostics->items[i].severity == LSP_DIAG_ERROR) {
+            if (errors) (*errors)++;
+        } else if (diagnostics->items[i].severity == LSP_DIAG_WARNING) {
+            if (warnings) (*warnings)++;
+        } else if (info) {
+            (*info)++;
+        }
+    }
+}
+
 static void app_store_diagnostics(App *app, LSPDiagnostics *diagnostics) {
     if (!diagnostics) return;
 
@@ -206,9 +222,26 @@ static void app_store_diagnostics(App *app, LSPDiagnostics *diagnostics) {
         return;
     }
 
+    int old_errors = 0, old_warnings = 0, old_info = 0;
+    int new_errors = 0, new_warnings = 0, new_info = 0;
+    diagnostic_counts((LSPDiagnostics *)target->diagnostics, &old_errors, &old_warnings, &old_info);
+    diagnostic_counts(diagnostics, &new_errors, &new_warnings, &new_info);
+
     if (target->diagnostics)
         lsp_free_diagnostics((LSPDiagnostics *)target->diagnostics);
     target->diagnostics = diagnostics;
+
+    if (old_errors != new_errors || old_warnings != new_warnings || old_info != new_info) {
+        const char *name = target->filepath ? strrchr(target->filepath, '/') : NULL;
+        name = name ? name + 1 : (target->filepath ? target->filepath : "[No Name]");
+        if (new_errors || new_warnings || new_info) {
+            notification_push(new_errors ? NOTIF_ERROR : (new_warnings ? NOTIF_WARNING : NOTIF_INFO),
+                              "%s: %d errors, %d warnings, %d info",
+                              name, new_errors, new_warnings, new_info);
+        } else if (old_errors || old_warnings || old_info) {
+            notification_push(NOTIF_SUCCESS, "%s: diagnostics cleared", name);
+        }
+    }
 }
 
 static void app_update_diagnostics_from_lsp(App *app) {

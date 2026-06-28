@@ -68,10 +68,12 @@ void panel_statusbar(Gui *g, App *app, Document *doc, ModeState *mode) {
               t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
 
     /* Dirty indicator */
+    float after_file_x = file_x + font_text_width(&g->font, fname) + 10;
     if (doc->dirty) {
-        float dirty_x = file_x + font_text_width(&g->font, fname) + 10;
+        float dirty_x = after_file_x;
         font_draw(&g->font, r, "[+]", dirty_x, y + 4,
                   t->warning[0], t->warning[1], t->warning[2], t->warning[3]);
+        after_file_x = dirty_x + font_text_width(&g->font, "[+]") + 10;
     }
 
     /* Right side: position */
@@ -83,12 +85,15 @@ void panel_statusbar(Gui *g, App *app, Document *doc, ModeState *mode) {
               t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
 
     int errors = 0, warnings = 0, info = 0;
+    const LSPDiagnostic *line_diag = NULL;
     if (doc->diagnostics) {
         LSPDiagnostics *diag = (LSPDiagnostics *)doc->diagnostics;
         for (int i = 0; i < diag->count; i++) {
             if (diag->items[i].severity == LSP_DIAG_ERROR) errors++;
             else if (diag->items[i].severity == LSP_DIAG_WARNING) warnings++;
             else info++;
+            if (!line_diag && diag->items[i].start_line == cur->row)
+                line_diag = &diag->items[i];
         }
     }
 
@@ -115,6 +120,20 @@ void panel_statusbar(Gui *g, App *app, Document *doc, ModeState *mode) {
              lsp_errors ? "!" : "",
              errors, warnings, info, ws_errors, ws_warnings);
     float lsp_x = pos_x - font_text_width(&g->font, lsp_buf) - 20;
+    if (line_diag && line_diag->message) {
+        char diag_buf[180];
+        char sev = line_diag->severity == LSP_DIAG_ERROR ? 'E' :
+                   line_diag->severity == LSP_DIAG_WARNING ? 'W' : 'I';
+        snprintf(diag_buf, sizeof(diag_buf), "%c: %s", sev, line_diag->message);
+        float diag_w = font_text_width(&g->font, diag_buf);
+        if (after_file_x + diag_w + 12 < lsp_x) {
+            float *color = line_diag->severity == LSP_DIAG_ERROR ? t->error :
+                           line_diag->severity == LSP_DIAG_WARNING ? t->warning :
+                           t->gutter_fg;
+            font_draw(&g->font, r, diag_buf, after_file_x, y + 4,
+                      color[0], color[1], color[2], 1.0f);
+        }
+    }
     if (lsp_x > file_x)
         font_draw(&g->font, r, lsp_buf, lsp_x, y + 4,
                   errors ? t->error[0] : t->gutter_fg[0],

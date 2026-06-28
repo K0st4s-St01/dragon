@@ -30,16 +30,16 @@ static int lsp_diag_count = 0;
 
 void panel_lsp_diagnostics_open(App *app) {
     Document *doc = (Document *)app_get_doc(app);
-    
-    /* Check if there are diagnostics */
-    if (!doc->diagnostics) {
+
+    lsp_diag_open = true;
+    lsp_diag_selected = 0;
+    lsp_diag_open_time = glfwGetTime();
+    lsp_diag_count = 0;
+
+    if (!doc->diagnostics)
         return;
-    }
-    
+
     LSPDiagnostics *diag = (LSPDiagnostics *)doc->diagnostics;
-    if (diag->count == 0) {
-        return;
-    }
     
     /* Populate diagnostics entries */
     lsp_diag_count = 0;
@@ -65,21 +65,8 @@ void panel_lsp_diagnostics_open(App *app) {
         lsp_diag_count++;
     }
     
-    if (lsp_diag_count == 0) {
-        return;
-    }
-    
-    /* If only one diagnostic, navigate directly */
-    if (lsp_diag_count == 1) {
+    if (lsp_diag_count == 1)
         document_cursor_to(doc, lsp_diag_entries[0].line, lsp_diag_entries[0].character);
-        document_sync_viewport_to_cursor(doc);
-        return;
-    }
-    
-    /* Multiple diagnostics - show picker */
-    lsp_diag_open = true;
-    lsp_diag_selected = 0;
-    lsp_diag_open_time = glfwGetTime();
 }
 
 void panel_lsp_diagnostics_close(App *app) {
@@ -178,11 +165,13 @@ void panel_lsp_diagnostics_render(Gui *g, App *app) {
                                    t->menu_selected[2], t->menu_selected[3]);
             }
             
-            /* Severity indicator (E/W) */
-            char sev_char = (lsp_diag_entries[i].severity == LSP_DIAG_ERROR) ? 'E' : 'W';
-            float sev_r = (lsp_diag_entries[i].severity == LSP_DIAG_ERROR) ? 1.0f : 1.0f;
-            float sev_g = (lsp_diag_entries[i].severity == LSP_DIAG_ERROR) ? 0.0f : 1.0f;
-            float sev_b = (lsp_diag_entries[i].severity == LSP_DIAG_ERROR) ? 0.0f : 0.0f;
+            /* Severity indicator */
+            bool is_error = lsp_diag_entries[i].severity == LSP_DIAG_ERROR;
+            bool is_warning = lsp_diag_entries[i].severity == LSP_DIAG_WARNING;
+            char sev_char = is_error ? 'E' : (is_warning ? 'W' : 'I');
+            float sev_r = is_error ? t->error[0] : (is_warning ? t->warning[0] : t->accent[0]);
+            float sev_g = is_error ? t->error[1] : (is_warning ? t->warning[1] : t->accent[1]);
+            float sev_b = is_error ? t->error[2] : (is_warning ? t->warning[2] : t->accent[2]);
             char sev_str[2] = {sev_char, '\0'};
             font_draw(&g->font, r, sev_str, px + 14, ry,
                       sev_r, sev_g, sev_b, 1.0f);
