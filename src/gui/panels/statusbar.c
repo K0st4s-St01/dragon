@@ -59,10 +59,6 @@ static void draw_command_completions(Gui *g, Renderer *r, Theme *t,
 
         const char *name = input_cmd_completion_name(i);
         const char *detail = input_cmd_completion_detail(i);
-        if (name) {
-            font_draw(&g->font, r, name, x + 12.0f, row_y,
-                      t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
-        }
         if (detail && detail[0]) {
             float detail_w = font_text_width(&g->font, detail);
             float detail_x = x + panel_w - detail_w - 12.0f;
@@ -71,6 +67,26 @@ static void draw_command_completions(Gui *g, Renderer *r, Theme *t,
                           t->gutter_fg[0], t->gutter_fg[1],
                           t->gutter_fg[2], t->gutter_fg[3]);
             }
+        }
+        if (name) {
+            char display[192];
+            snprintf(display, sizeof(display), "%s", name);
+            float name_right = x + panel_w - 120.0f;
+            if (detail && detail[0]) {
+                float detail_w = font_text_width(&g->font, detail);
+                name_right = x + panel_w - detail_w - 24.0f;
+            }
+            size_t len = strlen(display);
+            while (len > 4 && x + 12.0f + font_text_width(&g->font, display) > name_right) {
+                display[--len] = '\0';
+                if (len > 3) {
+                    display[len - 3] = '.';
+                    display[len - 2] = '.';
+                    display[len - 1] = '.';
+                }
+            }
+            font_draw(&g->font, r, display, x + 12.0f, row_y,
+                      t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
         }
     }
 }

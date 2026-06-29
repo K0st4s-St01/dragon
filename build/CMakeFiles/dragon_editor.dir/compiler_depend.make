@@ -49,7 +49,9 @@ CMakeFiles/dragon_editor.dir/src/core/app.c.o: /home/xator/dragon/src/core/app.c
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -212,7 +214,9 @@ CMakeFiles/dragon_editor.dir/src/core/input.c.o: /home/xator/dragon/src/core/inp
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -309,7 +313,9 @@ CMakeFiles/dragon_editor.dir/src/core/renderer.c.o: /home/xator/dragon/src/core/
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -369,7 +375,9 @@ CMakeFiles/dragon_editor.dir/src/editor/buffer.c.o: /home/xator/dragon/src/edito
   /usr/include/bits/pthreadtypes.h \
   /usr/include/bits/select.h \
   /usr/include/bits/stdint-intn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -445,7 +453,9 @@ CMakeFiles/dragon_editor.dir/src/editor/config.c.o: /home/xator/dragon/src/edito
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -550,7 +560,9 @@ CMakeFiles/dragon_editor.dir/src/editor/document.c.o: /home/xator/dragon/src/edi
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -620,6 +632,7 @@ CMakeFiles/dragon_editor.dir/src/editor/history.c.o: /home/xator/dragon/src/edit
   /usr/include/bits/pthreadtypes.h \
   /usr/include/bits/select.h \
   /usr/include/bits/stdint-intn.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -699,7 +712,9 @@ CMakeFiles/dragon_editor.dir/src/editor/lsp.c.o: /home/xator/dragon/src/editor/l
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -789,7 +804,9 @@ CMakeFiles/dragon_editor.dir/src/editor/lsp_config.c.o: /home/xator/dragon/src/e
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -856,7 +873,9 @@ CMakeFiles/dragon_editor.dir/src/editor/syntax.c.o: /home/xator/dragon/src/edito
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -931,7 +950,9 @@ CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.o: /home/xator/dragon/src/e
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -1032,6 +1053,7 @@ CMakeFiles/dragon_editor.dir/src/gui/gui.c.o: /home/xator/dragon/src/gui/gui.c \
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
@@ -1088,6 +1110,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.o: /home/xator/dragon/
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
@@ -1144,6 +1167,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o: /home/xator/dragon/src/gu
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
@@ -1197,6 +1221,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o: /home/xator/drago
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
@@ -1280,7 +1305,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/changed_files.c.o: /home/xator/drago
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -1377,7 +1404,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o: /home/xator/dragon
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -1466,7 +1495,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o: /home/xator/dragon/s
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -1568,7 +1599,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o: /home/xator/dragon
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -1651,6 +1684,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/find_replace.c.o: /home/xator/dragon
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
@@ -1716,7 +1750,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o: /home/xator/dragon/sr
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -1792,6 +1828,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/jumplist_picker.c.o: /home/xator/dra
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
@@ -1857,7 +1894,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_diagnostics_picker.c.o: /home/xa
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -1941,7 +1980,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_goto_picker.c.o: /home/xator/dra
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -2025,7 +2066,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.o: /home/xator/dra
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -2110,7 +2153,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o: /home/xator/dragon/src/
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -2186,6 +2231,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/plugins.c.o: /home/xator/dragon/src/
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
@@ -2247,7 +2293,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.o: /home/xator/dragon/src/g
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -2323,6 +2371,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o: /home/xator/dragon/src
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
@@ -2376,6 +2425,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/space_menu.c.o: /home/xator/dragon/s
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
@@ -2435,6 +2485,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o: /home/xator/dragon/sr
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
   /usr/include/bits/time.h \
   /usr/include/bits/time64.h \
@@ -2510,7 +2561,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.o: /home/xator/drag
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -2630,7 +2683,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/terminal.c.o: /home/xator/dragon/src
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -2750,7 +2805,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o: /home/xato
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -2827,6 +2884,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o: /home/xat
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
@@ -2900,7 +2958,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o: /home/xator/d
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -2987,7 +3047,9 @@ CMakeFiles/dragon_editor.dir/src/gui/text.c.o: /home/xator/dragon/src/gui/text.c
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -3050,6 +3112,7 @@ CMakeFiles/dragon_editor.dir/src/gui/theme.c.o: /home/xator/dragon/src/gui/theme
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
@@ -3298,15 +3361,7 @@ CMakeFiles/dragon_editor.dir/src/main.c.o:
 
 /usr/include/bits/mathcalls-macros.h:
 
-/usr/include/bits/struct_stat.h:
-
-/home/xator/dragon/include/dragon_editor/panel_lsp_diagnostics.h:
-
-/usr/include/bits/types/time_t.h:
-
-/usr/include/bits/stat.h:
-
-/usr/include/assert.h:
+/usr/include/bits/math-vector.h:
 
 /usr/include/bits/pthread_stack_min-dynamic.h:
 
@@ -3325,6 +3380,12 @@ CMakeFiles/dragon_editor.dir/src/editor/buffer.c.o:
 /home/xator/dragon/include/dragon_editor/panel_settings.h:
 
 /home/xator/dragon/include/dragon_editor/panel_plugins.h:
+
+/home/xator/dragon/include/dragon_editor/panel_lsp_diagnostics.h:
+
+/usr/include/bits/types/time_t.h:
+
+/usr/include/bits/struct_stat.h:
 
 /home/xator/dragon/include/dragon_editor/panel_goto.h:
 
@@ -3362,9 +3423,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o:
 
 /home/xator/dragon/include/dragon_editor/panel_workspace_symbols.h:
 
-/home/xator/dragon/include/dragon_editor/panel_notification.h:
-
 /home/xator/dragon/include/dragon_editor/panel_lsp_hover.h:
+
+/home/xator/dragon/include/dragon_editor/panel_notification.h:
 
 /usr/include/linux/limits.h:
 
@@ -3381,8 +3442,6 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o:
 /usr/include/bits/waitflags.h:
 
 /usr/include/ctype.h:
-
-/usr/include/bits/unistd_ext.h:
 
 /usr/include/bits/types/struct_timespec.h:
 
@@ -3405,6 +3464,12 @@ CMakeFiles/dragon_editor.dir/src/core/renderer.c.o:
 /usr/include/bits/types/clock_t.h:
 
 /usr/include/bits/ioctls.h:
+
+/home/xator/dragon/include/dragon_editor/panel_terminal.h:
+
+/usr/include/bits/types/__fpos64_t.h:
+
+/home/xator/dragon/include/dragon_editor/command.h:
 
 /usr/include/alloca.h:
 
@@ -3474,6 +3539,14 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o:
 
 /home/xator/dragon/src/editor/history.c:
 
+/usr/include/bits/stdlib-bsearch.h:
+
+/home/xator/dragon/include/dragon_editor/gui.h:
+
+/usr/include/bits/stdlib-float.h:
+
+/usr/include/bits/time64.h:
+
 /usr/include/bits/endianness.h:
 
 /home/xator/dragon/include/dragon_editor/app.h:
@@ -3487,12 +3560,6 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o:
 /home/xator/dragon/src/editor/document.c:
 
 /home/xator/dragon/src/gui/panels/settings.c:
-
-/home/xator/dragon/include/dragon_editor/command.h:
-
-/home/xator/dragon/include/dragon_editor/panel_terminal.h:
-
-/usr/include/bits/types/__fpos64_t.h:
 
 /home/xator/dragon/include/dragon_editor/lsp_config.h:
 
@@ -3530,8 +3597,6 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o:
 
 /home/xator/dragon/include/dragon_editor/history.h:
 
-/home/xator/dragon/include/dragon_editor/gui.h:
-
 /home/xator/dragon/vendor/glad/include/glad/gl.h:
 
 /home/xator/dragon/include/dragon_editor/panel_completion.h:
@@ -3543,10 +3608,6 @@ CMakeFiles/dragon_editor.dir/src/editor/document.c.o:
 /usr/include/bits/types/FILE.h:
 
 /usr/include/bits/flt-eval-method.h:
-
-/usr/include/bits/stdlib-float.h:
-
-/usr/include/bits/time64.h:
 
 /usr/include/bits/types/locale_t.h:
 
@@ -3654,11 +3715,23 @@ CMakeFiles/dragon_editor.dir/src/gui/gui.c.o:
 
 /usr/include/bits/stdint-intn.h:
 
+/usr/include/bits/unistd_ext.h:
+
+/usr/include/bits/stdio.h:
+
+/usr/include/bits/stdio_lim.h:
+
+/home/xator/dragon/src/gui/panels/panel_find_replace.h:
+
 /usr/include/bits/struct_mutex.h:
 
 /usr/include/bits/struct_rwlock.h:
 
 /usr/include/bits/types/struct_itimerspec.h:
+
+/usr/include/bits/stat.h:
+
+/usr/include/assert.h:
 
 /home/xator/dragon/src/core/mode.c:
 
@@ -3740,8 +3813,6 @@ CMakeFiles/dragon_editor.dir/src/core/input.c.o:
 
 /usr/include/bits/signum-arch.h:
 
-/usr/include/bits/math-vector.h:
-
 /usr/include/bits/signum-generic.h:
 
 /usr/include/bits/dlfcn.h:
@@ -3808,10 +3879,6 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o:
 
 /usr/include/bits/termios-misc.h:
 
-/usr/include/bits/stdio_lim.h:
-
-/home/xator/dragon/src/gui/panels/panel_find_replace.h:
-
 /home/xator/dragon/src/gui/panels/jumplist_picker.c:
 
 /usr/include/bits/termios-cbaud.h:
@@ -3842,9 +3909,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/find_replace.c.o:
 
 /usr/include/bits/ioctl-types.h:
 
-/usr/include/features.h:
-
 /usr/include/bits/types/__FILE.h:
+
+/usr/include/features.h:
 
 /usr/include/bits/termios-baud.h:
 
