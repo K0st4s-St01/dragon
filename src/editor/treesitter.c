@@ -28,11 +28,28 @@ static const char* ts_input_read(void *payload, uint32_t byte_index, TSPoint pos
     return input->text + byte_index;
 }
 
-static TSLanguage* treesitter_load_language_from_file(const char *language_name) {
-    char lib_path[256];
-    snprintf(lib_path, sizeof(lib_path), "libtree-sitter-%s.so", language_name);
+static void *treesitter_dlopen_language(const char *language_name, const char *path) {
+    if (!path || !*path) return NULL;
+    void *handle = dlopen(path, RTLD_LAZY);
+    if (!handle) return NULL;
     
-    void *handle = dlopen(lib_path, RTLD_LAZY);
+    char fn_name[128];
+    snprintf(fn_name, sizeof(fn_name), "tree_sitter_%s", language_name);
+    TSLanguageFn lang_fn = (TSLanguageFn)dlsym(handle, fn_name);
+    if (!lang_fn) {
+        dlclose(handle);
+        return NULL;
+    }
+    return handle;
+}
+
+static TSLanguage* treesitter_load_language_from_file(const char *language_name) {
+    void *handle = treesitter_dlopen_language(language_name, language_treesitter_path_for_name(language_name));
+    char lib_path[256];
+    if (!handle) {
+        snprintf(lib_path, sizeof(lib_path), "libtree-sitter-%s.so", language_name);
+        handle = treesitter_dlopen_language(language_name, lib_path);
+    }
     if (!handle) {
         return NULL;
     }
@@ -41,11 +58,6 @@ static TSLanguage* treesitter_load_language_from_file(const char *language_name)
     snprintf(fn_name, sizeof(fn_name), "tree_sitter_%s", language_name);
     
     TSLanguageFn lang_fn = (TSLanguageFn)dlsym(handle, fn_name);
-    if (!lang_fn) {
-        dlclose(handle);
-        return NULL;
-    }
-    
     return lang_fn();
 }
 

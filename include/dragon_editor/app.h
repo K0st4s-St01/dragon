@@ -74,5 +74,7 @@ void *app_get_treesitter_manager(App *app);
 /* Config */
 Config *app_get_config(App *app);
 bool app_apply_theme(App *app, const char *name);
+bool app_reload_config(App *app);
+bool app_set_plugin_enabled(App *app, int index, bool enabled);
 
 #endif

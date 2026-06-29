@@ -4076,8 +4076,13 @@ static void test_config_language_entries(void) {
           "tab_width = 2\n"
           "line_comment = \"#\"\n"
           "tree_sitter = \"nix\"\n"
+          "tree_sitter_path = \"plugins/nix/libtree-sitter-nix.so\"\n"
+          "format_command = \"nixfmt {file}\"\n"
           "lsp_command = \"nil\"\n"
-          "lsp_args = [\"--stdio\"]\n", f);
+          "lsp_args = [\"--stdio\"]\n"
+          "keywords = [\"let\", \"in\"]\n"
+          "type_keywords = [\"path\"]\n"
+          "macro_keywords = [\"builtins\"]\n", f);
     fclose(f);
 
     Config *cfg = config_load();
@@ -4087,17 +4092,82 @@ static void test_config_language_entries(void) {
              cfg->languages[0].tab_width == 2 &&
              strcmp(cfg->languages[0].line_comment, "#") == 0 &&
              strcmp(cfg->languages[0].tree_sitter, "nix") == 0 &&
+             strcmp(cfg->languages[0].tree_sitter_path, "plugins/nix/libtree-sitter-nix.so") == 0 &&
+             strcmp(cfg->languages[0].format_command, "nixfmt {file}") == 0 &&
              strcmp(cfg->languages[0].lsp_command, "nil") == 0 &&
-             cfg->languages[0].lsp_arg_count == 1;
+             cfg->languages[0].lsp_arg_count == 1 &&
+             cfg->languages[0].keyword_count == 2 &&
+             strcmp(cfg->languages[0].keywords[0], "let") == 0 &&
+             cfg->languages[0].type_keyword_count == 1 &&
+             strcmp(cfg->languages[0].type_keywords[0], "path") == 0 &&
+             cfg->languages[0].macro_keyword_count == 1 &&
+             strcmp(cfg->languages[0].macro_keywords[0], "builtins") == 0;
     language_registry_load_config(cfg);
     const LanguageSettings *ls = language_settings_get("nix");
     ok = ok && strcmp(language_id_for_extension("nix"), "nix") == 0 &&
          strcmp(language_treesitter_for_extension(".nix"), "nix") == 0 &&
+         strcmp(language_treesitter_path_for_extension("nix"), "plugins/nix/libtree-sitter-nix.so") == 0 &&
+         strcmp(language_treesitter_path_for_name("nix"), "plugins/nix/libtree-sitter-nix.so") == 0 &&
+         strcmp(language_format_command("nix"), "nixfmt {file}") == 0 &&
          ls && ls->tab_width == 2 && ls->line_comment && strcmp(ls->line_comment, "#") == 0;
     language_registry_load_config(NULL);
     config_free(cfg);
     ASSERT(chdir(oldcwd) == 0);
     ASSERT_TRUE(ok);
+    PASS();
+}
+
+static void test_config_language_fallback_keywords(void) {
+    TEST(config_language_fallback_keywords);
+    Config *cfg = config_default();
+    ASSERT(cfg != NULL);
+    ConfigLanguage *lang = &cfg->languages[cfg->language_count++];
+    memset(lang, 0, sizeof(*lang));
+    snprintf(lang->id, sizeof(lang->id), "toy");
+    snprintf(lang->extensions[0], sizeof(lang->extensions[0]), "toy");
+    lang->extension_count = 1;
+    snprintf(lang->keywords[0], sizeof(lang->keywords[0]), "entity");
+    lang->keyword_count = 1;
+    snprintf(lang->type_keywords[0], sizeof(lang->type_keywords[0]), "Scalar");
+    lang->type_keyword_count = 1;
+    snprintf(lang->macro_keywords[0], sizeof(lang->macro_keywords[0]), "derive");
+    lang->macro_keyword_count = 1;
+    language_registry_load_config(cfg);
+
+    Document *doc = make_doc("entity Scalar derive call()\n");
+    doc->filepath = strdup("sample.toy");
+    document_detect_language(doc);
+    syntax_free(&doc->syntax);
+    syntax_init(&doc->syntax, doc->language_id);
+    ASSERT_TRUE(document_update_syntax_fallback(doc));
+    ASSERT_EQ_INT(syntax_get_type_at(&doc->syntax, 0, 1), SYNTAX_KEYWORD);
+    ASSERT_EQ_INT(syntax_get_type_at(&doc->syntax, 0, 8), SYNTAX_TYPE);
+    ASSERT_EQ_INT(syntax_get_type_at(&doc->syntax, 0, 15), SYNTAX_MACRO);
+    ASSERT_EQ_INT(syntax_get_type_at(&doc->syntax, 0, 22), SYNTAX_FUNCTION);
+
+    free_doc(doc);
+    language_registry_load_config(NULL);
+    config_free(cfg);
+    PASS();
+}
+
+static void test_document_format_command_filter(void) {
+    TEST(document_format_command_filter);
+    Document *doc = make_doc("abc\n");
+    ASSERT_TRUE(document_format_with_command(doc, "tr a-z A-Z"));
+    ASSERT_EQ_STR(doc->buffer.text, "ABC\n");
+    ASSERT_TRUE(doc->dirty);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_format_command_file_placeholder(void) {
+    TEST(document_format_command_file_placeholder);
+    Document *doc = make_doc("abc\n");
+    ASSERT_TRUE(document_format_with_command(doc, "sed -i 's/abc/xyz/' {file}"));
+    ASSERT_EQ_STR(doc->buffer.text, "xyz\n");
+    ASSERT_TRUE(doc->dirty);
+    free_doc(doc);
     PASS();
 }
 
@@ -4110,11 +4180,20 @@ static void test_config_plugin_manifest(void) {
     ASSERT(chdir(dir) == 0);
     ASSERT(mkdir("plugins", 0777) == 0);
     ASSERT(mkdir("plugins/gleam", 0777) == 0);
+    ASSERT(mkdir("plugins/grain", 0777) == 0);
     FILE *f = fopen("dragon.toml", "w");
     ASSERT(f != NULL);
     fputs("[[plugin]]\n"
           "path = \"plugins/gleam\"\n"
-          "enabled = true\n", f);
+          "enabled = true\n"
+          "\n"
+          "[[plugin]]\n"
+          "path = \"plugins/zig-tools.toml\"\n"
+          "enabled = true\n"
+          "\n"
+          "[[plugin]]\n"
+          "path = \"plugins/grain\"\n"
+          "enabled = false\n", f);
     fclose(f);
     f = fopen("plugins/gleam/dragon-plugin.toml", "w");
     ASSERT(f != NULL);
@@ -4132,14 +4211,46 @@ static void test_config_plugin_manifest(void) {
           "lsp_command = \"gleam\"\n"
           "lsp_args = [\"lsp\"]\n", f);
     fclose(f);
+    f = fopen("plugins/zig-tools.toml", "w");
+    ASSERT(f != NULL);
+    fputs("[plugin]\n"
+          "name = \"zig-tools\"\n"
+          "\n"
+          "[[language]]\n"
+          "id = \"zig\"\n"
+          "extensions = [\"zig\"]\n"
+          "tree_sitter = \"zig\"\n", f);
+    fclose(f);
+    f = fopen("plugins/grain/dragon-plugin.toml", "w");
+    ASSERT(f != NULL);
+    fputs("[plugin]\n"
+          "name = \"grain-tools\"\n"
+          "\n"
+          "[[language]]\n"
+          "id = \"grain\"\n"
+          "extensions = [\"gr\"]\n"
+          "tree_sitter = \"grain\"\n", f);
+    fclose(f);
 
     Config *cfg = config_load();
-    int ok = cfg && cfg->plugin_count == 1 && cfg->language_count == 1 &&
+    int ok = cfg && cfg->plugin_count == 3 && cfg->language_count == 3 &&
              cfg->plugins[0].enabled == 1 && cfg->plugins[0].loaded == 1 &&
              cfg->plugins[0].language_count == 1 &&
              strcmp(cfg->plugins[0].name, "gleam-tools") == 0 &&
              strcmp(cfg->languages[0].id, "gleam") == 0 &&
-             strcmp(cfg->languages[0].lsp_command, "gleam") == 0;
+             strcmp(cfg->languages[0].tree_sitter_path, "plugins/gleam/libtree-sitter-gleam.so") == 0 &&
+             strcmp(cfg->languages[0].lsp_command, "gleam") == 0 &&
+             cfg->languages[0].source_plugin == 0 &&
+             strcmp(cfg->plugins[1].name, "zig-tools") == 0 &&
+             strcmp(cfg->languages[1].tree_sitter_path, "plugins/libtree-sitter-zig.so") == 0 &&
+             cfg->plugins[2].enabled == 0 && cfg->plugins[2].loaded == 1 &&
+             strcmp(cfg->languages[2].id, "grain") == 0;
+    language_registry_load_config(cfg);
+    ok = ok && language_id_for_extension("gr") == NULL;
+    cfg->plugins[2].enabled = 1;
+    language_registry_load_config(cfg);
+    ok = ok && strcmp(language_id_for_extension("gr"), "grain") == 0;
+    language_registry_load_config(NULL);
     config_free(cfg);
     ASSERT(chdir(oldcwd) == 0);
     ASSERT_TRUE(ok);
@@ -4524,6 +4635,9 @@ int main(void) {
     test_lang_settings_unknown();
     test_lang_settings_detect();
     test_config_language_entries();
+    test_config_language_fallback_keywords();
+    test_document_format_command_filter();
+    test_document_format_command_file_placeholder();
     test_config_plugin_manifest();
 
     printf("\n=== Results: %d/%d passed, %d failed ===\n",

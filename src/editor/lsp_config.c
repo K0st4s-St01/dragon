@@ -51,6 +51,9 @@ void lsp_config_load_configured(LSPManager *manager, const Config *cfg) {
     if (!manager || !cfg) return;
     for (int i = 0; i < cfg->language_count; i++) {
         const ConfigLanguage *lang = &cfg->languages[i];
+        int plugin = lang->source_plugin;
+        if (plugin >= 0 && plugin < cfg->plugin_count && !cfg->plugins[plugin].enabled)
+            continue;
         if (!lang->id[0] || !lang->lsp_command[0])
             continue;
         const char *args[CONFIG_MAX_LSP_ARGS];

@@ -92,6 +92,7 @@ static const CmdCompletion static_cmds[] = {
     {"workspace-symbols", "Workspace symbols", false},
     {"workspace-diagnostics", "Workspace diagnostics", false},
     {"plugins", "Plugin manager", false},
+    {"config-reload", "Reload config", false},
     {"tree-sitter-subtree", "Tree-sitter inspector", false},
     {"ts-subtree", "Tree-sitter inspector", false},
     {"tree-sitter-highlight-name", "Tree-sitter inspector", false},

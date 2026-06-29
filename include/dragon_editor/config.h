@@ -7,6 +7,7 @@
 #define CONFIG_MAX_EXTENSIONS 16
 #define CONFIG_MAX_LSP_ARGS 16
 #define CONFIG_MAX_PLUGINS 32
+#define CONFIG_MAX_LANGUAGE_WORDS 64
 
 typedef struct {
     char id[64];
@@ -19,9 +20,18 @@ typedef struct {
     char line_comment[24];
     int auto_format;
     char tree_sitter[64];
+    char tree_sitter_path[256];
+    char format_command[256];
     char lsp_command[128];
     char lsp_args[CONFIG_MAX_LSP_ARGS][128];
     int lsp_arg_count;
+    int source_plugin;
+    char keywords[CONFIG_MAX_LANGUAGE_WORDS][32];
+    int keyword_count;
+    char type_keywords[CONFIG_MAX_LANGUAGE_WORDS][32];
+    int type_keyword_count;
+    char macro_keywords[CONFIG_MAX_LANGUAGE_WORDS][32];
+    int macro_keyword_count;
 } ConfigLanguage;
 
 typedef struct {

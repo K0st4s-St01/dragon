@@ -22,8 +22,13 @@ diagnostic_delay_ms = 100
 #use_tabs = false
 #line_comment = "#"
 #tree_sitter = "nix"
+#tree_sitter_path = "plugins/nix/libtree-sitter-nix.so"
+#format_command = "nixfmt {file}"
 #lsp_command = "nil"
 #lsp_args = []
+#keywords = ["let", "in", "rec", "with"]
+#type_keywords = ["path", "attrs"]
+#macro_keywords = ["builtins"]
 
 # Plugins are TOML manifests that can contribute language entries.
 # If path is a directory, Dragon reads path/dragon-plugin.toml.
@@ -31,6 +36,7 @@ diagnostic_delay_ms = 100
 #name = "gleam-tools"
 #path = "plugins/gleam"
 #enabled = true
+# Use :plugins or :config-reload after editing this file.
 
 # Optional per-color overrides for the selected theme.
 # Values are RGBA floats in the 0.0-1.0 range.

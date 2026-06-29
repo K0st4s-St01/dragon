@@ -179,6 +179,7 @@ void document_copy_selection_above(Document *doc);
 void document_join_lines_with_space(Document *doc);
 void document_comment_toggle(Document *doc);
 void document_format_selection(Document *doc);
+bool document_format_with_command(Document *doc, const char *cmd);
 void document_move_line_up(Document *doc);
 void document_move_line_down(Document *doc);
 void document_page_down_extend(Document *doc);
@@ -344,6 +345,9 @@ typedef struct Config Config;
 void language_registry_load_config(const Config *cfg);
 const char *language_id_for_extension(const char *extension);
 const char *language_treesitter_for_extension(const char *extension);
+const char *language_treesitter_path_for_extension(const char *extension);
+const char *language_treesitter_path_for_name(const char *name);
+const char *language_format_command(const char *language_id);
 const LanguageSettings *language_settings_get(const char *language_id);
 void language_settings_detect(Document *doc, LanguageSettings *out);
 

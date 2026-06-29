@@ -29,7 +29,6 @@ bool panel_plugins_is_open(void) {
 }
 
 void panel_plugins_key(App *app, int key) {
-    (void)app;
     if (!plugins_open) return;
     Config *cfg = app_get_config(app);
     int count = cfg ? cfg->plugin_count : 0;
@@ -58,6 +57,21 @@ void panel_plugins_key(App *app, int key) {
         break;
     case GLFW_KEY_END:
         plugins_selected = count > 0 ? count - 1 : 0;
+        break;
+    case GLFW_KEY_ENTER:
+    case GLFW_KEY_SPACE:
+        if (cfg && plugins_selected >= 0 && plugins_selected < count) {
+            bool enabled = cfg->plugins[plugins_selected].enabled ? false : true;
+            app_set_plugin_enabled(app, plugins_selected, enabled);
+        }
+        break;
+    case GLFW_KEY_R:
+        app_reload_config(app);
+        cfg = app_get_config(app);
+        count = cfg ? cfg->plugin_count : 0;
+        if (plugins_selected >= count) plugins_selected = count > 0 ? count - 1 : 0;
+        if (plugins_selected < 0) plugins_selected = 0;
+        plugins_scroll = 0;
         break;
     default:
         break;
@@ -98,8 +112,12 @@ void panel_plugins_render(Gui *g, App *app) {
     font_draw(&g->font, r, meta, px + pw - meta_w - 14.0f, py + 12.0f,
               t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 
+    const char *footer = "j/k move  space toggle  r reload config  esc close";
+    font_draw(&g->font, r, footer, px + 14.0f, py + ph - 24.0f,
+              t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+
     float list_y = py + 50.0f;
-    int visible = (int)((ph - 70.0f) / row_h);
+    int visible = (int)((ph - 92.0f) / row_h);
     if (visible < 1) visible = 1;
     if (plugins_selected < plugins_scroll) plugins_scroll = plugins_selected;
     if (plugins_selected >= plugins_scroll + visible) plugins_scroll = plugins_selected - visible + 1;

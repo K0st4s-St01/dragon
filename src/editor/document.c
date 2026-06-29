@@ -13,6 +13,7 @@
 #define CUSTOM_LANGUAGE_MAX CONFIG_MAX_LANGUAGES
 
 static char *filepath_to_uri(const char *filepath);
+static char *run_shell_command(const char *cmd, const char *input, size_t input_len, size_t *output_len);
 static ConfigLanguage custom_languages[CUSTOM_LANGUAGE_MAX];
 static int custom_language_count = 0;
 
@@ -44,9 +45,50 @@ static bool language_is_script(const char *lang) {
     const LanguageSettings *ls = language_settings_get(lang);
     if (ls && (ls->line_comment || ls->comment_open))
         return true;
+    for (int i = 0; lang && i < custom_language_count; i++) {
+        ConfigLanguage *cfg = &custom_languages[i];
+        if (strcmp(cfg->id, lang) == 0 &&
+            (cfg->keyword_count > 0 || cfg->type_keyword_count > 0 ||
+             cfg->macro_keyword_count > 0)) {
+            return true;
+        }
+    }
     return lang && (strcmp(lang, "python") == 0 || strcmp(lang, "javascript") == 0 ||
                     strcmp(lang, "typescript") == 0 || strcmp(lang, "go") == 0 ||
                     strcmp(lang, "rust") == 0);
+}
+
+static bool word_matches(const char *word, int len, const char candidate[32]) {
+    return candidate[0] && (int)strlen(candidate) == len && strncmp(word, candidate, len) == 0;
+}
+
+static bool custom_fallback_keyword(const char *word, int len, const char *lang, SyntaxType *type) {
+    if (!lang) return false;
+    for (int i = 0; i < custom_language_count; i++) {
+        ConfigLanguage *cfg = &custom_languages[i];
+        if (strcmp(cfg->id, lang) != 0)
+            continue;
+        for (int j = 0; j < cfg->macro_keyword_count; j++) {
+            if (word_matches(word, len, cfg->macro_keywords[j])) {
+                *type = SYNTAX_MACRO;
+                return true;
+            }
+        }
+        for (int j = 0; j < cfg->type_keyword_count; j++) {
+            if (word_matches(word, len, cfg->type_keywords[j])) {
+                *type = SYNTAX_TYPE;
+                return true;
+            }
+        }
+        for (int j = 0; j < cfg->keyword_count; j++) {
+            if (word_matches(word, len, cfg->keywords[j])) {
+                *type = SYNTAX_KEYWORD;
+                return true;
+            }
+        }
+        return false;
+    }
+    return false;
 }
 
 static bool fallback_keyword(const char *word, int len, const char *lang, SyntaxType *type) {
@@ -68,7 +110,8 @@ static bool fallback_keyword(const char *word, int len, const char *lang, Syntax
     static const char *macros[] = {
         "define", "ifdef", "ifndef", "endif", "elif", "pragma", "undef", NULL
     };
-    (void)lang;
+    if (custom_fallback_keyword(word, len, lang, type))
+        return true;
     for (int i = 0; macros[i]; i++) {
         if ((int)strlen(macros[i]) == len && strncmp(word, macros[i], len) == 0) {
             *type = SYNTAX_MACRO;
@@ -2120,6 +2163,99 @@ void document_comment_toggle(Document *doc) {
 void document_format_selection(Document *doc) {
     if (!doc) return;
     document_trim_whitespace(doc);
+}
+
+static bool command_has_file_placeholder(const char *cmd) {
+    return cmd && strstr(cmd, "{file}") != NULL;
+}
+
+static bool build_format_command(const char *cmd, const char *path, char *out, size_t out_size) {
+    if (!cmd || !path || !out || out_size == 0) return false;
+    const char *needle = "{file}";
+    const char *hit = strstr(cmd, needle);
+    if (!hit) {
+        snprintf(out, out_size, "%s < %s", cmd, path);
+        return true;
+    }
+
+    size_t prefix = (size_t)(hit - cmd);
+    size_t suffix = strlen(hit + strlen(needle));
+    if (prefix + strlen(path) + suffix + 1 > out_size)
+        return false;
+    memcpy(out, cmd, prefix);
+    strcpy(out + prefix, path);
+    strcpy(out + prefix + strlen(path), hit + strlen(needle));
+    return true;
+}
+
+static bool document_replace_full_text(Document *doc, const char *text, size_t len) {
+    if (!doc || !text) return false;
+    char *old = NULL;
+    if (doc->buffer.len > 0) {
+        old = malloc(doc->buffer.len);
+        if (!old) return false;
+        memcpy(old, doc->buffer.text, doc->buffer.len);
+        history_push_delete(&doc->history, 0, old, doc->buffer.len, 0, 0);
+        free(old);
+    }
+    buffer_delete(&doc->buffer, 0, doc->buffer.len);
+    if (len > 0) {
+        buffer_insert(&doc->buffer, 0, text, len);
+        history_push_insert(&doc->history, 0, text, len, 0, 0);
+    }
+    cursor_move_to(&doc->cursors[0], 0, 0);
+    cursor_clear_selection(&doc->cursors[0]);
+    document_mark_dirty(doc);
+    return true;
+}
+
+bool document_format_with_command(Document *doc, const char *cmd) {
+    if (!doc || !cmd || !*cmd) return false;
+
+    char path[] = "/tmp/dragon-format-XXXXXX";
+    int fd = mkstemp(path);
+    if (fd < 0) return false;
+    size_t written = 0;
+    while (written < doc->buffer.len) {
+        ssize_t n = write(fd, doc->buffer.text + written, doc->buffer.len - written);
+        if (n <= 0) {
+            close(fd);
+            unlink(path);
+            return false;
+        }
+        written += (size_t)n;
+    }
+    close(fd);
+
+    char cmd_buf[4096];
+    if (!build_format_command(cmd, path, cmd_buf, sizeof(cmd_buf))) {
+        unlink(path);
+        return false;
+    }
+
+    bool inplace = command_has_file_placeholder(cmd);
+    bool ok = false;
+    if (inplace) {
+        int rc = system(cmd_buf);
+        if (rc == 0) {
+            Buffer formatted;
+            buffer_init(&formatted);
+            if (buffer_load(&formatted, path)) {
+                ok = document_replace_full_text(doc, formatted.text, formatted.len);
+            }
+            buffer_free(&formatted);
+        }
+    } else {
+        size_t out_len = 0;
+        char *output = run_shell_command(cmd_buf, NULL, 0, &out_len);
+        if (output) {
+            ok = document_replace_full_text(doc, output, out_len);
+            free(output);
+        }
+    }
+
+    unlink(path);
+    return ok;
 }
 
 bool document_format_with_lsp(Document *doc, void *lsp_manager, int tab_size, bool insert_spaces) {
@@ -4980,6 +5116,9 @@ void language_registry_load_config(const Config *cfg) {
     custom_language_count = 0;
     if (!cfg) return;
     for (int i = 0; i < cfg->language_count && custom_language_count < CUSTOM_LANGUAGE_MAX; i++) {
+        int plugin = cfg->languages[i].source_plugin;
+        if (plugin >= 0 && plugin < cfg->plugin_count && !cfg->plugins[plugin].enabled)
+            continue;
         custom_languages[custom_language_count++] = cfg->languages[i];
     }
 }
@@ -5008,6 +5147,40 @@ const char *language_treesitter_for_extension(const char *extension) {
         }
     }
     return builtin_treesitter_for_extension(ext);
+}
+
+const char *language_treesitter_path_for_extension(const char *extension) {
+    if (!extension) return NULL;
+    const char *ext = extension[0] == '.' ? extension + 1 : extension;
+    for (int i = 0; i < custom_language_count; i++) {
+        const ConfigLanguage *lang = &custom_languages[i];
+        for (int j = 0; j < lang->extension_count; j++) {
+            if (strcmp(lang->extensions[j], ext) == 0)
+                return lang->tree_sitter_path[0] ? lang->tree_sitter_path : NULL;
+        }
+    }
+    return NULL;
+}
+
+const char *language_treesitter_path_for_name(const char *name) {
+    if (!name) return NULL;
+    for (int i = 0; i < custom_language_count; i++) {
+        const ConfigLanguage *lang = &custom_languages[i];
+        const char *ts_name = lang->tree_sitter[0] ? lang->tree_sitter : lang->id;
+        if (strcmp(ts_name, name) == 0 || strcmp(lang->id, name) == 0)
+            return lang->tree_sitter_path[0] ? lang->tree_sitter_path : NULL;
+    }
+    return NULL;
+}
+
+const char *language_format_command(const char *language_id) {
+    if (!language_id) return NULL;
+    for (int i = 0; i < custom_language_count; i++) {
+        const ConfigLanguage *lang = &custom_languages[i];
+        if (strcmp(lang->id, language_id) == 0)
+            return lang->format_command[0] ? lang->format_command : NULL;
+    }
+    return NULL;
 }
 
 const LanguageSettings *language_settings_get(const char *language_id) {

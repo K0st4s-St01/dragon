@@ -54,6 +54,42 @@ static void parse_string_array(toml_table_t *tbl, const char *key,
     }
 }
 
+static void parse_word_array(toml_table_t *tbl, const char *key,
+                             char out[][32], int out_max, int *out_count) {
+    if (!out || !out_count) return;
+    toml_array_t *arr = toml_array_in(tbl, key);
+    if (!arr) return;
+    *out_count = 0;
+    int n = toml_array_nelem(arr);
+    for (int i = 0; i < n && *out_count < out_max; i++) {
+        toml_datum_t d = toml_string_at(arr, i);
+        if (!d.ok) continue;
+        snprintf(out[*out_count], 32, "%s", d.u.s);
+        (*out_count)++;
+        free(d.u.s);
+    }
+}
+
+static void plugin_base_dir(const ConfigPlugin *plugin, char *out, size_t out_size) {
+    if (!out || out_size == 0) return;
+    out[0] = '\0';
+    if (!plugin || !plugin->path[0]) return;
+    if (!strstr(plugin->path, ".toml")) {
+        snprintf(out, out_size, "%s", plugin->path);
+        return;
+    }
+    const char *slash = strrchr(plugin->path, '/');
+    if (!slash) {
+        snprintf(out, out_size, ".");
+        return;
+    }
+    size_t len = (size_t)(slash - plugin->path);
+    if (len >= out_size) len = out_size - 1;
+    memcpy(out, plugin->path, len);
+    out[len] = '\0';
+}
+
+
 static void set_color(float color[4], float r, float g, float b, float a) {
     color[0] = r;
     color[1] = g;
@@ -106,16 +142,16 @@ Config *config_default(void) {
     return cfg;
 }
 
-static void config_add_language_from_table(Config *cfg, toml_table_t *tbl, int plugin_index) {
+static ConfigLanguage *config_add_language_from_table(Config *cfg, toml_table_t *tbl, int plugin_index) {
     if (!cfg || !tbl || cfg->language_count >= CONFIG_MAX_LANGUAGES)
-        return;
+        return NULL;
 
     toml_datum_t id = toml_string_in(tbl, "id");
     if (!id.ok)
         id = toml_string_in(tbl, "name");
     if (!id.ok || !id.u.s[0]) {
         if (id.ok) free(id.u.s);
-        return;
+        return NULL;
     }
 
     ConfigLanguage *lang = NULL;
@@ -129,6 +165,7 @@ static void config_add_language_from_table(Config *cfg, toml_table_t *tbl, int p
         lang = &cfg->languages[cfg->language_count++];
         memset(lang, 0, sizeof(*lang));
         lang->tab_width = 4;
+        lang->source_plugin = plugin_index;
         snprintf(lang->id, sizeof(lang->id), "%s", id.u.s);
         if (plugin_index >= 0 && plugin_index < cfg->plugin_count)
             cfg->plugins[plugin_index].language_count++;
@@ -158,8 +195,18 @@ static void config_add_language_from_table(Config *cfg, toml_table_t *tbl, int p
     parse_string_field(tbl, "comment_close", lang->comment_close, sizeof(lang->comment_close));
     parse_string_field(tbl, "line_comment", lang->line_comment, sizeof(lang->line_comment));
     parse_string_field(tbl, "tree_sitter", lang->tree_sitter, sizeof(lang->tree_sitter));
+    parse_string_field(tbl, "tree_sitter_path", lang->tree_sitter_path, sizeof(lang->tree_sitter_path));
+    if (!lang->tree_sitter_path[0])
+        parse_string_field(tbl, "parser_path", lang->tree_sitter_path, sizeof(lang->tree_sitter_path));
+    parse_string_field(tbl, "format_command", lang->format_command, sizeof(lang->format_command));
     parse_string_field(tbl, "lsp_command", lang->lsp_command, sizeof(lang->lsp_command));
     parse_string_array(tbl, "lsp_args", lang->lsp_args, CONFIG_MAX_LSP_ARGS, &lang->lsp_arg_count);
+    parse_word_array(tbl, "keywords", lang->keywords, CONFIG_MAX_LANGUAGE_WORDS, &lang->keyword_count);
+    parse_word_array(tbl, "type_keywords", lang->type_keywords,
+                     CONFIG_MAX_LANGUAGE_WORDS, &lang->type_keyword_count);
+    parse_word_array(tbl, "macro_keywords", lang->macro_keywords,
+                     CONFIG_MAX_LANGUAGE_WORDS, &lang->macro_keyword_count);
+    return lang;
 }
 
 static void config_parse_languages(Config *cfg, toml_table_t *conf, int plugin_index) {
@@ -168,7 +215,17 @@ static void config_parse_languages(Config *cfg, toml_table_t *conf, int plugin_i
     int n = toml_array_nelem(langs);
     for (int i = 0; i < n; i++) {
         toml_table_t *tbl = toml_table_at(langs, i);
-        config_add_language_from_table(cfg, tbl, plugin_index);
+        ConfigLanguage *lang = config_add_language_from_table(cfg, tbl, plugin_index);
+        if (lang && plugin_index >= 0 && plugin_index < cfg->plugin_count &&
+            !lang->tree_sitter_path[0] && cfg->plugins[plugin_index].path[0]) {
+            const char *parser_name = lang->tree_sitter[0] ? lang->tree_sitter : lang->id;
+            if (parser_name && parser_name[0]) {
+                char base[256];
+                plugin_base_dir(&cfg->plugins[plugin_index], base, sizeof(base));
+                snprintf(lang->tree_sitter_path, sizeof(lang->tree_sitter_path),
+                         "%s/libtree-sitter-%s.so", base[0] ? base : ".", parser_name);
+            }
+        }
     }
 }
 
@@ -198,7 +255,7 @@ static void config_parse_plugin_manifest(Config *cfg, int plugin_index) {
     if (!cfg || plugin_index < 0 || plugin_index >= cfg->plugin_count)
         return;
     ConfigPlugin *plugin = &cfg->plugins[plugin_index];
-    if (!plugin->enabled || !plugin->path[0])
+    if (!plugin->path[0])
         return;
 
     char manifest[512];
@@ -223,10 +280,8 @@ static void config_parse_plugin_manifest(Config *cfg, int plugin_index) {
     parse_string_field(meta, "version", plugin->version, sizeof(plugin->version));
     parse_string_field(meta, "description", plugin->description, sizeof(plugin->description));
     plugin->enabled = parse_bool_int(meta, "enabled", plugin->enabled);
-    if (plugin->enabled) {
-        config_parse_languages(cfg, conf, plugin_index);
-        plugin->loaded = 1;
-    }
+    config_parse_languages(cfg, conf, plugin_index);
+    plugin->loaded = 1;
     toml_free(conf);
 }
 

@@ -546,6 +546,74 @@ bool app_apply_theme(App *app, const char *name) {
     return true;
 }
 
+static void app_rebuild_config_dependents(App *app) {
+    if (!app || !app->config) return;
+    theme_apply_config(app->config);
+    language_registry_load_config(app->config);
+
+    lsp_manager_free(&app->lsp_manager);
+    lsp_manager_init(&app->lsp_manager);
+    app->lsp_manager.workspace_root = app->workspace_root ? strdup(app->workspace_root) : NULL;
+    lsp_config_load_defaults(&app->lsp_manager);
+    lsp_config_load_configured(&app->lsp_manager, app->config);
+
+    if (app->ts_manager)
+        treesitter_manager_free(app->ts_manager);
+    app->ts_manager = treesitter_manager_new();
+
+    app->pending_goto_client = NULL;
+    app->pending_goto_id = -1;
+    app->pending_goto_doc = -1;
+    app->pending_select_refs_client = NULL;
+    app->pending_select_refs_id = -1;
+    app->pending_select_refs_doc = -1;
+    app->pending_format_client = NULL;
+    app->pending_format_id = -1;
+    app->pending_format_doc = -1;
+    app->pending_semantic_client = NULL;
+    app->pending_semantic_id = -1;
+    app->pending_semantic_doc = -1;
+
+    for (int i = 0; i < app->doc_count; i++) {
+        Document *doc = &app->documents[i];
+        document_detect_language(doc);
+        syntax_free(&doc->syntax);
+        syntax_init(&doc->syntax, doc->language_id);
+        doc->syntax_dirty = true;
+        doc->ts_attempted = false;
+        doc->ts_parsed = false;
+        if (doc->filepath && doc->language_id)
+            document_notify_lsp_open(doc, &app->lsp_manager);
+    }
+}
+
+bool app_reload_config(App *app) {
+    if (!app) return false;
+
+    Config *cfg = config_load();
+    if (!cfg) return false;
+
+    Config *old = app->config;
+    app->config = cfg;
+    app_rebuild_config_dependents(app);
+    config_free(old);
+    notification_push(NOTIF_SUCCESS, "Config reloaded");
+    return true;
+}
+
+bool app_set_plugin_enabled(App *app, int index, bool enabled) {
+    if (!app || !app->config || index < 0 || index >= app->config->plugin_count)
+        return false;
+    ConfigPlugin *plugin = &app->config->plugins[index];
+    if (plugin->enabled == (enabled ? 1 : 0))
+        return true;
+    plugin->enabled = enabled ? 1 : 0;
+    app_rebuild_config_dependents(app);
+    notification_push(enabled ? NOTIF_SUCCESS : NOTIF_INFO,
+                      "%s plugin: %s", enabled ? "Enabled" : "Disabled", plugin->name);
+    return true;
+}
+
 static LSPClient *app_client_for_doc(App *app, Document *doc) {
     if (!app || !doc || !doc->language_id || !doc->filepath)
         return NULL;
@@ -612,6 +680,11 @@ void app_format_document(App *app) {
     Document *doc = (Document *)app_get_doc(app);
     LSPClient *client = app_client_for_doc(app, doc);
     if (!client) {
+        const char *cmd = doc ? language_format_command(doc->language_id) : NULL;
+        if (cmd && document_format_with_command(doc, cmd)) {
+            notification_push(NOTIF_SUCCESS, "Formatted with %s", cmd);
+            return;
+        }
         document_format_selection(doc);
         return;
     }
