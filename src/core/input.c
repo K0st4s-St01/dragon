@@ -43,60 +43,69 @@ typedef struct {
     const char *name;
     const char *detail;
     bool theme_name;
+    bool plugin_name;
 } CmdCompletion;
+
+typedef struct {
+    const char *name;
+    const char *detail;
+} StaticCmdCompletion;
 
 static CmdCompletion cmd_completions[CMD_COMPLETION_MAX];
 static int cmd_completion_count = 0;
 static int cmd_completion_selected = 0;
-static void command_completion_update(void);
+static void command_completion_update(App *app);
 
-static const CmdCompletion static_cmds[] = {
-    {"w", "Write current buffer", false},
-    {"write", "Write current buffer", false},
-    {"q", "Quit", false},
-    {"quit", "Quit", false},
-    {"wq", "Write and quit", false},
-    {"x", "Write and quit", false},
-    {"wqa", "Write all and quit", false},
-    {"qa", "Quit all", false},
-    {"bn", "Next buffer", false},
-    {"bnext", "Next buffer", false},
-    {"bp", "Previous buffer", false},
-    {"bprev", "Previous buffer", false},
-    {"bc", "Close buffer", false},
-    {"bclose", "Close buffer", false},
-    {"new", "New buffer", false},
-    {"n", "New buffer", false},
-    {"e", "Open file", false},
-    {"edit", "Open file", false},
-    {"o", "Open file", false},
-    {"open", "Open file", false},
-    {"r", "Read file into buffer", false},
-    {"read", "Read file into buffer", false},
-    {"mv", "Move/rename file", false},
-    {"move", "Move/rename file", false},
-    {"reload", "Reload current file", false},
-    {"rl", "Reload current file", false},
-    {"reload-all", "Reload current file", false},
-    {"rla", "Reload current file", false},
-    {"sort", "Sort selection", false},
-    {"fmt", "Format document", false},
-    {"format", "Format document", false},
-    {"theme", "Set theme", false},
-    {"colorscheme", "Set theme", false},
-    {"reflow", "Reflow text", false},
-    {"retab", "Convert indentation to tabs", false},
-    {"expandtab", "Convert indentation to spaces", false},
-    {"lsp-stop", "Stop LSP servers", false},
-    {"lsp-restart", "Restart LSP servers", false},
-    {"workspace-symbols", "Workspace symbols", false},
-    {"workspace-diagnostics", "Workspace diagnostics", false},
-    {"plugins", "Plugin manager", false},
-    {"config-reload", "Reload config", false},
-    {"tree-sitter-subtree", "Tree-sitter inspector", false},
-    {"ts-subtree", "Tree-sitter inspector", false},
-    {"tree-sitter-highlight-name", "Tree-sitter inspector", false},
-    {"tree-sitter-scopes", "Tree-sitter inspector", false},
+static const StaticCmdCompletion static_cmds[] = {
+    {"w", "Write current buffer"},
+    {"write", "Write current buffer"},
+    {"q", "Quit"},
+    {"quit", "Quit"},
+    {"wq", "Write and quit"},
+    {"x", "Write and quit"},
+    {"wqa", "Write all and quit"},
+    {"qa", "Quit all"},
+    {"bn", "Next buffer"},
+    {"bnext", "Next buffer"},
+    {"bp", "Previous buffer"},
+    {"bprev", "Previous buffer"},
+    {"bc", "Close buffer"},
+    {"bclose", "Close buffer"},
+    {"new", "New buffer"},
+    {"n", "New buffer"},
+    {"e", "Open file"},
+    {"edit", "Open file"},
+    {"o", "Open file"},
+    {"open", "Open file"},
+    {"r", "Read file into buffer"},
+    {"read", "Read file into buffer"},
+    {"mv", "Move/rename file"},
+    {"move", "Move/rename file"},
+    {"reload", "Reload current file"},
+    {"rl", "Reload current file"},
+    {"reload-all", "Reload current file"},
+    {"rla", "Reload current file"},
+    {"sort", "Sort selection"},
+    {"fmt", "Format document"},
+    {"format", "Format document"},
+    {"theme", "Set theme"},
+    {"colorscheme", "Set theme"},
+    {"reflow", "Reflow text"},
+    {"retab", "Convert indentation to tabs"},
+    {"expandtab", "Convert indentation to spaces"},
+    {"lsp-stop", "Stop LSP servers"},
+    {"lsp-restart", "Restart LSP servers"},
+    {"workspace-symbols", "Workspace symbols"},
+    {"workspace-diagnostics", "Workspace diagnostics"},
+    {"plugins", "Plugin manager"},
+    {"plugin-enable", "Enable plugin"},
+    {"plugin-disable", "Disable plugin"},
+    {"plugin-toggle", "Toggle plugin"},
+    {"config-reload", "Reload config"},
+    {"tree-sitter-subtree", "Tree-sitter inspector"},
+    {"ts-subtree", "Tree-sitter inspector"},
+    {"tree-sitter-highlight-name", "Tree-sitter inspector"},
+    {"tree-sitter-scopes", "Tree-sitter inspector"},
 };
 
 static void input_save_all_buffers(App *app) {
@@ -139,6 +148,41 @@ static void input_theme_command(App *app, char *arg) {
 
     if (!app_apply_theme(app, arg))
         notification_push(NOTIF_ERROR, "Unknown theme: %s", arg);
+}
+
+static bool plugin_matches_arg(const ConfigPlugin *plugin, const char *arg) {
+    if (!plugin || !arg || !*arg) return false;
+    if (strcmp(plugin->name, arg) == 0 || strcmp(plugin->path, arg) == 0)
+        return true;
+    if (plugin->path[0]) {
+        const char *base = strrchr(plugin->path, '/');
+        if (base && strcmp(base + 1, arg) == 0)
+            return true;
+    }
+    return false;
+}
+
+static void input_plugin_command(App *app, char *arg, int action) {
+    arg = trim_command_arg(arg);
+    Config *cfg = app_get_config(app);
+    if (!cfg || cfg->plugin_count <= 0) {
+        notification_push(NOTIF_INFO, "No plugins configured");
+        return;
+    }
+    if (!arg || !*arg) {
+        panel_plugins_open(app);
+        return;
+    }
+
+    for (int i = 0; i < cfg->plugin_count; i++) {
+        if (!plugin_matches_arg(&cfg->plugins[i], arg))
+            continue;
+        bool enabled = action > 0 ? true : action < 0 ? false : !cfg->plugins[i].enabled;
+        app_set_plugin_enabled(app, i, enabled);
+        return;
+    }
+
+    notification_push(NOTIF_ERROR, "Unknown plugin: %s", arg);
 }
 
 void input_cmd_reset(void) {
@@ -198,7 +242,8 @@ static bool command_completion_exists(const char *name) {
     return false;
 }
 
-static void command_completion_add(const char *name, const char *detail, bool theme_name) {
+static void command_completion_add(const char *name, const char *detail,
+                                   bool theme_name, bool plugin_name) {
     if (!name || !*name || cmd_completion_count >= CMD_COMPLETION_MAX)
         return;
     if (command_completion_exists(name))
@@ -207,10 +252,39 @@ static void command_completion_add(const char *name, const char *detail, bool th
         .name = name,
         .detail = detail ? detail : "",
         .theme_name = theme_name,
+        .plugin_name = plugin_name,
     };
 }
 
-static void command_completion_update(void) {
+static bool command_is_plugin_arg(const char *cmd, const char **arg) {
+    return cmd_has_arg_prefix(cmd, "plugin-enable", arg) ||
+           cmd_has_arg_prefix(cmd, "plugin-disable", arg) ||
+           cmd_has_arg_prefix(cmd, "plugin-toggle", arg);
+}
+
+static const char *command_plugin_prefix(const char *cmd) {
+    const char *arg = NULL;
+    if (cmd_has_arg_prefix(cmd, "plugin-enable", &arg)) return "plugin-enable";
+    if (cmd_has_arg_prefix(cmd, "plugin-disable", &arg)) return "plugin-disable";
+    if (cmd_has_arg_prefix(cmd, "plugin-toggle", &arg)) return "plugin-toggle";
+    return NULL;
+}
+
+static bool plugin_completion_matches(const ConfigPlugin *plugin, const char *query) {
+    if (!plugin) return false;
+    if (command_completion_matches(plugin->name, query))
+        return true;
+    if (command_completion_matches(plugin->path, query))
+        return true;
+    if (plugin->path[0]) {
+        const char *base = strrchr(plugin->path, '/');
+        if (base && command_completion_matches(base + 1, query))
+            return true;
+    }
+    return false;
+}
+
+static void command_completion_update(App *app) {
     cmd_completion_count = 0;
     if (cmd_completion_selected < 0)
         cmd_completion_selected = 0;
@@ -219,25 +293,36 @@ static void command_completion_update(void) {
     bool completing_theme =
         cmd_has_arg_prefix(cmd_buf, "theme", &arg) ||
         cmd_has_arg_prefix(cmd_buf, "colorscheme", &arg);
+    bool completing_plugin = command_is_plugin_arg(cmd_buf, &arg);
     if (completing_theme && arg && *arg == ' ') {
         while (*arg && isspace((unsigned char)*arg)) arg++;
         const char *names[32];
         int count = theme_list_names(names, 32);
         for (int i = 0; i < count && i < 32; i++) {
             if (command_completion_matches(names[i], arg))
-                command_completion_add(names[i], "theme", true);
+                command_completion_add(names[i], "theme", true, false);
+        }
+    } else if (completing_plugin && arg && *arg == ' ') {
+        while (*arg && isspace((unsigned char)*arg)) arg++;
+        Config *cfg = app_get_config(app);
+        for (int i = 0; cfg && i < cfg->plugin_count; i++) {
+            ConfigPlugin *plugin = &cfg->plugins[i];
+            if (plugin_completion_matches(plugin, arg))
+                command_completion_add(plugin->name,
+                                       plugin->enabled ? "plugin enabled" : "plugin disabled",
+                                       false, true);
         }
     } else {
         for (size_t i = 0; i < sizeof(static_cmds) / sizeof(static_cmds[0]); i++) {
             if (command_completion_matches(static_cmds[i].name, cmd_buf))
-                command_completion_add(static_cmds[i].name, static_cmds[i].detail, false);
+                command_completion_add(static_cmds[i].name, static_cmds[i].detail, false, false);
         }
 
         int count = 0;
         Command *commands = command_get_all(&count);
         for (int i = 0; commands && i < count; i++) {
             if (command_completion_matches(commands[i].name, cmd_buf))
-                command_completion_add(commands[i].name, commands[i].label, false);
+                command_completion_add(commands[i].name, commands[i].label, false, false);
         }
     }
 
@@ -245,7 +330,7 @@ static void command_completion_update(void) {
         cmd_completion_selected = cmd_completion_count > 0 ? cmd_completion_count - 1 : 0;
 }
 
-static void command_completion_accept(void) {
+static void command_completion_accept(App *app) {
     if (cmd_completion_count <= 0)
         return;
 
@@ -257,11 +342,15 @@ static void command_completion_accept(void) {
         } else if (cmd_has_arg_prefix(cmd_buf, "colorscheme", &arg)) {
             snprintf(cmd_buf, sizeof(cmd_buf), "colorscheme %s", item->name);
         }
+    } else if (item->plugin_name) {
+        const char *prefix = command_plugin_prefix(cmd_buf);
+        if (prefix)
+            snprintf(cmd_buf, sizeof(cmd_buf), "%s %s", prefix, item->name);
     } else {
         snprintf(cmd_buf, sizeof(cmd_buf), "%s", item->name);
     }
     cmd_len = (int)strlen(cmd_buf);
-    command_completion_update();
+    command_completion_update(app);
 }
 
 static char key_to_char(int key, int mods) {
@@ -646,7 +735,7 @@ void input_handle_char(App *app, unsigned int c) {
         if (c >= 32 && c < 127 && cmd_len < CMD_BUF_MAX - 1 && c != ':') {
             cmd_buf[cmd_len++] = (char)c;
             cmd_buf[cmd_len] = '\0';
-            command_completion_update();
+            command_completion_update(app);
         }
     }
 }
@@ -1330,7 +1419,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
         mode_set(mode, MODE_COMMAND);
         input_cmd_reset();
-        command_completion_update();
+        command_completion_update(app);
         return;
     }
 
@@ -1942,7 +2031,7 @@ static void handle_command_key(App *app, int key, int action, int mods) {
     if ((key == GLFW_KEY_BACKSPACE || (key == GLFW_KEY_H && (mods & GLFW_MOD_CONTROL))) && cmd_len > 0) {
         cmd_len--;
         cmd_buf[cmd_len] = '\0';
-        command_completion_update();
+        command_completion_update(app);
         return;
     }
 
@@ -1953,7 +2042,7 @@ static void handle_command_key(App *app, int key, int action, int mods) {
                 if (cmd_completion_selected < 0)
                     cmd_completion_selected = cmd_completion_count - 1;
             }
-            command_completion_accept();
+            command_completion_accept(app);
         }
         return;
     }
@@ -2064,6 +2153,15 @@ static void handle_command_key(App *app, int key, int action, int mods) {
     } else if (strncmp(cmd_buf, "colorscheme", 11) == 0 &&
                (cmd_buf[11] == '\0' || isspace((unsigned char)cmd_buf[11]))) {
         input_theme_command(app, cmd_buf + 11);
+    } else if (strncmp(cmd_buf, "plugin-enable", 13) == 0 &&
+               (cmd_buf[13] == '\0' || isspace((unsigned char)cmd_buf[13]))) {
+        input_plugin_command(app, cmd_buf + 13, 1);
+    } else if (strncmp(cmd_buf, "plugin-disable", 14) == 0 &&
+               (cmd_buf[14] == '\0' || isspace((unsigned char)cmd_buf[14]))) {
+        input_plugin_command(app, cmd_buf + 14, -1);
+    } else if (strncmp(cmd_buf, "plugin-toggle", 13) == 0 &&
+               (cmd_buf[13] == '\0' || isspace((unsigned char)cmd_buf[13]))) {
+        input_plugin_command(app, cmd_buf + 13, 0);
     } else if (strncmp(cmd_buf, "reflow ", 7) == 0) {
         int width = atoi(cmd_buf + 7);
         if (width > 0) document_reflow(doc, width);

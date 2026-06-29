@@ -45,6 +45,9 @@ void command_registry_init(void) {
     command_register("workspace-symbols", "Workspace symbols", "LSP", cmd_workspace_symbols);
     command_register("workspace-diagnostics", "Workspace diagnostics", "LSP", cmd_workspace_diagnostics);
     command_register("plugins",        "Plugin manager",     "Workspace", cmd_plugins);
+    command_register("plugin-enable",  "Enable plugin",      "Workspace", cmd_plugins);
+    command_register("plugin-disable", "Disable plugin",     "Workspace", cmd_plugins);
+    command_register("plugin-toggle",  "Toggle plugin",      "Workspace", cmd_plugins);
     command_register("config-reload",  "Reload config",      "Workspace", cmd_config_reload);
 }
 

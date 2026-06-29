@@ -36,7 +36,10 @@ diagnostic_delay_ms = 100
 #name = "gleam-tools"
 #path = "plugins/gleam"
 #enabled = true
-# Use :plugins or :config-reload after editing this file.
+# Use :plugins to toggle plugins. Runtime toggles are saved to
+# <workspace>/.dragon/plugins.state and are reapplied on startup/reload.
+# Command forms: :plugin-enable <name>, :plugin-disable <name>,
+# :plugin-toggle <name>, :config-reload.
 
 # Optional per-color overrides for the selected theme.
 # Values are RGBA floats in the 0.0-1.0 range.

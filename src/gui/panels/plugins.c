@@ -112,7 +112,7 @@ void panel_plugins_render(Gui *g, App *app) {
     font_draw(&g->font, r, meta, px + pw - meta_w - 14.0f, py + 12.0f,
               t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 
-    const char *footer = "j/k move  space toggle  r reload config  esc close";
+    const char *footer = "j/k move  space toggle+save  r reload config  esc close";
     font_draw(&g->font, r, footer, px + 14.0f, py + ph - 24.0f,
               t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 

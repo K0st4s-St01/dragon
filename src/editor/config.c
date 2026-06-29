@@ -5,6 +5,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <errno.h>
+#include <sys/stat.h>
 #include "../vendor/tomlc99/toml.h"
 
 /* Helper to parse color arrays from TOML table */
@@ -87,6 +89,41 @@ static void plugin_base_dir(const ConfigPlugin *plugin, char *out, size_t out_si
     if (len >= out_size) len = out_size - 1;
     memcpy(out, plugin->path, len);
     out[len] = '\0';
+}
+
+static void plugin_state_key(const ConfigPlugin *plugin, char *out, size_t out_size) {
+    if (!out || out_size == 0) return;
+    out[0] = '\0';
+    if (!plugin) return;
+    const char *key = plugin->path[0] ? plugin->path : plugin->name;
+    snprintf(out, out_size, "%s", key);
+}
+
+static char *workspace_state_dir(const char *workspace_root) {
+    if (!workspace_root || !*workspace_root) return NULL;
+    size_t len = strlen(workspace_root) + strlen("/.dragon") + 1;
+    char *path = malloc(len);
+    if (!path) return NULL;
+    snprintf(path, len, "%s/.dragon", workspace_root);
+    return path;
+}
+
+static char *plugin_state_path(const char *workspace_root) {
+    if (!workspace_root || !*workspace_root) return NULL;
+    size_t len = strlen(workspace_root) + strlen("/.dragon/plugins.state") + 1;
+    char *path = malloc(len);
+    if (!path) return NULL;
+    snprintf(path, len, "%s/.dragon/plugins.state", workspace_root);
+    return path;
+}
+
+static void trim_line_end(char *s) {
+    if (!s) return;
+    size_t len = strlen(s);
+    while (len > 0 && (s[len - 1] == '\n' || s[len - 1] == '\r' ||
+                       s[len - 1] == ' ' || s[len - 1] == '\t')) {
+        s[--len] = '\0';
+    }
 }
 
 
@@ -421,4 +458,70 @@ Config *config_load(void) {
 
 void config_free(Config *cfg) {
     if (cfg) free(cfg);
+}
+
+void config_apply_plugin_state(Config *cfg, const char *workspace_root) {
+    if (!cfg || cfg->plugin_count <= 0) return;
+
+    char *path = plugin_state_path(workspace_root);
+    if (!path) return;
+
+    FILE *f = fopen(path, "r");
+    free(path);
+    if (!f) return;
+
+    char line[512];
+    while (fgets(line, sizeof(line), f)) {
+        if (line[0] == '#' || line[0] == '\n' || line[0] == '\r')
+            continue;
+
+        char *tab = strchr(line, '\t');
+        if (!tab) continue;
+        *tab = '\0';
+
+        char *key = tab + 1;
+        trim_line_end(key);
+        if (!*key) continue;
+
+        int enabled = atoi(line) ? 1 : 0;
+        for (int i = 0; i < cfg->plugin_count; i++) {
+            char current[256];
+            plugin_state_key(&cfg->plugins[i], current, sizeof(current));
+            if (current[0] && strcmp(current, key) == 0) {
+                cfg->plugins[i].enabled = enabled;
+                break;
+            }
+        }
+    }
+
+    fclose(f);
+}
+
+bool config_save_plugin_state(const Config *cfg, const char *workspace_root) {
+    if (!cfg || !workspace_root || !*workspace_root)
+        return false;
+
+    char *dir = workspace_state_dir(workspace_root);
+    if (!dir) return false;
+    if (mkdir(dir, 0777) != 0 && errno != EEXIST) {
+        free(dir);
+        return false;
+    }
+    free(dir);
+
+    char *path = plugin_state_path(workspace_root);
+    if (!path) return false;
+    FILE *f = fopen(path, "w");
+    free(path);
+    if (!f) return false;
+
+    fputs("# Dragon plugin enabled state. Format: enabled<TAB>plugin-path-or-name\n", f);
+    for (int i = 0; i < cfg->plugin_count; i++) {
+        char key[256];
+        plugin_state_key(&cfg->plugins[i], key, sizeof(key));
+        if (!key[0]) continue;
+        fprintf(f, "%d\t%s\n", cfg->plugins[i].enabled ? 1 : 0, key);
+    }
+
+    return fclose(f) == 0;
 }

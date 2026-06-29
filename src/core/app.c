@@ -592,6 +592,7 @@ bool app_reload_config(App *app) {
 
     Config *cfg = config_load();
     if (!cfg) return false;
+    config_apply_plugin_state(cfg, app->workspace_root);
 
     Config *old = app->config;
     app->config = cfg;
@@ -608,9 +609,11 @@ bool app_set_plugin_enabled(App *app, int index, bool enabled) {
     if (plugin->enabled == (enabled ? 1 : 0))
         return true;
     plugin->enabled = enabled ? 1 : 0;
+    bool saved = config_save_plugin_state(app->config, app->workspace_root);
     app_rebuild_config_dependents(app);
-    notification_push(enabled ? NOTIF_SUCCESS : NOTIF_INFO,
-                      "%s plugin: %s", enabled ? "Enabled" : "Disabled", plugin->name);
+    notification_push(saved ? (enabled ? NOTIF_SUCCESS : NOTIF_INFO) : NOTIF_WARNING,
+                      "%s plugin: %s%s", enabled ? "Enabled" : "Disabled",
+                      plugin->name, saved ? "" : " (not saved)");
     return true;
 }
 
@@ -761,9 +764,13 @@ App *app_create(int width, int height, const char *title) {
     renderer_init(&app->renderer, width, height);
     gui_init(&app->gui);
     mode_init(&app->mode);
+
+    /* Initialize workspace before config so plugin state can be applied. */
+    app->workspace_root = getcwd(NULL, 0);
     
     /* Load configuration and apply theme */
     app->config = config_load();
+    config_apply_plugin_state(app->config, app->workspace_root);
     theme_apply_config(app->config);
     language_registry_load_config(app->config);
     
@@ -781,9 +788,7 @@ App *app_create(int width, int height, const char *title) {
     app->pending_semantic_id = -1;
     app->pending_semantic_doc = -1;
     
-    /* Initialize workspace to current directory */
-    app->workspace_root = getcwd(NULL, 0);
-    app->lsp_manager.workspace_root = strdup(app->workspace_root);
+    app->lsp_manager.workspace_root = app->workspace_root ? strdup(app->workspace_root) : NULL;
     
     /* Initialize first buffer */
     app->doc_count = 1;

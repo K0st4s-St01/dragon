@@ -53,6 +53,19 @@ dragon_editor <file>           # open file
 - `Ctrl+F` - Find and replace
 - `Ctrl+S` - Save file
 
+## Configuration
+
+Dragon reads `./dragon.toml`, falling back to `~/.config/dragon/dragon.toml`.
+Configured languages can add extensions, indentation/comment settings,
+tree-sitter parser paths, formatter commands, and LSP commands without
+recompiling.
+
+Plugins are TOML manifests declared with `[[plugin]]`. Use `:plugins` for the
+plugin manager, or `:plugin-enable <name>`, `:plugin-disable <name>`, and
+`:plugin-toggle <name>` from command mode. Runtime plugin toggles are persisted
+per workspace in `.dragon/plugins.state` and reapplied on startup and
+`:config-reload`.
+
 ## Project Structure
 
 ```

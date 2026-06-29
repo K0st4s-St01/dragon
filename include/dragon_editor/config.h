@@ -1,6 +1,7 @@
 #ifndef DE_CONFIG_H
 #define DE_CONFIG_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define CONFIG_MAX_LANGUAGES 64
@@ -97,6 +98,10 @@ typedef struct Config {
 
 /* Load config from ./dragon.toml, then ~/.config/dragon/dragon.toml */
 Config *config_load(void);
+
+/* Apply and save project-local plugin enable/disable state. */
+void config_apply_plugin_state(Config *cfg, const char *workspace_root);
+bool config_save_plugin_state(const Config *cfg, const char *workspace_root);
 
 /* Get default config (if no file found) */
 Config *config_default(void);

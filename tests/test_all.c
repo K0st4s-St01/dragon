@@ -4257,6 +4257,63 @@ static void test_config_plugin_manifest(void) {
     PASS();
 }
 
+static void test_config_plugin_state_persists(void) {
+    TEST(config_plugin_state_persists);
+    char oldcwd[1024];
+    ASSERT(getcwd(oldcwd, sizeof(oldcwd)) != NULL);
+    char dir[] = "/tmp/dragon-plugin-state-XXXXXX";
+    ASSERT(mkdtemp(dir) != NULL);
+    ASSERT(chdir(dir) == 0);
+    ASSERT(mkdir("plugins", 0777) == 0);
+    ASSERT(mkdir("plugins/gleam", 0777) == 0);
+    ASSERT(mkdir(".dragon", 0777) == 0);
+
+    FILE *f = fopen("dragon.toml", "w");
+    ASSERT(f != NULL);
+    fputs("[[plugin]]\n"
+          "path = \"plugins/gleam\"\n"
+          "enabled = true\n", f);
+    fclose(f);
+
+    f = fopen("plugins/gleam/dragon-plugin.toml", "w");
+    ASSERT(f != NULL);
+    fputs("[plugin]\n"
+          "name = \"gleam-tools\"\n"
+          "\n"
+          "[[language]]\n"
+          "id = \"gleam\"\n"
+          "extensions = [\"gleam\"]\n", f);
+    fclose(f);
+
+    f = fopen(".dragon/plugins.state", "w");
+    ASSERT(f != NULL);
+    fputs("0\tplugins/gleam\n", f);
+    fclose(f);
+
+    Config *cfg = config_load();
+    config_apply_plugin_state(cfg, dir);
+    int ok = cfg && cfg->plugin_count == 1 && cfg->plugins[0].enabled == 0;
+    language_registry_load_config(cfg);
+    ok = ok && language_id_for_extension("gleam") == NULL;
+
+    cfg->plugins[0].enabled = 1;
+    ok = ok && config_save_plugin_state(cfg, dir);
+    config_free(cfg);
+
+    cfg = config_load();
+    config_apply_plugin_state(cfg, dir);
+    ok = ok && cfg && cfg->plugin_count == 1 && cfg->plugins[0].enabled == 1;
+    language_registry_load_config(cfg);
+    const char *lang = language_id_for_extension("gleam");
+    ok = ok && lang && strcmp(lang, "gleam") == 0;
+
+    language_registry_load_config(NULL);
+    config_free(cfg);
+    ASSERT(chdir(oldcwd) == 0);
+    ASSERT_TRUE(ok);
+    PASS();
+}
+
 /* ================================================================
  * MAIN
  * ================================================================ */
@@ -4639,6 +4696,7 @@ int main(void) {
     test_document_format_command_filter();
     test_document_format_command_file_placeholder();
     test_config_plugin_manifest();
+    test_config_plugin_state_persists();
 
     printf("\n=== Results: %d/%d passed, %d failed ===\n",
            tests_passed, tests_run, tests_failed);
