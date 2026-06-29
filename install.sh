@@ -83,6 +83,10 @@ check_tool() {
 }
 
 check_vendor() {
+    if [ -f "$ROOT_DIR/vendor/tomlc99/toml.c" ] && [ -f "$ROOT_DIR/vendor/glad/src/glad.c" ]; then
+        return
+    fi
+
     if [ -f "$ROOT_DIR/.gitmodules" ] && [ -d "$ROOT_DIR/.git" ]; then
         git -C "$ROOT_DIR" submodule update --init --recursive
     fi
