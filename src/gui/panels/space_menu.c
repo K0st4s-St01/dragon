@@ -269,6 +269,27 @@ void panel_space_menu_input(App *app, unsigned int c) {
     panel_space_menu_close(app);
 }
 
+static void space_draw_fit(Gui *g, Renderer *r, const char *text,
+                           float x, float right, float y,
+                           float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[256];
+    size_t copy = strlen(text);
+    if (copy >= sizeof(clipped)) copy = sizeof(clipped) - 1;
+    memcpy(clipped, text, copy);
+    clipped[copy] = '\0';
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 static void render_menu_list(Gui *g, App *app, SpaceCommand *cmds, int count,
                              const char *title, const char *subtitle) {
     Renderer *r = app_get_renderer(app);
@@ -276,7 +297,10 @@ static void render_menu_list(Gui *g, App *app, SpaceCommand *cmds, int count,
     int w = app_get_width(app);
     int h = app_get_height(app);
 
-    float pw = 620.0f;
+    float pw = (float)w * 0.44f;
+    if (pw < 380.0f) pw = 380.0f;
+    if (pw > 620.0f) pw = 620.0f;
+    if (pw > (float)w) pw = (float)w;
     float ph = (float)h;
     float px = (float)w - pw;
     float py = 0.0f;
@@ -287,7 +311,7 @@ static void render_menu_list(Gui *g, App *app, SpaceCommand *cmds, int count,
 
     /* Panel background */
     renderer_draw_rect(r, px, py, pw, ph,
-                       0.00f, 0.00f, 0.00f, 0.99f);
+                       t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], 0.99f);
 
     /* Borders */
     renderer_draw_rect(r, px, py, 4, ph,
@@ -299,20 +323,21 @@ static void render_menu_list(Gui *g, App *app, SpaceCommand *cmds, int count,
 
     /* Title area */
     renderer_draw_rect(r, px, py, pw, 56,
-                       0.05f, 0.05f, 0.08f, 0.9f);
+                       t->status_bg[0], t->status_bg[1], t->status_bg[2], 0.9f);
     renderer_draw_rect(r, px + 4, py + 56, pw - 8, 1,
                        t->accent[0], t->accent[1], t->accent[2], 0.3f);
 
-    font_draw(&g->font, r, title, px + 20, py + 14,
-              t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    font_draw(&g->font, r, subtitle, px + 20, py + 34,
-              t->accent[0] * 0.8f, t->accent[1] * 0.8f, t->accent[2] * 0.8f, 0.8f);
+    space_draw_fit(g, r, title, px + 20, px + pw - 20, py + 14,
+                   t->accent[0], t->accent[1], t->accent[2], 1.0f);
+    space_draw_fit(g, r, subtitle, px + 20, px + pw - 20, py + 34,
+                   t->accent[0] * 0.8f, t->accent[1] * 0.8f, t->accent[2] * 0.8f, 0.8f);
 
     /* Scrollable list */
     float list_y = py + 62;
     float list_h = ph - 62 - 40;
     float line_h = g->font.glyph_h + 8;
     int visible_lines = (int)(list_h / line_h);
+    if (visible_lines < 1) visible_lines = 1;
 
     renderer_draw_rect(r, px + 8, list_y, pw - 8 - 12, list_h,
                        0.0f, 0.0f, 0.0f, 0.3f);
@@ -339,13 +364,14 @@ static void render_menu_list(Gui *g, App *app, SpaceCommand *cmds, int count,
         float kg = cmd->implemented ? t->accent[1] : 0.00f;
         float kb = cmd->implemented ? t->accent[2] : 0.50f;
 
-        font_draw(&g->font, r, key_display, px + 30, y,
-                  kr, kg, kb, 1.0f);
+        float desc_x = px + (pw < 460.0f ? 150.0f : 200.0f);
+        space_draw_fit(g, r, key_display, px + 30, desc_x - 12.0f, y,
+                       kr, kg, kb, 1.0f);
 
         /* Description */
-        font_draw(&g->font, r, cmd->description, px + 200, y,
-                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2],
-                  cmd->implemented ? 1.0f : 0.4f);
+        space_draw_fit(g, r, cmd->description, desc_x, px + pw - 96.0f, y,
+                       t->menu_fg[0], t->menu_fg[1], t->menu_fg[2],
+                       cmd->implemented ? 1.0f : 0.4f);
 
         if (!cmd->implemented) {
             font_draw(&g->font, r, "[TODO]", px + pw - 90, y,
@@ -370,15 +396,15 @@ static void render_menu_list(Gui *g, App *app, SpaceCommand *cmds, int count,
     /* Footer */
     float footer_y = py + ph - 34;
     renderer_draw_rect(r, px, footer_y - 4, pw, 32,
-                       0.05f, 0.05f, 0.08f, 0.9f);
+                       t->status_bg[0], t->status_bg[1], t->status_bg[2], 0.9f);
     renderer_draw_rect(r, px + 4, footer_y - 4, pw - 8, 1,
                        t->accent[0], t->accent[1], t->accent[2], 0.3f);
 
     const char *footer = sm_submenu
         ? "Up/Down:Scroll  Type Key:Execute  Backspace:Back  Esc:Cancel"
         : "Up/Down:Scroll  Type Key:Execute  Esc:Cancel";
-    font_draw(&g->font, r, footer, px + 20, footer_y,
-              t->accent[0] * 0.7f, t->accent[1] * 0.7f, t->accent[2] * 0.7f, 1.0f);
+    space_draw_fit(g, r, footer, px + 20, px + pw - 20, footer_y,
+                   t->accent[0] * 0.7f, t->accent[1] * 0.7f, t->accent[2] * 0.7f, 1.0f);
 }
 
 void panel_space_menu_render(Gui *g, App *app) {

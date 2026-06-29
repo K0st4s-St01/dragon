@@ -111,17 +111,39 @@ void panel_symbols_picker_key(App *app, int key) {
     }
 }
 
+static void symbols_draw_fit(Gui *g, Renderer *r, const char *text,
+                             float x, float right, float y,
+                             float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[256];
+    snprintf(clipped, sizeof(clipped), "%s", text);
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 void panel_symbols_picker_render(Gui *g, App *app) {
     if (!symbols_picker_open || !g) return;
-    if (symbols_count == 0) return;
     
     Theme *theme = theme_get();
     Renderer *r = app_get_renderer(app);
     int w = app_get_width(app);
     int h = app_get_height(app);
     
-    float pw = 600.0f;
-    float ph = 400.0f;
+    float pw = (float)w * 0.56f;
+    if (pw < 540.0f) pw = 540.0f;
+    if (pw > 780.0f) pw = 780.0f;
+    if (pw > (float)w - 48.0f) pw = (float)w - 48.0f;
+    float ph = (float)h * 0.60f;
+    if (ph < 340.0f) ph = 340.0f;
+    if (ph > (float)h - 80.0f) ph = (float)h - 80.0f;
     float px = (float)w / 2 - pw / 2;
     float py = (float)h / 2 - ph / 2;
     
@@ -133,20 +155,23 @@ void panel_symbols_picker_render(Gui *g, App *app) {
     renderer_draw_rect(r, px, py, pw, ph,
                        theme->menu_bg[0], theme->menu_bg[1], theme->menu_bg[2], theme->menu_bg[3]);
     
-    /* Border */
     renderer_draw_rect(r, px, py, pw, 2, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py+ph-2, pw, 2, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py, 2, ph, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
-    renderer_draw_rect(r, px+pw-2, py, 2, ph, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+    renderer_draw_rect(r, px, py + 36.0f, pw, 1,
+                       theme->accent[0], theme->accent[1], theme->accent[2], 0.24f);
     
     /* Title */
     font_draw(&g->font, r, "Document Symbols", px + 14, py + 10,
               theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
     
     /* Items */
-    int max_items = 15;
-    float item_y = py + 35;
-    float item_height = 20;
+    float item_y = py + 48;
+    float item_height = g->font.glyph_h + 8.0f;
+    int max_items = (int)((ph - 86.0f) / item_height);
+    if (max_items < 1) max_items = 1;
+    if (symbols_count == 0) {
+        font_draw(&g->font, r, "No document symbols found", px + 18.0f, item_y,
+                  theme->gutter_fg[0], theme->gutter_fg[1], theme->gutter_fg[2], theme->gutter_fg[3]);
+    }
     
     for (int i = symbols_scroll; i < symbols_count && i < symbols_scroll + max_items; i++) {
         float y = item_y + (i - symbols_scroll) * item_height;
@@ -171,7 +196,13 @@ void panel_symbols_picker_render(Gui *g, App *app) {
         char buf[256];
         snprintf(buf, sizeof(buf), "[%c] %s", kind_char, symbols[i].name);
         
-        font_draw(&g->font, r, buf, px + 20, y + 3,
-                  theme->menu_fg[0], theme->menu_fg[1], theme->menu_fg[2], 1.0f);
+        symbols_draw_fit(g, r, buf, px + 20, px + pw - 18, y + 3,
+                         theme->menu_fg[0], theme->menu_fg[1], theme->menu_fg[2], 1.0f);
     }
+
+    float help_y = py + ph - 24.0f;
+    renderer_draw_rect(r, px, help_y - 5.0f, pw, 1,
+                       theme->accent[0], theme->accent[1], theme->accent[2], 0.20f);
+    font_draw(&g->font, r, "Enter go  Esc close  Up/Down move", px + 14.0f, help_y,
+              theme->gutter_fg[0], theme->gutter_fg[1], theme->gutter_fg[2], theme->gutter_fg[3]);
 }

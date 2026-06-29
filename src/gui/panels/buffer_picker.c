@@ -186,14 +186,11 @@ void panel_buffer_picker_render(Gui *g, App *app) {
     renderer_draw_rect(r, px, py, pw, ph,
                        t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], t->menu_bg[3]);
     
-    /* Border */
-    renderer_draw_rect(r, px, py, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py+ph-1, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px+pw-1, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    
     renderer_draw_rect(r, px, py, pw, 38.0f,
                        t->status_bg[0], t->status_bg[1], t->status_bg[2], 0.52f);
+    renderer_draw_rect(r, px, py, pw, 2.0f, t->accent[0], t->accent[1], t->accent[2], 1.0f);
+    renderer_draw_rect(r, px, py + 38.0f, pw, 1.0f,
+                       t->accent[0], t->accent[1], t->accent[2], 0.28f);
 
     char title[96];
     snprintf(title, sizeof(title), "Buffers  %d open", bp_buffer_count);

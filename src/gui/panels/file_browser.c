@@ -174,6 +174,27 @@ static void fb_set_input_join(const char *dir, const char *name) {
     fb_path_input[pos] = '\0';
 }
 
+static void fb_draw_fit(Gui *g, Renderer *r, const char *text,
+                        float x, float right, float y,
+                        float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[512];
+    size_t copy = strlen(text);
+    if (copy >= sizeof(clipped)) copy = sizeof(clipped) - 1;
+    memcpy(clipped, text, copy);
+    clipped[copy] = '\0';
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 static void fb_open_at_root(App *app, const char *root, FbMode mode) {
     (void)app;
     fb_open = true;
@@ -527,10 +548,15 @@ void panel_file_browser_render(Gui *g, App *app) {
     int w = app_get_width(app);
     int h = app_get_height(app);
 
-    float pw = 460.0f;
-    float ph = (float)h - 80.0f;
-    float px = 20.0f;
-    float py = 40.0f;
+    float pw = (float)w * 0.36f;
+    if (pw < 420.0f) pw = 420.0f;
+    if (pw > 640.0f) pw = 640.0f;
+    if (pw > (float)w - 32.0f) pw = (float)w - 32.0f;
+    float ph = (float)h - 64.0f;
+    if (ph < 260.0f) ph = 260.0f;
+    if (ph > (float)h - 32.0f) ph = (float)h - 32.0f;
+    float px = 16.0f;
+    float py = 32.0f;
 
     /* Dim background */
     renderer_draw_rect(r, 0, 0, (float)w, (float)h, 0.0f, 0.0f, 0.0f, 0.4f);
@@ -539,15 +565,13 @@ void panel_file_browser_render(Gui *g, App *app) {
     renderer_draw_rect(r, px, py, pw, ph,
                        t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], t->menu_bg[3]);
 
-    /* Border */
     renderer_draw_rect(r, px, py, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py+ph-1, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px+pw-1, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1.0f);
+    renderer_draw_rect(r, px, py + 34.0f, pw, 1, t->accent[0], t->accent[1], t->accent[2], 0.28f);
 
     /* Title - show root basename */
     const char *root_name = strrchr(fb_root, '/');
     root_name = root_name ? root_name + 1 : fb_root;
+    if (!root_name[0]) root_name = "/";
     char title[FB_PATH_MAX + 16];
     const char *prefix = "Files";
     if (fb_mode == FB_MODE_SAVE_AS) prefix = "Save as";
@@ -558,8 +582,8 @@ void panel_file_browser_render(Gui *g, App *app) {
     else if (fb_mode == FB_MODE_RENAME) prefix = "Rename";
     else if (fb_mode == FB_MODE_DELETE) prefix = "Delete";
     snprintf(title, sizeof(title), "%s: %s", prefix, root_name);
-    font_draw(&g->font, r, title, px + 14, py + 10,
-              t->accent[0], t->accent[1], t->accent[2], 1.0f);
+    fb_draw_fit(g, r, title, px + 14, px + pw - 14, py + 10,
+                t->accent[0], t->accent[1], t->accent[2], 1.0f);
 
     /* List */
     float list_y = py + 40;
@@ -569,12 +593,13 @@ void panel_file_browser_render(Gui *g, App *app) {
                            t->gutter_bg[0], t->gutter_bg[1], t->gutter_bg[2], t->gutter_bg[3]);
         char input[FB_PATH_MAX + 2];
         snprintf(input, sizeof(input), "%s_", fb_path_input);
-        font_draw(&g->font, r, input, px + 18, list_y + 2,
-                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+        fb_draw_fit(g, r, input, px + 18, px + pw - 18, list_y + 2,
+                    t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
         list_y += g->font.glyph_h + 18;
     }
     float line_h = g->font.glyph_h + 6;
-    int max_visible = (int)((ph - 64) / line_h);
+    float footer_y = py + ph - 24;
+    int max_visible = (int)((footer_y - 10.0f - list_y) / line_h);
     if (max_visible < 1) max_visible = 1;
 
     /* Keep selection in view */
@@ -620,21 +645,19 @@ void panel_file_browser_render(Gui *g, App *app) {
         float nr = e->is_dir ? t->accent[0] : t->menu_fg[0];
         float ng = e->is_dir ? t->accent[1] : t->menu_fg[1];
         float nb = e->is_dir ? t->accent[2] : t->menu_fg[2];
-        font_draw(&g->font, r, label, tx + 16, ry, nr, ng, nb, 1.0f);
+        fb_draw_fit(g, r, label, tx + 16, px + pw - 16, ry, nr, ng, nb, 1.0f);
     }
 
     /* Footer help */
-    float footer_y = py + ph - 24;
     renderer_draw_rect(r, px, footer_y - 4, pw, 1,
                        t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], 0.3f);
-    font_draw(&g->font, r,
-              fb_mode == FB_MODE_SAVE_AS
-                  ? "type path  Enter save  j/k move  l expand  Esc close"
-                  : fb_mode == FB_MODE_DELETE
-                  ? "y confirm delete  other cancel"
-                  : (fb_mode == FB_MODE_NEW_FILE || fb_mode == FB_MODE_NEW_FOLDER || fb_mode == FB_MODE_RENAME)
-                  ? "type name  Enter confirm  Backspace del  Esc close"
-                  : "j/k move  Enter choose  l open  h collapse  a new file  A new folder  r rename  d delete  Esc close",
-              px + 14, footer_y,
-              t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+    const char *help = fb_mode == FB_MODE_SAVE_AS
+        ? "type path  Enter save  j/k move  l expand  Esc close"
+        : fb_mode == FB_MODE_DELETE
+        ? "y confirm delete  other cancel"
+        : (fb_mode == FB_MODE_NEW_FILE || fb_mode == FB_MODE_NEW_FOLDER || fb_mode == FB_MODE_RENAME)
+        ? "type name  Enter confirm  Backspace del  Esc close"
+        : "j/k move  Enter choose  l open  h collapse  a new file  A new folder  r rename  d delete  Esc close";
+    fb_draw_fit(g, r, help, px + 14, px + pw - 14, footer_y,
+                t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 }

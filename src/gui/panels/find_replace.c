@@ -56,6 +56,24 @@ bool panel_find_is_open(void) {
     return fr_open;
 }
 
+static void find_draw_fit(Gui *g, Renderer *r, const char *text,
+                          float x, float right, float y,
+                          float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[260];
+    snprintf(clipped, sizeof(clipped), "%s", text);
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 static bool find_next_range(Document *doc, size_t *start_out, size_t *end_out) {
     if (fr_query_len == 0 || !doc) return false;
     Buffer *buf = &doc->buffer;
@@ -211,6 +229,7 @@ void panel_find_render(Gui *g, App *app, Document *doc) {
     Renderer *r = app_get_renderer(app);
     Theme *t = theme_get();
     int w = app_get_width(app);
+    int h = app_get_height(app);
 
     double now = glfwGetTime();
     if (now - fr_last_blink > 0.5) {
@@ -218,16 +237,22 @@ void panel_find_render(Gui *g, App *app, Document *doc) {
         fr_last_blink = now;
     }
 
-    float pw = 400, ph = 160;
+    float pw = (float)w * 0.46f;
+    if (pw < 400.0f) pw = 400.0f;
+    if (pw > 640.0f) pw = 640.0f;
+    if (pw > (float)w - 32.0f) pw = (float)w - 32.0f;
+    float ph = fr_action < FR_ACTION_PIPE ? 134.0f : 104.0f;
     float px = (float)w/2 - pw/2;
-    float py = 80;
+    float py = 80.0f;
+    if (py + ph > (float)h - 42.0f) py = (float)h - ph - 42.0f;
+    if (py < 16.0f) py = 16.0f;
 
+    renderer_draw_rect(r, 0, 0, (float)w, (float)h, 0.0f, 0.0f, 0.0f, 0.24f);
     renderer_draw_rect(r, px, py, pw, ph,
                        t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], t->menu_bg[3]);
-    renderer_draw_rect(r, px, py, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1);
-    renderer_draw_rect(r, px, py+ph-1, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1);
-    renderer_draw_rect(r, px, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1);
-    renderer_draw_rect(r, px+pw-1, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1);
+    renderer_draw_rect(r, px, py, pw, 2, t->accent[0], t->accent[1], t->accent[2], 1);
+    renderer_draw_rect(r, px, py + 34.0f, pw, 1,
+                       t->accent[0], t->accent[1], t->accent[2], 0.24f);
 
     /* Determine label based on action */
     const char *label = "Find:";
@@ -263,26 +288,28 @@ void panel_find_render(Gui *g, App *app, Document *doc) {
         btn_label = "Remove";
     }
 
-    font_draw(&g->font, r, label, px+14, py+10, t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
-    renderer_draw_rect(r, px+110, py+6, pw-124, g->font.glyph_h+8,
+    font_draw(&g->font, r, label, px+14, py+10, t->accent[0], t->accent[1], t->accent[2], 1.0f);
+    float input_x = px + 112.0f;
+    renderer_draw_rect(r, input_x, py+6, px + pw - 14.0f - input_x, g->font.glyph_h+8,
                        t->gutter_bg[0], t->gutter_bg[1], t->gutter_bg[2], t->gutter_bg[3]);
     char buf[260];
     snprintf(buf, sizeof(buf), "%s%s", fr_query, (fr_active_field==0 && fr_cursor_visible) ? "_" : " ");
-    font_draw(&g->font, r, buf, px+114, py+10,
-              t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+    find_draw_fit(g, r, buf, input_x + 4.0f, px + pw - 18.0f, py+10,
+                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
 
     /* Hide replace field for shell commands */
     if (fr_action < FR_ACTION_PIPE) {
-        font_draw(&g->font, r, "Replace:", px+14, py+36, t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
-        renderer_draw_rect(r, px+70, py+32, pw-84, g->font.glyph_h+8,
+        float replace_x = px + 86.0f;
+        renderer_draw_rect(r, replace_x, py+42, px + pw - 14.0f - replace_x, g->font.glyph_h+8,
                            t->gutter_bg[0], t->gutter_bg[1], t->gutter_bg[2], t->gutter_bg[3]);
+        font_draw(&g->font, r, "Replace:", px+14, py+46, t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
         snprintf(buf, sizeof(buf), "%s%s", fr_replace, (fr_active_field==1 && fr_cursor_visible) ? "_" : " ");
-        font_draw(&g->font, r, buf, px+74, py+36,
-                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+        find_draw_fit(g, r, buf, replace_x + 4.0f, px + pw - 18.0f, py+46,
+                      t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
     }
 
     /* Buttons */
-    float btn_y = py + 60;
+    float btn_y = py + ph - (g->font.glyph_h + 18.0f);
     renderer_draw_rect(r, px+14, btn_y, 120, g->font.glyph_h+8,
                        t->accent[0], t->accent[1], t->accent[2], 1);
     font_draw(&g->font, r, btn_label, px+20, btn_y+4, 1, 1, 1, 1);

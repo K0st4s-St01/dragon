@@ -35,6 +35,27 @@ static bool is_deleted_status(const char *status) {
     return status && (status[0] == 'D' || status[1] == 'D');
 }
 
+static void cf_draw_fit(Gui *g, Renderer *r, const char *text,
+                        float x, float right, float y,
+                        float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[512];
+    size_t copy = strlen(text);
+    if (copy >= sizeof(clipped)) copy = sizeof(clipped) - 1;
+    memcpy(clipped, text, copy);
+    clipped[copy] = '\0';
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 static void add_changed_file(const char *root, const char *status, const char *path) {
     if (cf_count >= CF_MAX || !root || !path || !*path) return;
     ChangedFile *item = &cf_items[cf_count++];
@@ -178,12 +199,17 @@ void panel_changed_files_render(Gui *g, App *app) {
     Theme *t = theme_get();
     int w = app_get_width(app);
     int h = app_get_height(app);
-    float pw = 760.0f;
-    float ph = 500.0f;
+    float pw = (float)w * 0.62f;
+    if (pw < 560.0f) pw = 560.0f;
+    if (pw > 860.0f) pw = 860.0f;
+    if (pw > (float)w - 48.0f) pw = (float)w - 48.0f;
+    float ph = (float)h * 0.62f;
+    if (ph < 340.0f) ph = 340.0f;
+    if (ph > (float)h - 80.0f) ph = (float)h - 80.0f;
     float px = (float)w / 2.0f - pw / 2.0f;
     float py = (float)h / 2.0f - ph / 2.0f;
     float row_h = g->font.glyph_h + 7.0f;
-    int visible = (int)((ph - 78.0f) / row_h);
+    int visible = (int)((ph - 86.0f) / row_h);
     if (visible < 1) visible = 1;
 
     if (cf_selected < cf_scroll) cf_scroll = cf_selected;
@@ -201,7 +227,7 @@ void panel_changed_files_render(Gui *g, App *app) {
     font_draw(&g->font, r, title, px + 14.0f, py + 10.0f,
               t->accent[0], t->accent[1], t->accent[2], 1.0f);
 
-    float list_y = py + 44.0f;
+    float list_y = py + 48.0f;
     if (!cf_git_found) {
         font_draw(&g->font, r, "git status failed for this workspace", px + 18.0f, list_y,
                   t->warning[0], t->warning[1], t->warning[2], 1.0f);
@@ -224,13 +250,16 @@ void panel_changed_files_render(Gui *g, App *app) {
         float sg = deleted ? t->error[1] : (cf_items[i].status[0] == '?' ? t->warning[1] : t->accent[1]);
         float sb = deleted ? t->error[2] : (cf_items[i].status[0] == '?' ? t->warning[2] : t->accent[2]);
         font_draw(&g->font, r, cf_items[i].status, px + 18.0f, y, sr, sg, sb, 1.0f);
-        font_draw(&g->font, r, basename_label(cf_items[i].path), px + 58.0f, y,
-                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], 1.0f);
-        font_draw(&g->font, r, cf_items[i].path, px + 260.0f, y,
-                  t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], 1.0f);
+        float path_x = px + pw * 0.38f;
+        cf_draw_fit(g, r, basename_label(cf_items[i].path), px + 58.0f, path_x - 16.0f, y,
+                    t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], 1.0f);
+        cf_draw_fit(g, r, cf_items[i].path, path_x, px + pw - 18.0f, y,
+                    t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], 1.0f);
     }
 
     const char *help = "Enter open  r refresh  j/k move  Esc close";
-    font_draw(&g->font, r, help, px + 14.0f, py + ph - 24.0f,
-              t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+    renderer_draw_rect(r, px, py + ph - 29.0f, pw, 1.0f,
+                       t->accent[0], t->accent[1], t->accent[2], 0.25f);
+    cf_draw_fit(g, r, help, px + 14.0f, px + pw - 14.0f, py + ph - 24.0f,
+                t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 }

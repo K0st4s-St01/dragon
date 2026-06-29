@@ -87,6 +87,27 @@ static char *hover_file_uri(const char *path) {
     return uri;
 }
 
+static void hover_draw_fit(Gui *g, Renderer *r, const char *text,
+                           float x, float right, float y,
+                           float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[512];
+    size_t copy = strlen(text);
+    if (copy >= sizeof(clipped)) copy = sizeof(clipped) - 1;
+    memcpy(clipped, text, copy);
+    clipped[copy] = '\0';
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 void panel_lsp_hover_request(App *app) {
     Document *doc = (Document *)app_get_doc(app);
     if (!doc || !doc->language_id || !doc->filepath) return;
@@ -214,9 +235,12 @@ void panel_lsp_hover_render(Gui *g, App *app) {
     }
     
     Document *doc = (Document *)app_get_doc(app);
+    if (!doc) return;
     Cursor *cur = &doc->cursors[0];
     Renderer *r = app_get_renderer(app);
     Theme *t = theme_get();
+    int win_w = app_get_width(app);
+    int win_h = app_get_height(app);
     
     /* Position: offset from cursor */
     float char_w = g->font.glyph_w;
@@ -231,7 +255,7 @@ void panel_lsp_hover_render(Gui *g, App *app) {
     
     for (int i = 0; i < hover_display.line_count; i++) {
         if (hover_display.lines[i]) {
-            float line_w = strlen(hover_display.lines[i]) * char_w;
+            float line_w = font_text_width(&g->font, hover_display.lines[i]);
             if (line_w > content_w) {
                 content_w = line_w;
             }
@@ -243,8 +267,20 @@ void panel_lsp_hover_render(Gui *g, App *app) {
     float th = max_lines * line_h + padding * 2;
     
     /* Cap size */
-    if (tw > 600) tw = 600;
-    if (th > 400) th = 400;
+    float max_tw = (float)win_w - 24.0f;
+    if (max_tw > 640.0f) max_tw = 640.0f;
+    if (tw > max_tw) tw = max_tw;
+    float max_th = (float)win_h - 48.0f;
+    if (max_th > 420.0f) max_th = 420.0f;
+    if (th > max_th) th = max_th;
+    max_lines = (int)((th - padding * 2.0f) / line_h);
+    if (max_lines < 1) max_lines = 1;
+    if (tooltip_x + tw > (float)win_w - 12.0f)
+        tooltip_x = (float)win_w - tw - 12.0f;
+    if (tooltip_y + th > (float)win_h - 12.0f)
+        tooltip_y = (float)win_h - th - 12.0f;
+    if (tooltip_x < 12.0f) tooltip_x = 12.0f;
+    if (tooltip_y < 12.0f) tooltip_y = 12.0f;
     
     /* Draw background */
     renderer_draw_rect(r, tooltip_x, tooltip_y, tw, th,
@@ -264,9 +300,9 @@ void panel_lsp_hover_render(Gui *g, App *app) {
     float text_y = tooltip_y + padding;
     for (int i = hover_scroll; i < hover_display.line_count && (i - hover_scroll) < max_lines; i++) {
         if (hover_display.lines[i]) {
-            font_draw(&g->font, r, hover_display.lines[i], 
-                      tooltip_x + padding, text_y,
-                      t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+            hover_draw_fit(g, r, hover_display.lines[i],
+                           tooltip_x + padding, tooltip_x + tw - padding, text_y,
+                           t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
         }
         text_y += line_h;
     }

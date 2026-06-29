@@ -7,6 +7,7 @@
 
 #include <GLFW/glfw3.h>
 #include <stdio.h>
+#include <string.h>
 
 static bool settings_open = false;
 static int settings_scroll = 0;
@@ -56,12 +57,35 @@ void panel_settings_key(App *app, int key) {
     }
 }
 
+static void settings_draw_fit(Gui *g, Renderer *r, const char *text,
+                              float x, float right, float y,
+                              float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[256];
+    size_t copy = strlen(text);
+    if (copy >= sizeof(clipped)) copy = sizeof(clipped) - 1;
+    memcpy(clipped, text, copy);
+    clipped[copy] = '\0';
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 static void draw_row(Gui *g, Renderer *r, Theme *t,
-                     float x, float y, const char *key, const char *value) {
-    font_draw(&g->font, r, key, x, y,
-              t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
-    font_draw(&g->font, r, value, x + 230, y,
-              t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+                     float x, float right, float y, const char *key, const char *value) {
+    float value_x = x + 230.0f;
+    if (value_x > right - 120.0f) value_x = x + 180.0f;
+    settings_draw_fit(g, r, key, x, value_x - 14.0f, y,
+                      t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+    settings_draw_fit(g, r, value, value_x, right, y,
+                      t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
 }
 
 static void color_value(char *buf, size_t size, const float c[4]) {
@@ -77,7 +101,10 @@ void panel_settings_render(Gui *g, App *app) {
     int w = app_get_width(app);
     int h = app_get_height(app);
 
-    float pw = 560.0f;
+    float pw = (float)w * 0.52f;
+    if (pw < 520.0f) pw = 520.0f;
+    if (pw > 760.0f) pw = 760.0f;
+    if (pw > (float)w - 48.0f) pw = (float)w - 48.0f;
     float ph = (float)h - 100.0f;
     if (ph < 260.0f) ph = 260.0f;
     float px = (float)w / 2.0f - pw / 2.0f;
@@ -86,10 +113,8 @@ void panel_settings_render(Gui *g, App *app) {
     renderer_draw_rect(r, 0, 0, (float)w, (float)h, 0, 0, 0, 0.35f);
     renderer_draw_rect(r, px, py, pw, ph,
                        t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], t->menu_bg[3]);
-    renderer_draw_rect(r, px, py, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1);
-    renderer_draw_rect(r, px, py + ph - 1, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1);
-    renderer_draw_rect(r, px, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1);
-    renderer_draw_rect(r, px + pw - 1, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1);
+    renderer_draw_rect(r, px, py, pw, 2, t->accent[0], t->accent[1], t->accent[2], 1);
+    renderer_draw_rect(r, px, py + 36.0f, pw, 1, t->accent[0], t->accent[1], t->accent[2], 0.28f);
 
     font_draw(&g->font, r, "Settings", px + 14, py + 10,
               t->accent[0], t->accent[1], t->accent[2], 1);
@@ -141,23 +166,24 @@ void panel_settings_render(Gui *g, App *app) {
     }
 
 #undef ADD_INT
+#undef ADD_STR
 #undef ADD_COLOR
 
     float row_h = g->font.glyph_h + 7.0f;
-    float list_y = py + 42.0f;
-    int visible = (int)((ph - 76.0f) / row_h);
+    float list_y = py + 48.0f;
+    int visible = (int)((ph - 86.0f) / row_h);
     int max_scroll = count > visible ? count - visible : 0;
     if (settings_scroll > max_scroll) settings_scroll = max_scroll;
     if (settings_scroll < 0) settings_scroll = 0;
 
     for (int i = 0; i < visible && i + settings_scroll < count; i++) {
         int idx = i + settings_scroll;
-        draw_row(g, r, t, px + 18, list_y + i * row_h, keys[idx], values[idx]);
+        draw_row(g, r, t, px + 18, px + pw - 18, list_y + i * row_h, keys[idx], values[idx]);
     }
 
     float footer_y = py + ph - 24.0f;
     renderer_draw_rect(r, px, footer_y - 4, pw, 1,
-                       t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], 0.3f);
+                       t->accent[0], t->accent[1], t->accent[2], 0.25f);
     font_draw(&g->font, r, "j/k scroll  Esc close", px + 14, footer_y,
               t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 }

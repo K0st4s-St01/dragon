@@ -50,6 +50,27 @@ void notification_update(double dt) {
     }
 }
 
+static void notification_draw_fit(Gui *g, Renderer *r, const char *text,
+                                  float x, float right, float y,
+                                  float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[256];
+    size_t copy = strlen(text);
+    if (copy >= sizeof(clipped)) copy = sizeof(clipped) - 1;
+    memcpy(clipped, text, copy);
+    clipped[copy] = '\0';
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 void panel_notification_render(Gui *g, App *app) {
     if (notification_count == 0) return;
 
@@ -71,9 +92,15 @@ void panel_notification_render(Gui *g, App *app) {
                       : n->lifetime / NOTIF_FADE_TIME;
         if (alpha < 0.0f) alpha = 0.0f;
 
+        float max_w = (float)w * 0.46f;
+        if (max_w < 280.0f) max_w = (float)w - 24.0f;
+        if (max_w > 560.0f) max_w = 560.0f;
         float tw = font_text_width(&g->font, n->message);
         float nw = tw + pad * 2 + 6.0f;  /* 6 for left accent */
+        if (nw > max_w) nw = max_w;
+        if (nw < 220.0f && (float)w > 260.0f) nw = 220.0f;
         float nx = (float)w - nw - 12.0f;
+        if (nx < 12.0f) nx = 12.0f;
         float ny = start_y + i * (notif_h + gap);
 
         /* Background */
@@ -93,7 +120,7 @@ void panel_notification_render(Gui *g, App *app) {
                            border_c[0], border_c[1], border_c[2], alpha);
 
         /* Text */
-        font_draw(&g->font, r, n->message, nx + pad + 3, ny + 4,
-                  t->fg[0], t->fg[1], t->fg[2], alpha);
+        notification_draw_fit(g, r, n->message, nx + pad + 3, nx + nw - pad, ny + 4,
+                              t->fg[0], t->fg[1], t->fg[2], alpha);
     }
 }

@@ -107,6 +107,24 @@ void panel_jumplist_picker_key(App *app, int key) {
     }
 }
 
+static void jumplist_draw_fit(Gui *g, Renderer *r, const char *text,
+                              float x, float right, float y,
+                              float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[160];
+    snprintf(clipped, sizeof(clipped), "%s", text);
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 void panel_jumplist_picker_render(Gui *g, App *app) {
     if (!jp_open) return;
     
@@ -115,8 +133,13 @@ void panel_jumplist_picker_render(Gui *g, App *app) {
     int w = app_get_width(app);
     int h = app_get_height(app);
     
-    float pw = 600.0f;
-    float ph = 400.0f;
+    float pw = (float)w * 0.54f;
+    if (pw < 520.0f) pw = 520.0f;
+    if (pw > 760.0f) pw = 760.0f;
+    if (pw > (float)w - 48.0f) pw = (float)w - 48.0f;
+    float ph = (float)h * 0.58f;
+    if (ph < 320.0f) ph = 320.0f;
+    if (ph > (float)h - 80.0f) ph = (float)h - 80.0f;
     float px = (float)w / 2 - pw / 2;
     float py = (float)h / 2 - ph / 2;
     
@@ -128,20 +151,19 @@ void panel_jumplist_picker_render(Gui *g, App *app) {
     renderer_draw_rect(r, px, py, pw, ph,
                        t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], t->menu_bg[3]);
     
-    /* Border */
-    renderer_draw_rect(r, px, py, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py+ph-1, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px+pw-1, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1.0f);
+    renderer_draw_rect(r, px, py, pw, 2, t->accent[0], t->accent[1], t->accent[2], 1.0f);
+    renderer_draw_rect(r, px, py + 36.0f, pw, 1,
+                       t->accent[0], t->accent[1], t->accent[2], 0.24f);
     
     /* Title */
     font_draw(&g->font, r, "Jumplist", px + 14, py + 10,
               t->accent[0], t->accent[1], t->accent[2], 1.0f);
     
     /* Results list */
-    float result_y = py + 40;
+    float result_y = py + 48;
     float line_h = g->font.glyph_h + 6;
-    int max_visible = (int)((ph - 60) / line_h);
+    int max_visible = (int)((ph - 86) / line_h);
+    if (max_visible < 1) max_visible = 1;
     int start = 0;
     if (jp_selected >= max_visible)
         start = jp_selected - max_visible + 1;
@@ -170,14 +192,16 @@ void panel_jumplist_picker_render(Gui *g, App *app) {
             
             /* Preview text */
             if (jp_jumps[i].preview[0]) {
-                font_draw(&g->font, r, jp_jumps[i].preview, px + 100, ry,
-                          t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+                jumplist_draw_fit(g, r, jp_jumps[i].preview, px + 100, px + pw - 16, ry,
+                                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
             }
         }
     }
     
     /* Help text at bottom */
     float help_y = py + ph - 24;
-    font_draw(&g->font, r, "Enter: Jump  Esc: Cancel", px + 14, help_y,
+    renderer_draw_rect(r, px, help_y - 5.0f, pw, 1,
+                       t->accent[0], t->accent[1], t->accent[2], 0.20f);
+    font_draw(&g->font, r, "Enter jump  Esc close  Up/Down move  PageUp/PageDown jump", px + 14, help_y,
               t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 }

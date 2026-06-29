@@ -7,6 +7,7 @@
 
 #include <GLFW/glfw3.h>
 #include <stdio.h>
+#include <string.h>
 
 static bool plugins_open = false;
 static int plugins_selected = 0;
@@ -26,6 +27,27 @@ void panel_plugins_close(App *app) {
 
 bool panel_plugins_is_open(void) {
     return plugins_open;
+}
+
+static void plugins_draw_fit(Gui *g, Renderer *r, const char *text,
+                             float x, float right, float y,
+                             float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[512];
+    size_t copy = strlen(text);
+    if (copy >= sizeof(clipped)) copy = sizeof(clipped) - 1;
+    memcpy(clipped, text, copy);
+    clipped[copy] = '\0';
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
 }
 
 void panel_plugins_key(App *app, int key) {
@@ -88,8 +110,10 @@ void panel_plugins_render(Gui *g, App *app) {
     int h = app_get_height(app);
     int count = cfg ? cfg->plugin_count : 0;
 
-    float pw = 700.0f;
-    if (pw > (float)w - 32.0f) pw = (float)w - 32.0f;
+    float pw = (float)w * 0.58f;
+    if (pw < 620.0f) pw = 620.0f;
+    if (pw > 860.0f) pw = 860.0f;
+    if (pw > (float)w - 48.0f) pw = (float)w - 48.0f;
     float ph = (float)h - 120.0f;
     if (ph < 280.0f) ph = 280.0f;
     float px = (float)w * 0.5f - pw * 0.5f;
@@ -112,9 +136,11 @@ void panel_plugins_render(Gui *g, App *app) {
     font_draw(&g->font, r, meta, px + pw - meta_w - 14.0f, py + 12.0f,
               t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 
+    renderer_draw_rect(r, px, py + ph - 29.0f, pw, 1,
+                       t->accent[0], t->accent[1], t->accent[2], 0.25f);
     const char *footer = "j/k move  space toggle+save  r reload config  esc close";
-    font_draw(&g->font, r, footer, px + 14.0f, py + ph - 24.0f,
-              t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+    plugins_draw_fit(g, r, footer, px + 14.0f, px + pw - 14.0f, py + ph - 24.0f,
+                     t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 
     float list_y = py + 50.0f;
     int visible = (int)((ph - 92.0f) / row_h);
@@ -144,10 +170,11 @@ void panel_plugins_render(Gui *g, App *app) {
         float state_g = plugin->loaded ? t->string[1] : (!plugin->enabled ? t->gutter_fg[1] : t->warning[1]);
         float state_b = plugin->loaded ? t->string[2] : (!plugin->enabled ? t->gutter_fg[2] : t->warning[2]);
 
-        font_draw(&g->font, r, plugin->name, px + 18.0f, y,
-                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
-        font_draw(&g->font, r, state, px + pw - 110.0f, y,
-                  state_r, state_g, state_b, 1.0f);
+        float state_x = px + pw - 112.0f;
+        plugins_draw_fit(g, r, plugin->name, px + 18.0f, state_x - 16.0f, y,
+                         t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+        plugins_draw_fit(g, r, state, state_x, px + pw - 18.0f, y,
+                         state_r, state_g, state_b, 1.0f);
 
         char detail[256];
         if (plugin->description[0])
@@ -156,8 +183,9 @@ void panel_plugins_render(Gui *g, App *app) {
             snprintf(detail, sizeof(detail), "%s", plugin->path);
         else
             snprintf(detail, sizeof(detail), "inline config");
-        font_draw(&g->font, r, detail, px + 18.0f, y + g->font.glyph_h + 2.0f,
-                  t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+        float detail_right = plugin->language_count > 0 ? px + pw - 210.0f : state_x - 16.0f;
+        plugins_draw_fit(g, r, detail, px + 18.0f, detail_right, y + g->font.glyph_h + 2.0f,
+                         t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 
         if (plugin->language_count > 0) {
             char langs[48];

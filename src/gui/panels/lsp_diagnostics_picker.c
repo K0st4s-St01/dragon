@@ -117,8 +117,25 @@ void panel_lsp_diagnostics_key(App *app, int key) {
     }
 }
 
+static void diagnostics_draw_fit(Gui *g, Renderer *r, const char *text,
+                                 float x, float right, float y,
+                                 float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[256];
+    snprintf(clipped, sizeof(clipped), "%s", text);
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 void panel_lsp_diagnostics_render(Gui *g, App *app) {
-    (void)g;
     if (!lsp_diag_open) return;
     
     Theme *t = theme_get();
@@ -126,8 +143,13 @@ void panel_lsp_diagnostics_render(Gui *g, App *app) {
     int w = app_get_width(app);
     int h = app_get_height(app);
     
-    float pw = 800.0f;
-    float ph = 500.0f;
+    float pw = (float)w * 0.68f;
+    if (pw < 620.0f) pw = 620.0f;
+    if (pw > 920.0f) pw = 920.0f;
+    if (pw > (float)w - 48.0f) pw = (float)w - 48.0f;
+    float ph = (float)h * 0.66f;
+    if (ph < 360.0f) ph = 360.0f;
+    if (ph > (float)h - 80.0f) ph = (float)h - 80.0f;
     float px = (float)w / 2 - pw / 2;
     float py = (float)h / 2 - ph / 2;
     
@@ -139,20 +161,19 @@ void panel_lsp_diagnostics_render(Gui *g, App *app) {
     renderer_draw_rect(r, px, py, pw, ph,
                        t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], t->menu_bg[3]);
     
-    /* Border */
-    renderer_draw_rect(r, px, py, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py+ph-1, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1.0f);
-    renderer_draw_rect(r, px+pw-1, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1.0f);
+    renderer_draw_rect(r, px, py, pw, 2, t->accent[0], t->accent[1], t->accent[2], 1.0f);
+    renderer_draw_rect(r, px, py + 36.0f, pw, 1,
+                       t->accent[0], t->accent[1], t->accent[2], 0.24f);
     
     /* Title */
     font_draw(&g->font, r, "Diagnostics", px + 14, py + 10,
               t->accent[0], t->accent[1], t->accent[2], 1.0f);
     
     /* Diagnostics list */
-    float item_y = py + 40;
+    float item_y = py + 48;
     float line_h = g->font.glyph_h + 6;
-    int max_visible = (int)((ph - 60) / line_h);
+    int max_visible = (int)((ph - 86) / line_h);
+    if (max_visible < 1) max_visible = 1;
     int start = 0;
     if (lsp_diag_selected >= max_visible)
         start = lsp_diag_selected - max_visible + 1;
@@ -191,13 +212,15 @@ void panel_lsp_diagnostics_render(Gui *g, App *app) {
                       t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
             
             /* Message */
-            font_draw(&g->font, r, lsp_diag_entries[i].message, px + 140, ry,
-                      t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+            diagnostics_draw_fit(g, r, lsp_diag_entries[i].message, px + 140, px + pw - 18, ry,
+                                 t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
         }
     }
     
     /* Help text at bottom */
     float help_y = py + ph - 24;
-    font_draw(&g->font, r, "Enter: Go  Esc: Cancel  Up/Down: Navigate", px + 14, help_y,
+    renderer_draw_rect(r, px, help_y - 5.0f, pw, 1,
+                       t->accent[0], t->accent[1], t->accent[2], 0.20f);
+    font_draw(&g->font, r, "Enter go  Esc close  Up/Down move", px + 14, help_y,
               t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 }

@@ -41,6 +41,7 @@ void panel_goto_render(Gui *g, App *app, Document *doc) {
     Renderer *r = app_get_renderer(app);
     Theme *t = theme_get();
     int w = app_get_width(app);
+    int h = app_get_height(app);
 
     double now = glfwGetTime();
     if (now - goto_last_blink > 0.5) {
@@ -48,25 +49,33 @@ void panel_goto_render(Gui *g, App *app, Document *doc) {
         goto_last_blink = now;
     }
 
-    float pw = 300, ph = 70;
+    float pw = (float)w * 0.32f;
+    if (pw < 300.0f) pw = 300.0f;
+    if (pw > 460.0f) pw = 460.0f;
+    if (pw > (float)w - 32.0f) pw = (float)w - 32.0f;
+    float ph = 76.0f;
     float px = (float)w/2 - pw/2;
-    float py = 120;
+    float py = 120.0f;
+    if (py + ph > (float)h - 42.0f) py = (float)h - ph - 42.0f;
+    if (py < 16.0f) py = 16.0f;
 
+    renderer_draw_rect(r, 0, 0, (float)w, (float)h, 0.0f, 0.0f, 0.0f, 0.22f);
     renderer_draw_rect(r, px, py, pw, ph,
                        t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], t->menu_bg[3]);
-    renderer_draw_rect(r, px, py, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1);
-    renderer_draw_rect(r, px, py+ph-1, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1);
-    renderer_draw_rect(r, px, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1);
-    renderer_draw_rect(r, px+pw-1, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1);
+    renderer_draw_rect(r, px, py, pw, 2, t->accent[0], t->accent[1], t->accent[2], 1);
+    renderer_draw_rect(r, px, py + 34.0f, pw, 1,
+                       t->accent[0], t->accent[1], t->accent[2], 0.24f);
 
     font_draw(&g->font, r, "Go to line:", px+14, py+10,
-              t->fg[0], t->fg[1], t->fg[2], t->fg[3]);
+              t->accent[0], t->accent[1], t->accent[2], 1.0f);
 
-    renderer_draw_rect(r, px+100, py+6, pw-114, g->font.glyph_h+8,
+    renderer_draw_rect(r, px+112, py+6, pw-126, g->font.glyph_h+8,
                        t->gutter_bg[0], t->gutter_bg[1], t->gutter_bg[2], t->gutter_bg[3]);
 
     char display[34];
     snprintf(display, sizeof(display), "%s%s", goto_buf, goto_cursor_visible ? "_" : " ");
-    font_draw(&g->font, r, display, px+104, py+10,
+    font_draw(&g->font, r, display, px+116, py+10,
               t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+    font_draw(&g->font, r, "Enter jump  Esc close", px + 14.0f, py + ph - 24.0f,
+              t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 }

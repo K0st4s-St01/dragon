@@ -220,6 +220,27 @@ bool panel_workspace_symbols_is_open(void) {
     return ws_open;
 }
 
+static void ws_draw_fit(Gui *g, Renderer *r, const char *text,
+                        float x, float right, float y,
+                        float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[512];
+    size_t copy = strlen(text);
+    if (copy >= sizeof(clipped)) copy = sizeof(clipped) - 1;
+    memcpy(clipped, text, copy);
+    clipped[copy] = '\0';
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 void panel_workspace_symbols_key(App *app, int key) {
     if (!ws_open) return;
     switch (key) {
@@ -263,44 +284,53 @@ void panel_workspace_symbols_render(Gui *g, App *app) {
     int w = app_get_width(app);
     int h = app_get_height(app);
 
-    float pw = 780.0f, ph = 500.0f;
+    float pw = (float)w * 0.66f;
+    if (pw < 620.0f) pw = 620.0f;
+    if (pw > 940.0f) pw = 940.0f;
+    if (pw > (float)w - 48.0f) pw = (float)w - 48.0f;
+    float ph = (float)h * 0.64f;
+    if (ph < 360.0f) ph = 360.0f;
+    if (ph > (float)h - 80.0f) ph = (float)h - 80.0f;
     float px = (float)w / 2.0f - pw / 2.0f;
     float py = (float)h / 2.0f - ph / 2.0f;
     renderer_draw_rect(r, 0, 0, (float)w, (float)h, 0, 0, 0, 0.5f);
     renderer_draw_rect(r, px, py, pw, ph, t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], t->menu_bg[3]);
-    renderer_draw_rect(r, px, py, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1);
-    renderer_draw_rect(r, px, py + ph - 1, pw, 1, t->accent[0], t->accent[1], t->accent[2], 1);
-    renderer_draw_rect(r, px, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1);
-    renderer_draw_rect(r, px + pw - 1, py, 1, ph, t->accent[0], t->accent[1], t->accent[2], 1);
+    renderer_draw_rect(r, px, py, pw, 2, t->accent[0], t->accent[1], t->accent[2], 1);
+    renderer_draw_rect(r, px, py + 36.0f, pw, 1, t->accent[0], t->accent[1], t->accent[2], 0.28f);
 
     char title[96];
     snprintf(title, sizeof(title), "Workspace Symbols (%d, %d files)", ws_count, ws_files_seen);
     font_draw(&g->font, r, title, px + 14, py + 10, t->accent[0], t->accent[1], t->accent[2], 1);
 
     float row_h = g->font.glyph_h + 7;
-    int visible = (int)((ph - 72) / row_h);
+    int visible = (int)((ph - 86) / row_h);
+    if (visible < 1) visible = 1;
     if (ws_selected < ws_scroll) ws_scroll = ws_selected;
     if (ws_selected >= ws_scroll + visible) ws_scroll = ws_selected - visible + 1;
     if (ws_scroll < 0) ws_scroll = 0;
 
     if (ws_count == 0) {
-        font_draw(&g->font, r, "No tree-sitter symbols found", px + 18, py + 42,
+        font_draw(&g->font, r, "No tree-sitter symbols found", px + 18, py + 48,
                   t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
     }
     for (int i = ws_scroll; i < ws_count && (i - ws_scroll) < visible; i++) {
-        float y = py + 42 + (i - ws_scroll) * row_h;
+        float y = py + 48 + (i - ws_scroll) * row_h;
         if (i == ws_selected)
             renderer_draw_rect(r, px + 5, y - 2, pw - 10, row_h,
                                t->menu_selected[0], t->menu_selected[1], t->menu_selected[2], t->menu_selected[3]);
         char left[220];
         snprintf(left, sizeof(left), "[%s] %s", ws_symbols[i].kind, ws_symbols[i].name);
-        font_draw(&g->font, r, left, px + 18, y, t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], 1);
+        float loc_x = px + pw * 0.46f;
+        ws_draw_fit(g, r, left, px + 18, loc_x - 16.0f, y,
+                    t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], 1);
         char loc[WS_PATH_MAX + 32];
         snprintf(loc, sizeof(loc), "%s:%d", ws_symbols[i].path, ws_symbols[i].line + 1);
-        font_draw(&g->font, r, loc, px + 300, y,
-                  t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+        ws_draw_fit(g, r, loc, loc_x, px + pw - 18, y,
+                    t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
     }
 
+    renderer_draw_rect(r, px, py + ph - 29, pw, 1,
+                       t->accent[0], t->accent[1], t->accent[2], 0.25f);
     font_draw(&g->font, r, "Enter go  j/k move  Esc close", px + 14, py + ph - 24,
               t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
 }

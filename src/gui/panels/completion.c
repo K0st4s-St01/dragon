@@ -215,6 +215,24 @@ bool panel_completion_handle_lsp_response(LSPClient *client, int response_id, co
     return true;
 }
 
+static void completion_draw_fit(Gui *g, Renderer *r, const char *text,
+                                float x, float right, float y,
+                                float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[256];
+    snprintf(clipped, sizeof(clipped), "%s", text);
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 void panel_completion_render(Gui *g, App *app) {
     if (!completion_open) return;
     Document *doc = (Document *)app_get_doc(app);
@@ -227,12 +245,16 @@ void panel_completion_render(Gui *g, App *app) {
     float row_h = g->font.glyph_h + 7;
     int visible = completion_count < 8 ? completion_count : 8;
     if (visible < 1) visible = 1;
-    float pw = 360;
+    float pw = 420.0f;
+    if (pw > (float)w - 24.0f) pw = (float)w - 24.0f;
+    if (pw < 260.0f) pw = 260.0f;
     float ph = visible * row_h + 56;
     float px = 80 + cur->col * g->font.glyph_w;
     float py = 48 + cur->row * row_h;
     if (px + pw > w - 12) px = (float)w - pw - 12;
     if (py + ph > h - 34) py = (float)h - ph - 34;
+    if (px < 12.0f) px = 12.0f;
+    if (py < 12.0f) py = 12.0f;
 
     renderer_draw_rect(r, px, py, pw, ph,
                        t->menu_bg[0], t->menu_bg[1], t->menu_bg[2], 0.98f);
@@ -258,16 +280,19 @@ void panel_completion_render(Gui *g, App *app) {
         if (i == completion_selected)
             renderer_draw_rect(r, px + 4, y - 2, pw - 8, row_h,
                                t->menu_selected[0], t->menu_selected[1], t->menu_selected[2], t->menu_selected[3]);
-        font_draw(&g->font, r, completion_entries[i].label, px + 12, y,
-                  t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], 1);
-        font_draw(&g->font, r, completion_entries[i].detail, px + 180, y,
-                  t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+        float detail_x = px + pw * 0.54f;
+        completion_draw_fit(g, r, completion_entries[i].label, px + 12, detail_x - 12, y,
+                            t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], 1);
+        completion_draw_fit(g, r, completion_entries[i].detail, detail_x, px + pw - 12, y,
+                            t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
     }
 
     if (completion_selected >= 0 && completion_selected < completion_count &&
         completion_entries[completion_selected].detail[0]) {
-        font_draw(&g->font, r, completion_entries[completion_selected].detail,
-                  px + 12, py + ph - 24,
-                  t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
+        renderer_draw_rect(r, px, py + ph - 30, pw, 1,
+                           t->accent[0], t->accent[1], t->accent[2], 0.20f);
+        completion_draw_fit(g, r, completion_entries[completion_selected].detail,
+                            px + 12, px + pw - 12, py + ph - 24,
+                            t->gutter_fg[0], t->gutter_fg[1], t->gutter_fg[2], t->gutter_fg[3]);
     }
 }

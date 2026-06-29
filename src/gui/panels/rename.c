@@ -60,6 +60,27 @@ bool panel_rename_is_open(void) {
     return rename_open;
 }
 
+static void rename_draw_fit(Gui *g, Renderer *r, const char *text,
+                            float x, float right, float y,
+                            float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[256];
+    size_t copy = strlen(text);
+    if (copy >= sizeof(clipped)) copy = sizeof(clipped) - 1;
+    memcpy(clipped, text, copy);
+    clipped[copy] = '\0';
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 void panel_rename_key(App *app, int key) {
     if (!rename_open) return;
     
@@ -155,8 +176,11 @@ void panel_rename_render(Gui *g, App *app) {
     int w = app_get_width(app);
     int h = app_get_height(app);
     
-    float pw = 400.0f;
-    float ph = (rename_pending_client || rename_status[0]) ? 130.0f : 100.0f;
+    float pw = (float)w * 0.36f;
+    if (pw < 360.0f) pw = 360.0f;
+    if (pw > 520.0f) pw = 520.0f;
+    if (pw > (float)w - 32.0f) pw = (float)w - 32.0f;
+    float ph = (rename_pending_client || rename_status[0]) ? 136.0f : 108.0f;
     float px = (float)w / 2 - pw / 2;
     float py = (float)h / 2 - ph / 2;
     
@@ -168,11 +192,9 @@ void panel_rename_render(Gui *g, App *app) {
     renderer_draw_rect(r, px, py, pw, ph,
                        theme->menu_bg[0], theme->menu_bg[1], theme->menu_bg[2], theme->menu_bg[3]);
     
-    /* Border */
     renderer_draw_rect(r, px, py, pw, 2, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py+ph-2, pw, 2, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py, 2, ph, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
-    renderer_draw_rect(r, px+pw-2, py, 2, ph, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+    renderer_draw_rect(r, px, py + 34.0f, pw, 1,
+                       theme->accent[0], theme->accent[1], theme->accent[2], 0.28f);
     
     /* Title */
     if (rename_pending_client) {
@@ -189,18 +211,22 @@ void panel_rename_render(Gui *g, App *app) {
     
     /* Draw text input and cursor (only if not waiting) */
     if (!rename_pending_client) {
-        font_draw(&g->font, r, rename_buffer, px + 15, py + 40,
-                  theme->menu_fg[0], theme->menu_fg[1], theme->menu_fg[2], 1.0f);
+        rename_draw_fit(g, r, rename_buffer, px + 15, px + pw - 16, py + 40,
+                        theme->menu_fg[0], theme->menu_fg[1], theme->menu_fg[2], 1.0f);
         
         /* Draw cursor */
-        float cursor_x = px + 15 + rename_cursor * 8; /* Estimate character width */
+        float cursor_x = px + 15 + font_text_width(&g->font, rename_buffer);
+        if (cursor_x > px + pw - 18) cursor_x = px + pw - 18;
         renderer_draw_rect(r, cursor_x, py + 40, 2, 15,
                            theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
     }
     
     /* Draw status message if available */
     if (rename_status[0] != '\0') {
-        font_draw(&g->font, r, rename_status, px + 15, py + 70,
-                  theme->menu_fg[0], theme->menu_fg[1], theme->menu_fg[2], 1.0f);
+        rename_draw_fit(g, r, rename_status, px + 15, px + pw - 15, py + 70,
+                        theme->menu_fg[0], theme->menu_fg[1], theme->menu_fg[2], 1.0f);
     }
+
+    font_draw(&g->font, r, "Enter rename  Esc close", px + 14, py + ph - 24,
+              theme->gutter_fg[0], theme->gutter_fg[1], theme->gutter_fg[2], theme->gutter_fg[3]);
 }

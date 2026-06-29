@@ -25,6 +25,27 @@ static const char *mode_name(Mode m) {
     }
 }
 
+static void statusbar_draw_fit(Gui *g, Renderer *r, const char *text,
+                               float x, float right, float y,
+                               float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[256];
+    size_t copy = strlen(text);
+    if (copy >= sizeof(clipped)) copy = sizeof(clipped) - 1;
+    memcpy(clipped, text, copy);
+    clipped[copy] = '\0';
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 static void draw_command_completions(Gui *g, Renderer *r, Theme *t,
                                      int win_w, float bar_y) {
     int count = input_cmd_completion_count();
@@ -33,10 +54,16 @@ static void draw_command_completions(Gui *g, Renderer *r, Theme *t,
 
     int selected = input_cmd_completion_selected();
     float row_h = g->font.glyph_h + 6.0f;
-    float panel_w = 560.0f;
+    int visible = count < 8 ? count : 8;
+    int start = 0;
+    if (selected >= visible)
+        start = selected - visible + 1;
+    float panel_w = (float)win_w * 0.44f;
+    if (panel_w < 360.0f) panel_w = 360.0f;
+    if (panel_w > 620.0f) panel_w = 620.0f;
     if (panel_w > (float)win_w - 24.0f)
         panel_w = (float)win_w - 24.0f;
-    float panel_h = row_h * (float)count + 10.0f;
+    float panel_h = row_h * (float)visible + 10.0f;
     float x = 12.0f;
     float y = bar_y - panel_h - 4.0f;
     if (y < 4.0f)
@@ -49,8 +76,8 @@ static void draw_command_completions(Gui *g, Renderer *r, Theme *t,
     renderer_draw_rect(r, x, y + panel_h - 1.0f, panel_w, 1.0f,
                        t->accent[0], t->accent[1], t->accent[2], 1.0f);
 
-    for (int i = 0; i < count; i++) {
-        float row_y = y + 5.0f + (float)i * row_h;
+    for (int i = start; i < count && (i - start) < visible; i++) {
+        float row_y = y + 5.0f + (float)(i - start) * row_h;
         if (i == selected) {
             renderer_draw_rect(r, x + 4.0f, row_y - 2.0f, panel_w - 8.0f, row_h,
                                t->menu_selected[0], t->menu_selected[1],
@@ -59,34 +86,16 @@ static void draw_command_completions(Gui *g, Renderer *r, Theme *t,
 
         const char *name = input_cmd_completion_name(i);
         const char *detail = input_cmd_completion_detail(i);
+        float detail_left = x + panel_w * 0.58f;
         if (detail && detail[0]) {
-            float detail_w = font_text_width(&g->font, detail);
-            float detail_x = x + panel_w - detail_w - 12.0f;
-            if (detail_x > x + 180.0f) {
-                font_draw(&g->font, r, detail, detail_x, row_y,
-                          t->gutter_fg[0], t->gutter_fg[1],
-                          t->gutter_fg[2], t->gutter_fg[3]);
-            }
+            statusbar_draw_fit(g, r, detail, detail_left, x + panel_w - 12.0f, row_y,
+                               t->gutter_fg[0], t->gutter_fg[1],
+                               t->gutter_fg[2], t->gutter_fg[3]);
         }
         if (name) {
-            char display[192];
-            snprintf(display, sizeof(display), "%s", name);
-            float name_right = x + panel_w - 120.0f;
-            if (detail && detail[0]) {
-                float detail_w = font_text_width(&g->font, detail);
-                name_right = x + panel_w - detail_w - 24.0f;
-            }
-            size_t len = strlen(display);
-            while (len > 4 && x + 12.0f + font_text_width(&g->font, display) > name_right) {
-                display[--len] = '\0';
-                if (len > 3) {
-                    display[len - 3] = '.';
-                    display[len - 2] = '.';
-                    display[len - 1] = '.';
-                }
-            }
-            font_draw(&g->font, r, display, x + 12.0f, row_y,
-                      t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
+            float name_right = detail && detail[0] ? detail_left - 14.0f : x + panel_w - 12.0f;
+            statusbar_draw_fit(g, r, name, x + 12.0f, name_right, row_y,
+                               t->menu_fg[0], t->menu_fg[1], t->menu_fg[2], t->menu_fg[3]);
         }
     }
 }

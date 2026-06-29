@@ -92,6 +92,27 @@ bool panel_code_actions_is_open(void) {
     return code_actions_open;
 }
 
+static void code_actions_draw_fit(Gui *g, Renderer *r, const char *text,
+                                  float x, float right, float y,
+                                  float cr, float cg, float cb, float ca) {
+    if (!text || !*text || right <= x) return;
+    char clipped[256];
+    size_t copy = strlen(text);
+    if (copy >= sizeof(clipped)) copy = sizeof(clipped) - 1;
+    memcpy(clipped, text, copy);
+    clipped[copy] = '\0';
+    size_t len = strlen(clipped);
+    while (len > 4 && x + font_text_width(&g->font, clipped) > right) {
+        clipped[--len] = '\0';
+        if (len > 3) {
+            clipped[len - 3] = '.';
+            clipped[len - 2] = '.';
+            clipped[len - 1] = '.';
+        }
+    }
+    font_draw(&g->font, r, clipped, x, y, cr, cg, cb, ca);
+}
+
 void panel_code_actions_key(App *app, int key) {
     if (!code_actions_open) return;
     
@@ -170,15 +191,20 @@ bool panel_code_actions_handle_lsp_response(LSPClient *client, int response_id, 
 
 void panel_code_actions_render(Gui *g, App *app) {
     if (!code_actions_open || !g) return;
+
+    Theme *theme = theme_get();
+    Renderer *r = app_get_renderer(app);
+    int w = app_get_width(app);
+    int h = app_get_height(app);
+
+    float available_w = (float)w - 48.0f;
+    if (available_w < 260.0f) available_w = (float)w - 16.0f;
+    if (available_w < 120.0f) available_w = 120.0f;
     
     /* Show loading state while waiting */
     if (code_actions_count == 0) {
-        Theme *theme = theme_get();
-        Renderer *r = app_get_renderer(app);
-        int w = app_get_width(app);
-        int h = app_get_height(app);
-        
-        float pw = 400.0f;
+        float pw = 420.0f;
+        if (pw > available_w) pw = available_w;
         float ph = 80.0f;
         float px = (float)w / 2 - pw / 2;
         float py = (float)h / 2 - ph / 2;
@@ -187,23 +213,23 @@ void panel_code_actions_render(Gui *g, App *app) {
         renderer_draw_rect(r, px, py, pw, ph,
                            theme->menu_bg[0], theme->menu_bg[1], theme->menu_bg[2], theme->menu_bg[3]);
         renderer_draw_rect(r, px, py, pw, 2, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
-        renderer_draw_rect(r, px, py+ph-2, pw, 2, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
-        renderer_draw_rect(r, px, py, 2, ph, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
-        renderer_draw_rect(r, px+pw-2, py, 2, ph, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+        renderer_draw_rect(r, px, py + 34.0f, pw, 1.0f,
+                           theme->accent[0], theme->accent[1], theme->accent[2], 0.28f);
         
         const char *status = code_actions_pending_client ? "Loading code actions..." : "No code actions available";
-        font_draw(&g->font, r, status, px + 14, py + 25,
-                  theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+        code_actions_draw_fit(g, r, status, px + 14, px + pw - 14, py + 25,
+                              theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
         return;
     }
-    
-    Theme *theme = theme_get();
-    Renderer *r = app_get_renderer(app);
-    int w = app_get_width(app);
-    int h = app_get_height(app);
-    
-    float pw = 600.0f;
-    float ph = 400.0f;
+
+    float pw = (float)w * 0.52f;
+    if (pw < 460.0f) pw = 460.0f;
+    if (pw > 700.0f) pw = 700.0f;
+    if (pw > available_w) pw = available_w;
+    float ph = (float)h * 0.54f;
+    if (ph < 260.0f) ph = 260.0f;
+    if (ph > (float)h - 80.0f) ph = (float)h - 80.0f;
+    if (ph < 140.0f) ph = (float)h - 24.0f;
     float px = (float)w / 2 - pw / 2;
     float py = (float)h / 2 - ph / 2;
     
@@ -215,25 +241,24 @@ void panel_code_actions_render(Gui *g, App *app) {
     renderer_draw_rect(r, px, py, pw, ph,
                        theme->menu_bg[0], theme->menu_bg[1], theme->menu_bg[2], theme->menu_bg[3]);
     
-    /* Border */
     renderer_draw_rect(r, px, py, pw, 2, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py+ph-2, pw, 2, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
-    renderer_draw_rect(r, px, py, 2, ph, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
-    renderer_draw_rect(r, px+pw-2, py, 2, ph, theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
+    renderer_draw_rect(r, px, py + 36.0f, pw, 1,
+                       theme->accent[0], theme->accent[1], theme->accent[2], 0.28f);
     
     /* Title */
     font_draw(&g->font, r, "Code Actions", px + 14, py + 10,
               theme->accent[0], theme->accent[1], theme->accent[2], 1.0f);
     
     /* Items */
-    int max_items = 15;
-    float item_y = py + 35;
+    float item_y = py + 48;
     float item_height = 20;
+    int max_items = (int)((ph - 86.0f) / item_height);
+    if (max_items < 1) max_items = 1;
     
     for (int i = code_actions_scroll; i < code_actions_count && i < code_actions_scroll + max_items; i++) {
         float y = item_y + (i - code_actions_scroll) * item_height;
         
-        if (y + item_height > py + ph - 10) break;
+        if (y + item_height > py + ph - 34) break;
         
         /* Highlight selected item */
         if (i == code_actions_selected) {
@@ -243,7 +268,13 @@ void panel_code_actions_render(Gui *g, App *app) {
         }
         
         /* Draw action title */
-        font_draw(&g->font, r, code_actions[i].title, px + 20, y + 3,
-                  theme->menu_fg[0], theme->menu_fg[1], theme->menu_fg[2], 1.0f);
+        code_actions_draw_fit(g, r, code_actions[i].title, px + 20, px + pw - 20, y + 3,
+                              theme->menu_fg[0], theme->menu_fg[1], theme->menu_fg[2], 1.0f);
     }
+
+    float help_y = py + ph - 24.0f;
+    renderer_draw_rect(r, px, help_y - 5.0f, pw, 1,
+                       theme->accent[0], theme->accent[1], theme->accent[2], 0.25f);
+    font_draw(&g->font, r, "Enter apply  Esc close  Up/Down move", px + 14, help_y,
+              theme->gutter_fg[0], theme->gutter_fg[1], theme->gutter_fg[2], theme->gutter_fg[3]);
 }
