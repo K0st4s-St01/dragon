@@ -2186,6 +2186,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o: /home/xator/dragon/src/
   /usr/include/bits/waitstatus.h \
   /usr/include/bits/wchar.h \
   /usr/include/bits/wordsize.h \
+  /usr/include/ctype.h \
   /usr/include/endian.h \
   /usr/include/features-time64.h \
   /usr/include/features.h \
