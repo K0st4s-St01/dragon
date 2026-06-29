@@ -42,7 +42,17 @@ static char csi_buf[CSI_BUF_MAX];
 static int csi_len = 0;
 static int term_cols = 80;
 static int term_rows = 12;
+static int term_margin_top = 0;
+static int term_margin_bottom = -1;
+static bool term_alt_screen = false;
+static bool term_cursor_visible = true;
+static bool term_bracketed_paste = false;
 static char term_shell_name[64] = "shell";
+
+static void terminal_reset_margins(void) {
+    term_margin_top = 0;
+    term_margin_bottom = -1;
+}
 
 static void terminal_reset_buffer(void) {
     memset(term_lines, 0, sizeof(term_lines));
@@ -54,6 +64,10 @@ static void terminal_reset_buffer(void) {
     term_saved_cursor_line = 0;
     esc_state = 0;
     csi_len = 0;
+    terminal_reset_margins();
+    term_alt_screen = false;
+    term_cursor_visible = true;
+    term_bracketed_paste = false;
 }
 
 static bool terminal_running(void) {
@@ -100,6 +114,7 @@ static void terminal_clear_screen(void) {
     term_cursor_line = 0;
     term_saved_col = 0;
     term_saved_cursor_line = 0;
+    terminal_reset_margins();
 }
 
 static void terminal_clamp_cursor(void) {
@@ -129,6 +144,31 @@ static int terminal_screen_bottom(void) {
     return bottom;
 }
 
+static int terminal_margin_bottom_row(void) {
+    int bottom = term_margin_bottom >= 0 ? term_margin_bottom : term_rows - 1;
+    if (bottom < 0) bottom = 0;
+    if (bottom >= term_rows) bottom = term_rows - 1;
+    return bottom;
+}
+
+static void terminal_region_bounds(int *start_out, int *end_out) {
+    int origin = terminal_screen_origin();
+    int top = term_margin_top;
+    int bottom = terminal_margin_bottom_row();
+    if (top < 0) top = 0;
+    if (top >= term_rows) top = term_rows - 1;
+    if (bottom < top) bottom = top;
+
+    int start = origin + top;
+    int end = origin + bottom + 1;
+    int screen_end = terminal_screen_bottom();
+    if (end > screen_end) end = screen_end;
+    if (start >= end) start = end > 0 ? end - 1 : 0;
+
+    if (start_out) *start_out = start;
+    if (end_out) *end_out = end;
+}
+
 static void terminal_trim_blank_tail_after_cursor(void) {
     int keep = term_cursor_line + 1;
     if (keep < 1) keep = 1;
@@ -153,6 +193,18 @@ static void terminal_set_cursor_position(int row, int col) {
     term_cursor_line = target;
     term_col = col - 1;
     terminal_clamp_cursor();
+}
+
+static void terminal_set_margins(int top, int bottom) {
+    if (top < 1) top = 1;
+    if (bottom < 1 || bottom > term_rows) bottom = term_rows;
+    if (top >= bottom) {
+        terminal_reset_margins();
+    } else {
+        term_margin_top = top - 1;
+        term_margin_bottom = bottom - 1;
+    }
+    terminal_set_cursor_position(1, 1);
 }
 
 static void terminal_save_cursor(void) {
@@ -221,8 +273,8 @@ static void terminal_clear_screen_to_cursor(void) {
 static void terminal_delete_lines(int n) {
     terminal_clamp_cursor();
     if (n < 1) n = 1;
-    int origin = terminal_screen_origin();
-    int bottom = terminal_screen_bottom();
+    int origin, bottom;
+    terminal_region_bounds(&origin, &bottom);
     if (term_cursor_line < origin || term_cursor_line >= bottom) return;
     if (n > bottom - term_cursor_line)
         n = bottom - term_cursor_line;
@@ -236,8 +288,8 @@ static void terminal_delete_lines(int n) {
 static void terminal_insert_lines(int n) {
     terminal_clamp_cursor();
     if (n < 1) n = 1;
-    int origin = terminal_screen_origin();
-    int bottom = terminal_screen_bottom();
+    int origin, bottom;
+    terminal_region_bounds(&origin, &bottom);
     if (term_cursor_line < origin || term_cursor_line >= bottom) return;
     if (n > bottom - term_cursor_line)
         n = bottom - term_cursor_line;
@@ -249,8 +301,8 @@ static void terminal_insert_lines(int n) {
 
 static void terminal_scroll_up(int n) {
     if (n < 1) n = 1;
-    int origin = terminal_screen_origin();
-    int bottom = terminal_screen_bottom();
+    int origin, bottom;
+    terminal_region_bounds(&origin, &bottom);
     if (bottom <= origin) return;
     if (n > bottom - origin) n = bottom - origin;
     for (int i = origin; i + n < bottom; i++)
@@ -262,8 +314,8 @@ static void terminal_scroll_up(int n) {
 
 static void terminal_scroll_down(int n) {
     if (n < 1) n = 1;
-    int origin = terminal_screen_origin();
-    int bottom = terminal_screen_bottom();
+    int origin, bottom;
+    terminal_region_bounds(&origin, &bottom);
     if (bottom <= origin) return;
     if (n > bottom - origin) n = bottom - origin;
     for (int i = bottom - 1; i - n >= origin; i--)
@@ -344,6 +396,55 @@ static int csi_param(int fallback) {
     return csi_param_at(0, fallback);
 }
 
+static bool csi_private_mode(void) {
+    return csi_len > 0 && csi_buf[0] == '?';
+}
+
+static void terminal_enter_alt_screen(void) {
+    if (term_alt_screen) return;
+    terminal_save_cursor();
+    int saved_line = term_saved_cursor_line;
+    int saved_col = term_saved_col;
+    term_alt_screen = true;
+    terminal_clear_screen();
+    term_alt_screen = true;
+    term_saved_cursor_line = saved_line;
+    term_saved_col = saved_col;
+}
+
+static void terminal_leave_alt_screen(void) {
+    if (!term_alt_screen) return;
+    int saved_line = term_saved_cursor_line;
+    int saved_col = term_saved_col;
+    terminal_clear_screen();
+    term_alt_screen = false;
+    term_cursor_line = saved_line;
+    term_col = saved_col;
+    terminal_clamp_cursor();
+}
+
+static void terminal_handle_private_mode(bool enabled) {
+    int mode = csi_param(0);
+    switch (mode) {
+    case 25:
+        term_cursor_visible = enabled;
+        break;
+    case 47:
+    case 1047:
+    case 1049:
+        if (enabled)
+            terminal_enter_alt_screen();
+        else
+            terminal_leave_alt_screen();
+        break;
+    case 2004:
+        term_bracketed_paste = enabled;
+        break;
+    default:
+        break;
+    }
+}
+
 static void terminal_delete_chars(int n) {
     terminal_clamp_cursor();
     if (n < 1) n = 1;
@@ -417,7 +518,8 @@ static void terminal_move_cursor_line(int delta) {
 }
 
 static void terminal_index(void) {
-    int bottom = terminal_screen_bottom();
+    int top, bottom;
+    terminal_region_bounds(&top, &bottom);
     if (term_cursor_line >= bottom - 1) {
         terminal_scroll_up(1);
     } else {
@@ -426,8 +528,10 @@ static void terminal_index(void) {
 }
 
 static void terminal_reverse_index(void) {
-    int origin = terminal_screen_origin();
-    if (term_cursor_line <= origin) {
+    int top, bottom;
+    terminal_region_bounds(&top, &bottom);
+    (void)bottom;
+    if (term_cursor_line <= top) {
         terminal_scroll_down(1);
     } else {
         terminal_move_cursor_line(-1);
@@ -475,8 +579,19 @@ static void terminal_handle_csi(char final) {
     case 'f':
         terminal_set_cursor_position(csi_param_at(0, 1), csi_param_at(1, 1));
         break;
+    case 'h':
+        if (csi_private_mode())
+            terminal_handle_private_mode(true);
+        break;
+    case 'l':
+        if (csi_private_mode())
+            terminal_handle_private_mode(false);
+        break;
     case 'd':
         terminal_set_cursor_position(csi_param_at(0, 1), term_col + 1);
+        break;
+    case 'r':
+        terminal_set_margins(csi_param_at(0, 1), csi_param_at(1, term_rows));
         break;
     case '@':
         terminal_insert_spaces(n);
@@ -673,6 +788,7 @@ static void terminal_resize(int cols, int rows) {
     if (cols == term_cols && rows == term_rows) return;
     term_cols = cols;
     term_rows = rows;
+    terminal_reset_margins();
     struct winsize ws;
     memset(&ws, 0, sizeof(ws));
     ws.ws_col = (unsigned short)term_cols;
@@ -950,8 +1066,11 @@ void panel_terminal_render(Gui *g, App *app) {
               t->accent[0], t->accent[1], t->accent[2], 1.0f);
 
     char meta[128];
-    snprintf(meta, sizeof(meta), "%s  %dx%d  %d lines",
-             running ? "running" : "stopped", term_cols, term_rows, term_line_count);
+    snprintf(meta, sizeof(meta), "%s%s%s  %dx%d  %d lines",
+             running ? "running" : "stopped",
+             term_alt_screen ? "  alt" : "",
+             term_bracketed_paste ? "  paste" : "",
+             term_cols, term_rows, term_line_count);
     float meta_x = px + pw - font_text_width(&g->font, meta) - 14.0f;
     if (meta_x < px + 120.0f) meta_x = px + 120.0f;
     font_draw(&g->font, r, meta, meta_x, py + 8.0f,
@@ -982,7 +1101,7 @@ void panel_terminal_render(Gui *g, App *app) {
     }
     glDisable(GL_SCISSOR_TEST);
 
-    if (term_scroll == 0 && term_line_count > 0) {
+    if (term_cursor_visible && term_scroll == 0 && term_line_count > 0) {
         int cursor_line = term_cursor_line - start;
         if (cursor_line >= 0 && cursor_line < visible) {
             float cx = body_x + (float)term_col * g->font.glyph_w;
