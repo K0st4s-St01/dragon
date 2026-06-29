@@ -4257,6 +4257,57 @@ static void test_config_plugin_manifest(void) {
     PASS();
 }
 
+static void test_config_load_from_dir_uses_workspace_paths(void) {
+    TEST(config_load_from_dir_uses_workspace_paths);
+    char oldcwd[1024];
+    ASSERT(getcwd(oldcwd, sizeof(oldcwd)) != NULL);
+    char dir[] = "/tmp/dragon-config-root-XXXXXX";
+    ASSERT(mkdtemp(dir) != NULL);
+    char plugins_dir[1024];
+    char plugin_dir[1024];
+    snprintf(plugins_dir, sizeof(plugins_dir), "%s/plugins", dir);
+    snprintf(plugin_dir, sizeof(plugin_dir), "%s/plugins/toy", dir);
+    ASSERT(mkdir(plugins_dir, 0777) == 0);
+    ASSERT(mkdir(plugin_dir, 0777) == 0);
+
+    char config_path[1024];
+    snprintf(config_path, sizeof(config_path), "%s/dragon.toml", dir);
+    FILE *f = fopen(config_path, "w");
+    ASSERT(f != NULL);
+    fputs("[[plugin]]\n"
+          "path = \"plugins/toy\"\n"
+          "enabled = true\n", f);
+    fclose(f);
+
+    char manifest_path[1024];
+    snprintf(manifest_path, sizeof(manifest_path), "%s/dragon-plugin.toml", plugin_dir);
+    f = fopen(manifest_path, "w");
+    ASSERT(f != NULL);
+    fputs("[plugin]\n"
+          "name = \"toy-tools\"\n"
+          "\n"
+          "[[language]]\n"
+          "id = \"toy\"\n"
+          "extensions = [\"toy\"]\n"
+          "tree_sitter = \"toy\"\n", f);
+    fclose(f);
+
+    Config *cfg = config_load_from_dir(dir);
+    char after[1024];
+    ASSERT(getcwd(after, sizeof(after)) != NULL);
+    char expected_parser[1024];
+    snprintf(expected_parser, sizeof(expected_parser), "%s/plugins/toy/libtree-sitter-toy.so", dir);
+    int ok = cfg && strcmp(after, oldcwd) == 0 &&
+             cfg->plugin_count == 1 && cfg->plugins[0].loaded == 1 &&
+             strcmp(cfg->plugins[0].name, "toy-tools") == 0 &&
+             cfg->language_count == 1 &&
+             strcmp(cfg->languages[0].id, "toy") == 0 &&
+             strcmp(cfg->languages[0].tree_sitter_path, expected_parser) == 0;
+    config_free(cfg);
+    ASSERT_TRUE(ok);
+    PASS();
+}
+
 static void test_config_plugin_state_persists(void) {
     TEST(config_plugin_state_persists);
     char oldcwd[1024];
@@ -4696,6 +4747,7 @@ int main(void) {
     test_document_format_command_filter();
     test_document_format_command_file_placeholder();
     test_config_plugin_manifest();
+    test_config_load_from_dir_uses_workspace_paths();
     test_config_plugin_state_persists();
 
     printf("\n=== Results: %d/%d passed, %d failed ===\n",

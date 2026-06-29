@@ -126,6 +126,35 @@ static void trim_line_end(char *s) {
     }
 }
 
+static bool config_path_is_absolute(const char *path) {
+    return path && path[0] == '/';
+}
+
+static void config_make_abs_path(const char *base, const char *path,
+                                 char *out, size_t out_size) {
+    if (!out || out_size == 0) return;
+    out[0] = '\0';
+    if (!path || !*path) return;
+    if (config_path_is_absolute(path) || !base || !*base) {
+        snprintf(out, out_size, "%s", path);
+        return;
+    }
+    snprintf(out, out_size, "%s/%s", base, path);
+}
+
+static void config_resolve_workspace_paths(Config *cfg, const char *workspace_root) {
+    if (!cfg || !workspace_root || !*workspace_root) return;
+    for (int i = 0; i < cfg->language_count; i++) {
+        ConfigLanguage *lang = &cfg->languages[i];
+        if (lang->tree_sitter_path[0] && !config_path_is_absolute(lang->tree_sitter_path)) {
+            char absolute[sizeof(lang->tree_sitter_path)];
+            config_make_abs_path(workspace_root, lang->tree_sitter_path,
+                                 absolute, sizeof(absolute));
+            snprintf(lang->tree_sitter_path, sizeof(lang->tree_sitter_path), "%s", absolute);
+        }
+    }
+}
+
 
 static void set_color(float color[4], float r, float g, float b, float a) {
     color[0] = r;
@@ -453,6 +482,30 @@ Config *config_load(void) {
     }
     
     toml_free(conf);
+    return cfg;
+}
+
+Config *config_load_from_dir(const char *dir) {
+    if (!dir || !*dir)
+        return config_load();
+
+    char *oldcwd = getcwd(NULL, 0);
+    if (!oldcwd)
+        return config_load();
+
+    bool has_project_config = access("dragon.toml", R_OK) == 0;
+    bool changed = chdir(dir) == 0;
+    char workspace_root[512] = {0};
+    if (changed && !getcwd(workspace_root, sizeof(workspace_root)))
+        workspace_root[0] = '\0';
+    if (changed)
+        has_project_config = access("dragon.toml", R_OK) == 0;
+    Config *cfg = config_load();
+    if (changed && has_project_config)
+        config_resolve_workspace_paths(cfg, workspace_root);
+    if (changed && chdir(oldcwd) != 0)
+        fprintf(stderr, "Config: Failed to restore working directory '%s'\n", oldcwd);
+    free(oldcwd);
     return cfg;
 }
 

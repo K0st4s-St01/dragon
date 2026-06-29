@@ -99,6 +99,9 @@ typedef struct Config {
 /* Load config from ./dragon.toml, then ~/.config/dragon/dragon.toml */
 Config *config_load(void);
 
+/* Load config with relative paths resolved from a workspace directory. */
+Config *config_load_from_dir(const char *dir);
+
 /* Apply and save project-local plugin enable/disable state. */
 void config_apply_plugin_state(Config *cfg, const char *workspace_root);
 bool config_save_plugin_state(const Config *cfg, const char *workspace_root);

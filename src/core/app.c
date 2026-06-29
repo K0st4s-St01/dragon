@@ -590,7 +590,7 @@ static void app_rebuild_config_dependents(App *app) {
 bool app_reload_config(App *app) {
     if (!app) return false;
 
-    Config *cfg = config_load();
+    Config *cfg = config_load_from_dir(app->workspace_root);
     if (!cfg) return false;
     config_apply_plugin_state(cfg, app->workspace_root);
 
@@ -769,7 +769,7 @@ App *app_create(int width, int height, const char *title) {
     app->workspace_root = getcwd(NULL, 0);
     
     /* Load configuration and apply theme */
-    app->config = config_load();
+    app->config = config_load_from_dir(app->workspace_root);
     config_apply_plugin_state(app->config, app->workspace_root);
     theme_apply_config(app->config);
     language_registry_load_config(app->config);
@@ -980,10 +980,19 @@ const char *app_get_workspace_root(App *app) {
 }
 
 void app_set_workspace_root(App *app, const char *path) {
+    if (!app || !path || !*path) return;
+
+    char *absolute = app_absolute_path(path);
+    if (!absolute) return;
+    bool changed = !app->workspace_root || strcmp(app->workspace_root, absolute) != 0;
+
     free(app->workspace_root);
-    app->workspace_root = strdup(path);
+    app->workspace_root = absolute;
     free(app->lsp_manager.workspace_root);
-    app->lsp_manager.workspace_root = strdup(path);
+    app->lsp_manager.workspace_root = app->workspace_root ? strdup(app->workspace_root) : NULL;
+
+    if (changed)
+        app_reload_config(app);
 }
 
 /* Window/split management */
