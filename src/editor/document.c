@@ -4089,15 +4089,6 @@ static int find_matching_bracket_forward(const char *text, size_t len, size_t po
     return -1;
 }
 
-static int find_matching_bracket_backward(const char *text, size_t pos, char open, char close) {
-    int depth = 0;
-    for (int i = (int)pos; i >= 0; i--) {
-        if (text[i] == close) depth++;
-        else if (text[i] == open) { depth--; if (depth == 0) return i; }
-    }
-    return -1;
-}
-
 static bool is_word_char(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
            (c >= '0' && c <= '9') || c == '_';
@@ -4107,25 +4098,12 @@ static bool is_space(char c) {
     return c == ' ' || c == '\t';
 }
 
-static bool is_newline(char c) {
-    return c == '\n' || c == '\r';
-}
-
 static void find_word_bounds(const char *text, size_t len, size_t pos, size_t *start, size_t *end) {
     if (pos >= len) { *start = pos; *end = pos; return; }
     *start = pos;
     *end = pos + 1;
     while (*start > 0 && is_word_char(text[*start - 1])) (*start)--;
     while (*end < len && is_word_char(text[*end])) (*end)++;
-}
-
-static void find_non_space(const char *text, size_t len, size_t *pos, int dir) {
-    while (*pos < len) {
-        if (!is_space(text[*pos]) && !is_newline(text[*pos])) break;
-        *pos += dir > 0 ? 1 : -1;
-        if (dir > 0 && *pos >= len) break;
-        if (dir < 0 && *pos >= len) *pos = 0;
-    }
 }
 
 void document_select_inside_word(Document *doc) {
@@ -4470,7 +4448,6 @@ void document_indent_style_to_tabs(Document *doc, int tab_width) {
     while (i < len) {
         /* Count leading spaces */
         int spaces = 0;
-        size_t line_start = i;
         while (i < len && text[i] == ' ') {
             spaces++;
             i++;

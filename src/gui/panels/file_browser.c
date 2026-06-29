@@ -51,6 +51,26 @@ static int     fb_action_index = -1;
 static char fb_expanded[FB_MAX_EXPANDED][FB_PATH_MAX];
 static int  fb_expanded_count = 0;
 
+static void fb_join_path(char *out, size_t out_size, const char *dir, const char *name) {
+    if (!out || out_size == 0) return;
+    if (!dir) dir = "";
+    if (!name) name = "";
+    size_t dir_len = strlen(dir);
+    size_t name_len = strlen(name);
+    bool need_slash = dir_len > 0 && dir[dir_len - 1] != '/';
+    size_t pos = 0;
+
+    if (dir_len >= out_size) dir_len = out_size - 1;
+    memcpy(out, dir, dir_len);
+    pos = dir_len;
+    if (need_slash && pos + 1 < out_size)
+        out[pos++] = '/';
+    size_t remain = pos < out_size ? out_size - pos - 1 : 0;
+    if (name_len > remain) name_len = remain;
+    memcpy(out + pos, name, name_len);
+    out[pos + name_len] = '\0';
+}
+
 static bool fb_is_expanded(const char *path) {
     for (int i = 0; i < fb_expanded_count; i++)
         if (strcmp(fb_expanded[i], path) == 0) return true;
@@ -92,7 +112,7 @@ static void fb_scan_dir(const char *dir, int depth) {
         if (de->d_name[0] == '.') continue; /* skip hidden, . and .. */
 
         FbEntry e;
-        snprintf(e.path, sizeof(e.path), "%s/%s", dir, de->d_name);
+        fb_join_path(e.path, sizeof(e.path), dir, de->d_name);
         snprintf(e.name, sizeof(e.name), "%s", de->d_name);
         e.depth = depth;
 
@@ -377,7 +397,7 @@ void panel_file_browser_key(App *app, int key) {
                         target = sel->path;
                 }
                 char fullpath[FB_PATH_MAX];
-                snprintf(fullpath, sizeof(fullpath), "%s/%s", target, fb_path_input);
+                fb_join_path(fullpath, sizeof(fullpath), target, fb_path_input);
                 int fd = open(fullpath, O_CREAT | O_EXCL | O_WRONLY, 0644);
                 if (fd >= 0) close(fd);
                 if (fb_count > 0 && fb_entries[fb_selected].is_dir &&
@@ -397,7 +417,7 @@ void panel_file_browser_key(App *app, int key) {
                         target = sel->path;
                 }
                 char fullpath[FB_PATH_MAX];
-                snprintf(fullpath, sizeof(fullpath), "%s/%s", target, fb_path_input);
+                fb_join_path(fullpath, sizeof(fullpath), target, fb_path_input);
                 mkdir(fullpath, 0755);
                 if (fb_count > 0 && fb_entries[fb_selected].is_dir &&
                     strcmp(fb_entries[fb_selected].name, "..") != 0)
@@ -416,9 +436,9 @@ void panel_file_browser_key(App *app, int key) {
                 char *last_slash = strrchr(dir, '/');
                 if (last_slash) {
                     *last_slash = '\0';
-                    snprintf(newpath, sizeof(newpath), "%s/%s", dir, fb_path_input);
+                    fb_join_path(newpath, sizeof(newpath), dir, fb_path_input);
                 } else {
-                    snprintf(newpath, sizeof(newpath), "%s/%s", fb_root, fb_path_input);
+                    fb_join_path(newpath, sizeof(newpath), fb_root, fb_path_input);
                 }
                 rename(e->path, newpath);
             }
