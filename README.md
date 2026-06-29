@@ -3,6 +3,25 @@
 A modal text editor built in C with OpenGL 3.3, GLFW, tree-sitter, LSP support,
 and a custom immediate-mode UI.
 
+## Features
+
+- Modal editing with Normal, Insert, Select, and Command modes.
+- Helix-inspired selections, multiple cursors, text objects, surround commands,
+  macros, jumplist navigation, and split windows.
+- File, buffer, jumplist, changed-file, settings, plugin, symbol, diagnostic,
+  command-palette, and LSP result panels.
+- Embedded terminal opened with `Ctrl+~` or `Space T`.
+- tree-sitter syntax and structural selection support.
+- LSP diagnostics, hover, completion, goto, references, rename, code actions,
+  and formatting.
+- Project and user configuration through `dragon.toml`.
+
+## Documentation
+
+See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for the full command reference,
+panel controls, terminal controls, LSP/tree-sitter workflows, configuration,
+themes, and plugin setup.
+
 ## Dependencies
 
 - CMake >= 3.10
@@ -58,12 +77,12 @@ dragon_editor                  # empty editor
 dragon_editor <file>           # open file
 ```
 
-## Modal Editing
+## Quick Start
 
 | Mode        | Key     | Action                    |
 |-------------|---------|---------------------------|
 | Normal      | `i`     | Enter Insert mode         |
-| Normal      | `v`     | Enter Visual mode         |
+| Normal      | `v`     | Enter Select mode         |
 | Normal      | `:`     | Enter Command mode        |
 | Normal      | `h/j/k/l` | Move cursor            |
 | Insert      | typing  | Insert text               |
@@ -75,11 +94,17 @@ dragon_editor <file>           # open file
 | Command     | `Tab`   | Accept completion         |
 | Any         | `Esc`   | Return to Normal mode     |
 
-## Shortcuts
+Common shortcuts:
 
-- `Ctrl+O` - Open file browser
-- `Ctrl+F` - Find and replace
-- `Ctrl+S` - Save file
+- `:w` - Save file
+- `/` - Find
+- `Space f` - File browser at workspace root
+- `Ctrl+~` - Toggle terminal
+- `Space` - Open the Space menu
+- `Space ?` - Command palette
+- `Space b` - Buffer picker
+- `Space d` / `Space D` - Document/workspace diagnostics
+- `Space s` / `Space S` - Document/workspace symbols
 
 ## Configuration
 
@@ -98,6 +123,9 @@ Command mode completes command names, themes, plugins, workspace-relative file
 paths for file commands, and open buffers for `:b`, `:buffer`, and
 `:buffer-close`.
 
+Built-in themes include `dragon`, `ember`, `glacier`, and `black+`. Use
+`:theme <name>` to apply one.
+
 ## Project Structure
 
 ```
@@ -106,6 +134,8 @@ dragon_editor/
   install.sh
   test.sh
   dragon.toml                Sample project configuration
+  docs/
+    USER_GUIDE.md            User guide and command reference
   src/
     main.c                  Entry point
     core/
