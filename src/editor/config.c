@@ -130,6 +130,26 @@ static bool config_path_is_absolute(const char *path) {
     return path && path[0] == '/';
 }
 
+static void config_join_path(char *out, size_t out_size, const char *dir, const char *name) {
+    if (!out || out_size == 0) return;
+    if (!dir) dir = "";
+    if (!name) name = "";
+    size_t dir_len = strlen(dir);
+    size_t name_len = strlen(name);
+    bool need_slash = dir_len > 0 && dir[dir_len - 1] != '/';
+    size_t pos = 0;
+
+    if (dir_len >= out_size) dir_len = out_size - 1;
+    memcpy(out, dir, dir_len);
+    pos = dir_len;
+    if (need_slash && pos + 1 < out_size)
+        out[pos++] = '/';
+    size_t remain = pos < out_size ? out_size - pos - 1 : 0;
+    if (name_len > remain) name_len = remain;
+    memcpy(out + pos, name, name_len);
+    out[pos + name_len] = '\0';
+}
+
 static void config_make_abs_path(const char *base, const char *path,
                                  char *out, size_t out_size) {
     if (!out || out_size == 0) return;
@@ -139,7 +159,7 @@ static void config_make_abs_path(const char *base, const char *path,
         snprintf(out, out_size, "%s", path);
         return;
     }
-    snprintf(out, out_size, "%s/%s", base, path);
+    config_join_path(out, out_size, base, path);
 }
 
 static void config_resolve_workspace_paths(Config *cfg, const char *workspace_root) {
@@ -287,9 +307,11 @@ static void config_parse_languages(Config *cfg, toml_table_t *conf, int plugin_i
             const char *parser_name = lang->tree_sitter[0] ? lang->tree_sitter : lang->id;
             if (parser_name && parser_name[0]) {
                 char base[256];
+                char filename[128];
                 plugin_base_dir(&cfg->plugins[plugin_index], base, sizeof(base));
-                snprintf(lang->tree_sitter_path, sizeof(lang->tree_sitter_path),
-                         "%s/libtree-sitter-%s.so", base[0] ? base : ".", parser_name);
+                snprintf(filename, sizeof(filename), "libtree-sitter-%s.so", parser_name);
+                config_join_path(lang->tree_sitter_path, sizeof(lang->tree_sitter_path),
+                                 base[0] ? base : ".", filename);
             }
         }
     }

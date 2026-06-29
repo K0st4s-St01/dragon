@@ -17,9 +17,7 @@ CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: /home/xator/dragon/vendor/tomlc9
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
-  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
-  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/time64.h \
   /usr/include/bits/timesize.h \
@@ -84,10 +82,6 @@ CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: /home/xator/dragon/vendor/tomlc9
 
 /usr/include/bits/typesizes.h:
 
-/usr/include/bits/types/struct_FILE.h:
-
-/usr/include/bits/types/locale_t.h:
-
 /usr/include/bits/libc-header-start.h:
 
 /usr/include/bits/floatn.h:
@@ -101,6 +95,8 @@ CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: /home/xator/dragon/vendor/tomlc9
 /usr/include/bits/long-double.h:
 
 /usr/include/bits/floatn-common.h:
+
+/usr/include/bits/stdlib-float.h:
 
 /usr/include/bits/endianness.h:
 
@@ -116,13 +112,7 @@ CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: /home/xator/dragon/vendor/tomlc9
 
 /usr/include/features.h:
 
-/usr/include/bits/stdio.h:
-
 /home/xator/dragon/vendor/tomlc99/toml.c:
-
-/usr/include/bits/stdlib-float.h:
-
-/usr/include/bits/stdlib-bsearch.h:
 
 /usr/include/bits/types.h:
 
@@ -144,6 +134,8 @@ CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: /home/xator/dragon/vendor/tomlc9
 
 /usr/include/bits/time64.h:
 
+/usr/include/bits/types/locale_t.h:
+
 /usr/include/sys/cdefs.h:
 
 /usr/include/stdc-predef.h:
@@ -161,3 +153,5 @@ CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: /home/xator/dragon/vendor/tomlc9
 /home/xator/dragon/vendor/tomlc99/toml.h:
 
 /usr/include/bits/types/__fpos_t.h:
+
+/usr/include/bits/types/struct_FILE.h:
