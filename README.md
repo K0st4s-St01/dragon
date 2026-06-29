@@ -1,6 +1,7 @@
 # Dragon Editor
 
-A modal text editor built with OpenGL 3.3, GLFW, and ImGui.
+A modal text editor built in C with OpenGL 3.3, GLFW, tree-sitter, LSP support,
+and a custom immediate-mode UI.
 
 ## Dependencies
 
@@ -8,21 +9,47 @@ A modal text editor built with OpenGL 3.3, GLFW, and ImGui.
 - pkg-config
 - GLFW3 (system)
 - OpenGL (system)
-- GLAD, ImGui, stb (vendored - see `vendor/README.md`)
+- tree-sitter (system)
+- GLAD, stb, tomlc99 (vendored - see `vendor/README.md`)
 
 ## Building
 
 ```bash
 chmod +x install.sh
-./install.sh
+./install.sh --no-install
 ```
 
 Or manually:
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(nproc)
+cmake --build build --parallel
 ./build/dragon_editor
 ```
+
+## Installing
+
+```bash
+./install.sh --test
+```
+
+Useful installer options:
+
+- `--deps` installs system dependencies for supported distros.
+- `--prefix <dir>` changes the install prefix.
+- `--no-install` builds without installing.
+- `--debug` builds a Debug configuration.
+- `--clean` removes the build directory before configuring.
+
+The CMake install target installs `dragon_editor` and a sample config at
+`share/dragon/dragon.toml.example` under the selected prefix.
+
+## Testing
+
+```bash
+./test.sh
+```
+
+The test wrapper configures a Debug build, builds `test_all`, and runs CTest.
 
 ## Usage
 
@@ -45,6 +72,7 @@ dragon_editor <file>           # open file
 | Command     | `w`     | Save file                 |
 | Command     | `q`     | Quit                      |
 | Command     | `wq`    | Save and quit             |
+| Command     | `Tab`   | Accept completion         |
 | Any         | `Esc`   | Return to Normal mode     |
 
 ## Shortcuts
@@ -66,32 +94,37 @@ plugin manager, or `:plugin-enable <name>`, `:plugin-disable <name>`, and
 per workspace in `.dragon/plugins.state` and reapplied on startup and
 `:config-reload`.
 
+Command mode completes command names, themes, plugins, workspace-relative file
+paths for file commands, and open buffers for `:b`, `:buffer`, and
+`:buffer-close`.
+
 ## Project Structure
 
 ```
 dragon_editor/
   CMakeLists.txt
   install.sh
+  test.sh
+  dragon.toml                Sample project configuration
   src/
-    main.c                  Entry point + ImGui loop
+    main.c                  Entry point
     core/
-      renderer.c/h          OpenGL renderer
-      editor.c/h            Text buffer + editing
-      modal.c/h             Modal dialog state
+      app.c                 Application lifecycle and event loop
+      renderer.c            OpenGL renderer
+      input.c               Modal key handling and command mode
     gui/panels/
       file_browser.c/h      File open dialog
       find_replace.c/h      Find & replace
       settings.c/h          Settings dialog
-    shaders/
-      basic.vert/frag       Rectangle rendering
-      text.vert/frag        Text rendering
+      terminal.c            Embedded terminal panel
+    editor/
+      document.c            Text editing, search, syntax, language registry
+      lsp.c                 LSP transport and protocol parsing
+      treesitter.c          tree-sitter parser integration
   vendor/
     glad/                   OpenGL loader
-    imgui/                  Immediate mode GUI
+    tomlc99/                TOML parser
     stb/                    Image/font loading
   include/dragon_editor/    Public headers
-  assets/
-    fonts/                  Font files
-    icons/                  Icon files
   build/                    Build output
 ```

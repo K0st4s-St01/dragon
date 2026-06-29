@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(dragon_editor LANGUAGES C CXX)
 
+include(GNUInstallDirs)
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -10,6 +12,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLFW3 REQUIRED glfw3)
 pkg_check_modules(GL   REQUIRED gl)
+pkg_check_modules(TREE_SITTER REQUIRED tree-sitter)
 
 add_library(glad STATIC vendor/glad/src/glad.c)
 target_include_directories(glad PUBLIC vendor/glad/include)
@@ -69,9 +72,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/include/dragon_editor
     ${GLFW3_INCLUDE_DIRS}
     ${GL_INCLUDE_DIRS}
+    ${TREE_SITTER_INCLUDE_DIRS}
     vendor/glad/include
     vendor/stb
-    /usr/include/tree_sitter
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -79,14 +82,15 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     tomlc99
     ${GLFW3_LIBRARIES}
     ${GL_LIBRARIES}
+    ${TREE_SITTER_LIBRARIES}
     m
     dl
     util
-    tree-sitter
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE
     ${GLFW3_CFLAGS_OTHER}
+    ${TREE_SITTER_CFLAGS_OTHER}
     -Wall -Wextra
 )
 
@@ -111,20 +115,30 @@ add_library(dragon_core STATIC ${TEST_SOURCES})
 target_include_directories(dragon_core PUBLIC
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/dragon_editor
+    ${TREE_SITTER_INCLUDE_DIRS}
     vendor/glad/include
     vendor/stb
-    /usr/include/tree_sitter
 )
-target_link_libraries(dragon_core PUBLIC tomlc99 tree-sitter m dl)
+target_link_libraries(dragon_core PUBLIC tomlc99 ${TREE_SITTER_LIBRARIES} m dl)
+target_compile_options(dragon_core PUBLIC ${TREE_SITTER_CFLAGS_OTHER})
 
 add_executable(test_all tests/test_all.c)
 target_include_directories(test_all PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/dragon_editor
+    ${TREE_SITTER_INCLUDE_DIRS}
     vendor/glad/include
     vendor/stb
-    /usr/include/tree_sitter
 )
-target_link_libraries(test_all PRIVATE dragon_core m dl tree-sitter)
+target_link_libraries(test_all PRIVATE dragon_core m dl ${TREE_SITTER_LIBRARIES})
 
 add_test(NAME unit_tests COMMAND test_all)
+
+install(TARGETS ${PROJECT_NAME}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(FILES dragon.toml
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/dragon
+    RENAME dragon.toml.example
+)

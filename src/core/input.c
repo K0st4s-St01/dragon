@@ -32,18 +32,31 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #define CMD_BUF_MAX 1024
 #define CMD_COMPLETION_MAX 12
+#define CMD_COMPLETION_DETAIL_MAX 96
 
 static char cmd_buf[CMD_BUF_MAX] = {0};
 static int  cmd_len = 0;
 
+typedef enum {
+    CMD_COMPLETION_COMMAND = 0,
+    CMD_COMPLETION_THEME,
+    CMD_COMPLETION_PLUGIN,
+    CMD_COMPLETION_PATH,
+    CMD_COMPLETION_BUFFER,
+} CmdCompletionKind;
+
 typedef struct {
     const char *name;
     const char *detail;
-    bool theme_name;
-    bool plugin_name;
+    CmdCompletionKind kind;
+    bool path_is_dir;
+    int buffer_index;
 } CmdCompletion;
 
 typedef struct {
@@ -52,6 +65,8 @@ typedef struct {
 } StaticCmdCompletion;
 
 static CmdCompletion cmd_completions[CMD_COMPLETION_MAX];
+static char cmd_completion_names[CMD_COMPLETION_MAX][CMD_BUF_MAX];
+static char cmd_completion_details[CMD_COMPLETION_MAX][CMD_COMPLETION_DETAIL_MAX];
 static int cmd_completion_count = 0;
 static int cmd_completion_selected = 0;
 static void command_completion_update(App *app);
@@ -69,6 +84,8 @@ static const StaticCmdCompletion static_cmds[] = {
     {"bnext", "Next buffer"},
     {"bp", "Previous buffer"},
     {"bprev", "Previous buffer"},
+    {"b", "Switch buffer"},
+    {"buffer", "Switch buffer"},
     {"bc", "Close buffer"},
     {"bclose", "Close buffer"},
     {"new", "New buffer"},
@@ -120,6 +137,49 @@ static void input_save_all_buffers(App *app) {
 static void input_format_document(App *app, Document *doc) {
     (void)doc;
     app_format_document(app);
+}
+
+static bool command_path_is_absolute(const char *path) {
+    return path && path[0] == '/';
+}
+
+static void command_join_path(char *out, size_t out_size, const char *dir, const char *name) {
+    if (!out || out_size == 0) return;
+    if (!dir) dir = "";
+    if (!name) name = "";
+    size_t dir_len = strlen(dir);
+    size_t name_len = strlen(name);
+    bool need_slash = dir_len > 0 && dir[dir_len - 1] != '/';
+    size_t pos = 0;
+    if (dir_len >= out_size) dir_len = out_size - 1;
+    memcpy(out, dir, dir_len);
+    pos = dir_len;
+    if (need_slash && pos + 1 < out_size)
+        out[pos++] = '/';
+    size_t remain = pos < out_size ? out_size - pos - 1 : 0;
+    if (name_len > remain) name_len = remain;
+    memcpy(out + pos, name, name_len);
+    out[pos + name_len] = '\0';
+}
+
+static void command_resolve_workspace_path(App *app, const char *path,
+                                           char *out, size_t out_size) {
+    if (!out || out_size == 0) return;
+    out[0] = '\0';
+    if (!path || !*path) return;
+    if (command_path_is_absolute(path)) {
+        snprintf(out, out_size, "%s", path);
+        return;
+    }
+    if (path[0] == '~' && (path[1] == '\0' || path[1] == '/')) {
+        const char *home = getenv("HOME");
+        if (home && *home) {
+            command_join_path(out, out_size, home, path[1] == '/' ? path + 2 : "");
+            return;
+        }
+    }
+    const char *root = app_get_workspace_root(app);
+    command_join_path(out, out_size, root && *root ? root : ".", path);
 }
 
 static char *trim_command_arg(char *s) {
@@ -243,17 +303,31 @@ static bool command_completion_exists(const char *name) {
 }
 
 static void command_completion_add(const char *name, const char *detail,
-                                   bool theme_name, bool plugin_name) {
+                                   CmdCompletionKind kind, bool path_is_dir,
+                                   int buffer_index) {
     if (!name || !*name || cmd_completion_count >= CMD_COMPLETION_MAX)
         return;
     if (command_completion_exists(name))
         return;
-    cmd_completions[cmd_completion_count++] = (CmdCompletion){
-        .name = name,
-        .detail = detail ? detail : "",
-        .theme_name = theme_name,
-        .plugin_name = plugin_name,
+    int index = cmd_completion_count++;
+    snprintf(cmd_completion_names[index], sizeof(cmd_completion_names[index]), "%s", name);
+    snprintf(cmd_completion_details[index], sizeof(cmd_completion_details[index]),
+             "%s", detail ? detail : "");
+    cmd_completions[index] = (CmdCompletion){
+        .name = cmd_completion_names[index],
+        .detail = cmd_completion_details[index],
+        .kind = kind,
+        .path_is_dir = path_is_dir,
+        .buffer_index = buffer_index,
     };
+}
+
+static bool command_is_buffer_arg(const char *cmd, const char **arg) {
+    return cmd_has_arg_prefix(cmd, "b", arg) ||
+           cmd_has_arg_prefix(cmd, "buffer", arg) ||
+           cmd_has_arg_prefix(cmd, "bc", arg) ||
+           cmd_has_arg_prefix(cmd, "buffer-close", arg) ||
+           cmd_has_arg_prefix(cmd, "bclose", arg);
 }
 
 static bool command_is_plugin_arg(const char *cmd, const char **arg) {
@@ -268,6 +342,255 @@ static const char *command_plugin_prefix(const char *cmd) {
     if (cmd_has_arg_prefix(cmd, "plugin-disable", &arg)) return "plugin-disable";
     if (cmd_has_arg_prefix(cmd, "plugin-toggle", &arg)) return "plugin-toggle";
     return NULL;
+}
+
+static const char *command_buffer_prefix(const char *cmd) {
+    const char *arg = NULL;
+    if (cmd_has_arg_prefix(cmd, "buffer-close", &arg)) return "buffer-close";
+    if (cmd_has_arg_prefix(cmd, "bclose", &arg)) return "bclose";
+    if (cmd_has_arg_prefix(cmd, "bc", &arg)) return "bc";
+    if (cmd_has_arg_prefix(cmd, "buffer", &arg)) return "buffer";
+    if (cmd_has_arg_prefix(cmd, "b", &arg)) return "b";
+    return NULL;
+}
+
+static bool command_is_path_arg(const char *cmd, const char **arg, bool *dirs_only) {
+    struct PathCommand {
+        const char *name;
+        bool dirs_only;
+    };
+    static const struct PathCommand commands[] = {
+        {"e", false}, {"edit", false}, {"o", false}, {"open", false},
+        {"r", false}, {"read", false},
+        {"w", false}, {"write", false}, {"w!", false}, {"write!", false},
+        {"wq", false}, {"write-quit", false}, {"x", false},
+        {"mv", false}, {"move", false},
+        {"cwd", true}, {"open-workspace", true},
+    };
+
+    for (size_t i = 0; i < sizeof(commands) / sizeof(commands[0]); i++) {
+        if (cmd_has_arg_prefix(cmd, commands[i].name, arg)) {
+            if (dirs_only) *dirs_only = commands[i].dirs_only;
+            return true;
+        }
+    }
+    return false;
+}
+
+static const char *command_path_prefix(const char *cmd) {
+    const char *arg = NULL;
+    bool dirs_only = false;
+    static const char *names[] = {
+        "open-workspace", "write-quit", "write!", "write", "edit", "open",
+        "read", "move", "cwd", "wq", "w!", "w", "x", "mv", "e", "o", "r",
+    };
+    for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+        if (cmd_has_arg_prefix(cmd, names[i], &arg)) {
+            (void)dirs_only;
+            return names[i];
+        }
+    }
+    return NULL;
+}
+
+typedef struct {
+    char name[256];
+    bool is_dir;
+} PathCompletionEntry;
+
+static int path_completion_cmp(const void *a, const void *b) {
+    const PathCompletionEntry *ea = (const PathCompletionEntry *)a;
+    const PathCompletionEntry *eb = (const PathCompletionEntry *)b;
+    if (ea->is_dir != eb->is_dir)
+        return ea->is_dir ? -1 : 1;
+    return strcmp(ea->name, eb->name);
+}
+
+static void command_expand_scan_path(App *app, const char *query,
+                                     char *scan_dir, size_t scan_dir_size,
+                                     char *display_prefix, size_t display_prefix_size,
+                                     char *leaf_prefix, size_t leaf_prefix_size) {
+    if (scan_dir && scan_dir_size > 0) scan_dir[0] = '\0';
+    if (display_prefix && display_prefix_size > 0) display_prefix[0] = '\0';
+    if (leaf_prefix && leaf_prefix_size > 0) leaf_prefix[0] = '\0';
+    if (!query) query = "";
+
+    const char *slash = strrchr(query, '/');
+    char dir_part[CMD_BUF_MAX] = {0};
+    if (slash) {
+        size_t len = (size_t)(slash - query);
+        if (len == 0 && query[0] == '/') len = 1;
+        if (len >= sizeof(dir_part)) len = sizeof(dir_part) - 1;
+        memcpy(dir_part, query, len);
+        dir_part[len] = '\0';
+        snprintf(display_prefix, display_prefix_size, "%.*s",
+                 (int)((slash - query) + 1), query);
+        snprintf(leaf_prefix, leaf_prefix_size, "%s", slash + 1);
+    } else {
+        snprintf(leaf_prefix, leaf_prefix_size, "%s", query);
+    }
+
+    if (query[0] == '~') {
+        const char *home = getenv("HOME");
+        if (!home) home = "";
+        if (slash) {
+            char suffix[CMD_BUF_MAX] = {0};
+            size_t len = (size_t)(slash - query);
+            if (len > 1) {
+                size_t suffix_len = len - 1;
+                if (suffix_len >= sizeof(suffix)) suffix_len = sizeof(suffix) - 1;
+                memcpy(suffix, query + 1, suffix_len);
+                suffix[suffix_len] = '\0';
+            }
+            command_join_path(scan_dir, scan_dir_size, home, suffix);
+        } else {
+            snprintf(scan_dir, scan_dir_size, "%s", home);
+        }
+        return;
+    }
+
+    if (dir_part[0]) {
+        if (command_path_is_absolute(dir_part)) {
+            snprintf(scan_dir, scan_dir_size, "%s", dir_part);
+        } else {
+            command_resolve_workspace_path(app, dir_part, scan_dir, scan_dir_size);
+        }
+    } else {
+        const char *root = app_get_workspace_root(app);
+        snprintf(scan_dir, scan_dir_size, "%s", root && *root ? root : ".");
+    }
+}
+
+static void command_complete_paths(App *app, const char *arg, bool dirs_only) {
+    while (arg && *arg && isspace((unsigned char)*arg)) arg++;
+    if (!arg) arg = "";
+
+    char scan_dir[CMD_BUF_MAX];
+    char display_prefix[CMD_BUF_MAX];
+    char leaf_prefix[256];
+    command_expand_scan_path(app, arg, scan_dir, sizeof(scan_dir),
+                             display_prefix, sizeof(display_prefix),
+                             leaf_prefix, sizeof(leaf_prefix));
+
+    DIR *dir = opendir(scan_dir[0] ? scan_dir : ".");
+    if (!dir) return;
+
+    PathCompletionEntry entries[256];
+    int count = 0;
+    struct dirent *de;
+    while ((de = readdir(dir)) != NULL && count < 256) {
+        if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+            continue;
+        if (de->d_name[0] == '.' && leaf_prefix[0] != '.')
+            continue;
+        if (strncmp(de->d_name, leaf_prefix, strlen(leaf_prefix)) != 0)
+            continue;
+
+        char full[CMD_BUF_MAX];
+        command_join_path(full, sizeof(full), scan_dir, de->d_name);
+        struct stat st;
+        bool is_dir = stat(full, &st) == 0 && S_ISDIR(st.st_mode);
+        if (dirs_only && !is_dir)
+            continue;
+
+        snprintf(entries[count].name, sizeof(entries[count].name), "%s", de->d_name);
+        entries[count].is_dir = is_dir;
+        count++;
+    }
+    closedir(dir);
+
+    qsort(entries, count, sizeof(entries[0]), path_completion_cmp);
+    for (int i = 0; i < count && cmd_completion_count < CMD_COMPLETION_MAX; i++) {
+        char text[CMD_BUF_MAX];
+        command_join_path(text, sizeof(text), display_prefix, entries[i].name);
+        if (entries[i].is_dir) {
+            size_t len = strlen(text);
+            if (len + 1 < sizeof(text) && (len == 0 || text[len - 1] != '/')) {
+                text[len++] = '/';
+                text[len] = '\0';
+            }
+        }
+        command_completion_add(text, entries[i].is_dir ? "dir" : "file",
+                               CMD_COMPLETION_PATH, entries[i].is_dir, -1);
+    }
+}
+
+static const char *document_display_name(Document *doc, char *buf, size_t buf_size) {
+    if (!buf || buf_size == 0) return "";
+    if (!doc || !doc->filepath) {
+        snprintf(buf, buf_size, "[scratch]");
+        return buf;
+    }
+    const char *slash = strrchr(doc->filepath, '/');
+    snprintf(buf, buf_size, "%s", slash ? slash + 1 : doc->filepath);
+    return buf;
+}
+
+static bool buffer_completion_matches(Document *doc, int index, const char *query,
+                                      char *name, size_t name_size) {
+    document_display_name(doc, name, name_size);
+    if (!query || !*query) return true;
+    char number[16];
+    snprintf(number, sizeof(number), "%d", index + 1);
+    if (command_completion_matches(number, query))
+        return true;
+    if (command_completion_matches(name, query))
+        return true;
+    return doc && doc->filepath && command_completion_matches(doc->filepath, query);
+}
+
+static void command_complete_buffers(App *app, const char *arg) {
+    while (arg && *arg && isspace((unsigned char)*arg)) arg++;
+    if (!arg) arg = "";
+    int count = app_get_buffer_count(app);
+    for (int i = 0; i < count && cmd_completion_count < CMD_COMPLETION_MAX; i++) {
+        Document *doc = (Document *)app_get_doc_at(app, i);
+        char name[CMD_BUF_MAX];
+        if (!buffer_completion_matches(doc, i, arg, name, sizeof(name)))
+            continue;
+        char detail[CMD_COMPLETION_DETAIL_MAX];
+        snprintf(detail, sizeof(detail), "buffer %d%s", i + 1,
+                 doc && doc->dirty ? " modified" : "");
+        command_completion_add(name, detail, CMD_COMPLETION_BUFFER, false, i);
+    }
+}
+
+static int input_find_buffer(App *app, const char *arg) {
+    char query[CMD_BUF_MAX];
+    snprintf(query, sizeof(query), "%s", arg ? arg : "");
+    char *trimmed = trim_command_arg(query);
+    if (!trimmed || !*trimmed) return -1;
+
+    char *end = NULL;
+    long n = strtol(trimmed, &end, 10);
+    if (end && *end == '\0' && n > 0 && n <= app_get_buffer_count(app))
+        return (int)n - 1;
+
+    int count = app_get_buffer_count(app);
+    for (int i = 0; i < count; i++) {
+        Document *doc = (Document *)app_get_doc_at(app, i);
+        char name[CMD_BUF_MAX];
+        document_display_name(doc, name, sizeof(name));
+        if (strcmp(name, trimmed) == 0)
+            return i;
+        if (doc && doc->filepath && strcmp(doc->filepath, trimmed) == 0)
+            return i;
+    }
+    return -1;
+}
+
+static void input_buffer_command(App *app, char *arg, bool close_buffer) {
+    int index = input_find_buffer(app, arg);
+    if (index < 0) {
+        char query[CMD_BUF_MAX];
+        snprintf(query, sizeof(query), "%s", arg ? arg : "");
+        notification_push(NOTIF_ERROR, "Unknown buffer: %s", trim_command_arg(query));
+        return;
+    }
+    if (close_buffer)
+        app_close_buffer(app, index);
+    else
+        app_switch_to_buffer(app, index);
 }
 
 static bool plugin_completion_matches(const ConfigPlugin *plugin, const char *query) {
@@ -294,13 +617,16 @@ static void command_completion_update(App *app) {
         cmd_has_arg_prefix(cmd_buf, "theme", &arg) ||
         cmd_has_arg_prefix(cmd_buf, "colorscheme", &arg);
     bool completing_plugin = command_is_plugin_arg(cmd_buf, &arg);
+    bool dirs_only = false;
+    bool completing_path = command_is_path_arg(cmd_buf, &arg, &dirs_only);
+    bool completing_buffer = command_is_buffer_arg(cmd_buf, &arg);
     if (completing_theme && arg && *arg == ' ') {
         while (*arg && isspace((unsigned char)*arg)) arg++;
         const char *names[32];
         int count = theme_list_names(names, 32);
         for (int i = 0; i < count && i < 32; i++) {
             if (command_completion_matches(names[i], arg))
-                command_completion_add(names[i], "theme", true, false);
+                command_completion_add(names[i], "theme", CMD_COMPLETION_THEME, false, -1);
         }
     } else if (completing_plugin && arg && *arg == ' ') {
         while (*arg && isspace((unsigned char)*arg)) arg++;
@@ -310,19 +636,25 @@ static void command_completion_update(App *app) {
             if (plugin_completion_matches(plugin, arg))
                 command_completion_add(plugin->name,
                                        plugin->enabled ? "plugin enabled" : "plugin disabled",
-                                       false, true);
+                                       CMD_COMPLETION_PLUGIN, false, -1);
         }
+    } else if (completing_path && arg && *arg == ' ') {
+        command_complete_paths(app, arg, dirs_only);
+    } else if (completing_buffer && arg && *arg == ' ') {
+        command_complete_buffers(app, arg);
     } else {
         for (size_t i = 0; i < sizeof(static_cmds) / sizeof(static_cmds[0]); i++) {
             if (command_completion_matches(static_cmds[i].name, cmd_buf))
-                command_completion_add(static_cmds[i].name, static_cmds[i].detail, false, false);
+                command_completion_add(static_cmds[i].name, static_cmds[i].detail,
+                                       CMD_COMPLETION_COMMAND, false, -1);
         }
 
         int count = 0;
         Command *commands = command_get_all(&count);
         for (int i = 0; commands && i < count; i++) {
             if (command_completion_matches(commands[i].name, cmd_buf))
-                command_completion_add(commands[i].name, commands[i].label, false, false);
+                command_completion_add(commands[i].name, commands[i].label,
+                                       CMD_COMPLETION_COMMAND, false, -1);
         }
     }
 
@@ -335,15 +667,23 @@ static void command_completion_accept(App *app) {
         return;
 
     CmdCompletion *item = &cmd_completions[cmd_completion_selected];
-    if (item->theme_name) {
+    if (item->kind == CMD_COMPLETION_THEME) {
         const char *arg = NULL;
         if (cmd_has_arg_prefix(cmd_buf, "theme", &arg)) {
             snprintf(cmd_buf, sizeof(cmd_buf), "theme %s", item->name);
         } else if (cmd_has_arg_prefix(cmd_buf, "colorscheme", &arg)) {
             snprintf(cmd_buf, sizeof(cmd_buf), "colorscheme %s", item->name);
         }
-    } else if (item->plugin_name) {
+    } else if (item->kind == CMD_COMPLETION_PLUGIN) {
         const char *prefix = command_plugin_prefix(cmd_buf);
+        if (prefix)
+            snprintf(cmd_buf, sizeof(cmd_buf), "%s %s", prefix, item->name);
+    } else if (item->kind == CMD_COMPLETION_PATH) {
+        const char *prefix = command_path_prefix(cmd_buf);
+        if (prefix)
+            snprintf(cmd_buf, sizeof(cmd_buf), "%s %s", prefix, item->name);
+    } else if (item->kind == CMD_COMPLETION_BUFFER) {
+        const char *prefix = command_buffer_prefix(cmd_buf);
         if (prefix)
             snprintf(cmd_buf, sizeof(cmd_buf), "%s %s", prefix, item->name);
     } else {
@@ -2087,7 +2427,9 @@ static void handle_command_key(App *app, int key, int action, int mods) {
 
     /* Execute command */
     if (write_path && *write_path) {
-        document_save_as(doc, write_path);
+        char resolved[CMD_BUF_MAX];
+        command_resolve_workspace_path(app, write_path, resolved, sizeof(resolved));
+        document_save_as(doc, resolved[0] ? resolved : write_path);
         if (write_and_quit)
             cmd_quit(app);
     } else if (strcmp(cmd_buf, "w") == 0 || strcmp(cmd_buf, "write") == 0) {
@@ -2118,11 +2460,21 @@ static void handle_command_key(App *app, int key, int action, int mods) {
     } else if (strcmp(cmd_buf, "bp") == 0 || strcmp(cmd_buf, "bprev") == 0 ||
                strcmp(cmd_buf, "buffer-previous") == 0) {
         app_prev_buffer(app);
+    } else if (strncmp(cmd_buf, "b ", 2) == 0) {
+        input_buffer_command(app, cmd_buf + 2, false);
+    } else if (strncmp(cmd_buf, "buffer ", 7) == 0) {
+        input_buffer_command(app, cmd_buf + 7, false);
     } else if (strcmp(cmd_buf, "bc") == 0 || strcmp(cmd_buf, "bclose") == 0 ||
                strcmp(cmd_buf, "buffer-close") == 0 ||
                strcmp(cmd_buf, "bc!") == 0 || strcmp(cmd_buf, "bclose!") == 0 ||
                strcmp(cmd_buf, "buffer-close!") == 0) {
         app_close_buffer(app, app_get_current_buffer_index(app));
+    } else if (strncmp(cmd_buf, "bc ", 3) == 0 || strncmp(cmd_buf, "bclose ", 7) == 0 ||
+               strncmp(cmd_buf, "buffer-close ", 13) == 0) {
+        const char *arg = cmd_buf[1] == 'c' && cmd_buf[2] == ' ' ? cmd_buf + 3 :
+                          cmd_buf[0] == 'b' && cmd_buf[1] == 'c' ? cmd_buf + 7 :
+                          cmd_buf + 13;
+        input_buffer_command(app, (char *)arg, true);
     } else if (strcmp(cmd_buf, "new") == 0 || strcmp(cmd_buf, "n") == 0) {
         document_new(doc);
     } else if (strncmp(cmd_buf, "e ", 2) == 0 ||
@@ -2130,13 +2482,34 @@ static void handle_command_key(App *app, int key, int action, int mods) {
                strncmp(cmd_buf, "open ", 5) == 0 ||
                strncmp(cmd_buf, "edit ", 5) == 0) {
         const char *path = (cmd_buf[1] == ' ') ? cmd_buf + 2 : cmd_buf + 5;
-        app_open_file(app, path);
+        char resolved[CMD_BUF_MAX];
+        command_resolve_workspace_path(app, path, resolved, sizeof(resolved));
+        app_open_file(app, resolved[0] ? resolved : path);
     } else if (strncmp(cmd_buf, "r ", 2) == 0 || strncmp(cmd_buf, "read ", 5) == 0) {
         const char *path = cmd_buf[1] == ' ' ? cmd_buf + 2 : cmd_buf + 5;
-        document_insert_file(doc, path);
+        char resolved[CMD_BUF_MAX];
+        command_resolve_workspace_path(app, path, resolved, sizeof(resolved));
+        document_insert_file(doc, resolved[0] ? resolved : path);
     } else if (strncmp(cmd_buf, "mv ", 3) == 0 || strncmp(cmd_buf, "move ", 5) == 0) {
         const char *path = cmd_buf[2] == ' ' ? cmd_buf + 3 : cmd_buf + 5;
-        document_move_file(doc, path);
+        char resolved[CMD_BUF_MAX];
+        command_resolve_workspace_path(app, path, resolved, sizeof(resolved));
+        document_move_file(doc, resolved[0] ? resolved : path);
+    } else if (strncmp(cmd_buf, "cwd ", 4) == 0 ||
+               strncmp(cmd_buf, "open-workspace ", 15) == 0) {
+        bool change_dir = cmd_buf[0] == 'c';
+        const char *path = change_dir ? cmd_buf + 4 : cmd_buf + 15;
+        char resolved[CMD_BUF_MAX];
+        command_resolve_workspace_path(app, path, resolved, sizeof(resolved));
+        struct stat st;
+        bool is_dir = resolved[0] && stat(resolved, &st) == 0 && S_ISDIR(st.st_mode);
+        if (!is_dir) {
+            notification_push(NOTIF_ERROR, "Not a directory: %s", resolved[0] ? resolved : path);
+        } else if (change_dir && chdir(resolved) != 0) {
+            notification_push(NOTIF_ERROR, "Could not change dir: %s", resolved);
+        } else {
+            app_set_workspace_root(app, resolved);
+        }
     } else if (strcmp(cmd_buf, "reload") == 0 || strcmp(cmd_buf, "rl") == 0 ||
                strcmp(cmd_buf, "reload-all") == 0 || strcmp(cmd_buf, "rla") == 0) {
         if (doc->filepath) {

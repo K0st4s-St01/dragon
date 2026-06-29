@@ -6,3 +6,7 @@
 /home/xator/dragon/build/CMakeFiles/test.dir
 /home/xator/dragon/build/CMakeFiles/edit_cache.dir
 /home/xator/dragon/build/CMakeFiles/rebuild_cache.dir
+/home/xator/dragon/build/CMakeFiles/list_install_components.dir
+/home/xator/dragon/build/CMakeFiles/install.dir
+/home/xator/dragon/build/CMakeFiles/install/local.dir
+/home/xator/dragon/build/CMakeFiles/install/strip.dir
