@@ -179,6 +179,52 @@ static void terminal_clear_line(void) {
     term_col = 0;
 }
 
+static void terminal_clear_screen_from_cursor(void) {
+    terminal_clear_line_from_cursor();
+    int end = terminal_screen_origin() + term_rows;
+    if (end > term_line_count) end = term_line_count;
+    for (int i = term_cursor_line + 1; i < end; i++)
+        term_lines[i][0] = '\0';
+}
+
+static void terminal_clear_screen_to_cursor(void) {
+    int start = terminal_screen_origin();
+    if (start < 0) start = 0;
+    for (int i = start; i < term_cursor_line && i < term_line_count; i++)
+        term_lines[i][0] = '\0';
+    terminal_clear_line_to_cursor();
+}
+
+static void terminal_delete_lines(int n) {
+    terminal_clamp_cursor();
+    if (n < 1) n = 1;
+    int origin = terminal_screen_origin();
+    int bottom = origin + term_rows;
+    if (bottom > term_line_count) bottom = term_line_count;
+    if (term_cursor_line < origin || term_cursor_line >= bottom) return;
+    if (n > bottom - term_cursor_line)
+        n = bottom - term_cursor_line;
+    for (int i = term_cursor_line; i + n < bottom; i++)
+        memcpy(term_lines[i], term_lines[i + n], sizeof(term_lines[i]));
+    for (int i = bottom - n; i < bottom; i++)
+        term_lines[i][0] = '\0';
+}
+
+static void terminal_insert_lines(int n) {
+    terminal_clamp_cursor();
+    if (n < 1) n = 1;
+    int origin = terminal_screen_origin();
+    int bottom = origin + term_rows;
+    if (bottom > term_line_count) bottom = term_line_count;
+    if (term_cursor_line < origin || term_cursor_line >= bottom) return;
+    if (n > bottom - term_cursor_line)
+        n = bottom - term_cursor_line;
+    for (int i = bottom - 1; i - n >= term_cursor_line; i--)
+        memcpy(term_lines[i], term_lines[i - n], sizeof(term_lines[i]));
+    for (int i = term_cursor_line; i < term_cursor_line + n; i++)
+        term_lines[i][0] = '\0';
+}
+
 static void terminal_append_byte(char c) {
     terminal_clamp_cursor();
     char *line = term_lines[term_cursor_line];
@@ -370,6 +416,12 @@ static void terminal_handle_csi(char final) {
     case '@':
         terminal_insert_spaces(n);
         break;
+    case 'L':
+        terminal_insert_lines(n);
+        break;
+    case 'M':
+        terminal_delete_lines(n);
+        break;
     case 'P':
         terminal_delete_chars(n);
         break;
@@ -378,7 +430,11 @@ static void terminal_handle_csi(char final) {
         break;
     case 'J':
         n = csi_param(0);
-        if (n == 2 || n == 3)
+        if (n == 0)
+            terminal_clear_screen_from_cursor();
+        else if (n == 1)
+            terminal_clear_screen_to_cursor();
+        else if (n == 2 || n == 3)
             terminal_clear_screen();
         break;
     case 'K':
