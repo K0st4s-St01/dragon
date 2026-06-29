@@ -122,6 +122,29 @@ static int terminal_screen_origin(void) {
     return origin > 0 ? origin : 0;
 }
 
+static int terminal_screen_bottom(void) {
+    int bottom = terminal_screen_origin() + term_rows;
+    if (bottom > term_line_count) bottom = term_line_count;
+    if (bottom < 1) bottom = 1;
+    return bottom;
+}
+
+static void terminal_trim_blank_tail_after_cursor(void) {
+    int keep = term_cursor_line + 1;
+    if (keep < 1) keep = 1;
+    while (term_line_count > keep && term_lines[term_line_count - 1][0] == '\0')
+        term_line_count--;
+    terminal_clamp_cursor();
+}
+
+static void terminal_clear_live_tail_for_input(void) {
+    if (term_scroll != 0) return;
+    if (term_cursor_line < 0 || term_cursor_line >= term_line_count) return;
+    for (int i = term_cursor_line + 1; i < term_line_count; i++)
+        term_lines[i][0] = '\0';
+    terminal_trim_blank_tail_after_cursor();
+}
+
 static void terminal_set_cursor_position(int row, int col) {
     if (row < 1) row = 1;
     if (col < 1) col = 1;
@@ -181,10 +204,10 @@ static void terminal_clear_line(void) {
 
 static void terminal_clear_screen_from_cursor(void) {
     terminal_clear_line_from_cursor();
-    int end = terminal_screen_origin() + term_rows;
-    if (end > term_line_count) end = term_line_count;
+    int end = terminal_screen_bottom();
     for (int i = term_cursor_line + 1; i < end; i++)
         term_lines[i][0] = '\0';
+    terminal_trim_blank_tail_after_cursor();
 }
 
 static void terminal_clear_screen_to_cursor(void) {
@@ -199,8 +222,7 @@ static void terminal_delete_lines(int n) {
     terminal_clamp_cursor();
     if (n < 1) n = 1;
     int origin = terminal_screen_origin();
-    int bottom = origin + term_rows;
-    if (bottom > term_line_count) bottom = term_line_count;
+    int bottom = terminal_screen_bottom();
     if (term_cursor_line < origin || term_cursor_line >= bottom) return;
     if (n > bottom - term_cursor_line)
         n = bottom - term_cursor_line;
@@ -208,20 +230,45 @@ static void terminal_delete_lines(int n) {
         memcpy(term_lines[i], term_lines[i + n], sizeof(term_lines[i]));
     for (int i = bottom - n; i < bottom; i++)
         term_lines[i][0] = '\0';
+    terminal_trim_blank_tail_after_cursor();
 }
 
 static void terminal_insert_lines(int n) {
     terminal_clamp_cursor();
     if (n < 1) n = 1;
     int origin = terminal_screen_origin();
-    int bottom = origin + term_rows;
-    if (bottom > term_line_count) bottom = term_line_count;
+    int bottom = terminal_screen_bottom();
     if (term_cursor_line < origin || term_cursor_line >= bottom) return;
     if (n > bottom - term_cursor_line)
         n = bottom - term_cursor_line;
     for (int i = bottom - 1; i - n >= term_cursor_line; i--)
         memcpy(term_lines[i], term_lines[i - n], sizeof(term_lines[i]));
     for (int i = term_cursor_line; i < term_cursor_line + n; i++)
+        term_lines[i][0] = '\0';
+}
+
+static void terminal_scroll_up(int n) {
+    if (n < 1) n = 1;
+    int origin = terminal_screen_origin();
+    int bottom = terminal_screen_bottom();
+    if (bottom <= origin) return;
+    if (n > bottom - origin) n = bottom - origin;
+    for (int i = origin; i + n < bottom; i++)
+        memcpy(term_lines[i], term_lines[i + n], sizeof(term_lines[i]));
+    for (int i = bottom - n; i < bottom; i++)
+        term_lines[i][0] = '\0';
+    terminal_trim_blank_tail_after_cursor();
+}
+
+static void terminal_scroll_down(int n) {
+    if (n < 1) n = 1;
+    int origin = terminal_screen_origin();
+    int bottom = terminal_screen_bottom();
+    if (bottom <= origin) return;
+    if (n > bottom - origin) n = bottom - origin;
+    for (int i = bottom - 1; i - n >= origin; i--)
+        memcpy(term_lines[i], term_lines[i - n], sizeof(term_lines[i]));
+    for (int i = origin; i < origin + n; i++)
         term_lines[i][0] = '\0';
 }
 
@@ -369,6 +416,24 @@ static void terminal_move_cursor_line(int delta) {
     if (term_cursor_line >= term_line_count) term_cursor_line = term_line_count - 1;
 }
 
+static void terminal_index(void) {
+    int bottom = terminal_screen_bottom();
+    if (term_cursor_line >= bottom - 1) {
+        terminal_scroll_up(1);
+    } else {
+        terminal_move_cursor_line(1);
+    }
+}
+
+static void terminal_reverse_index(void) {
+    int origin = terminal_screen_origin();
+    if (term_cursor_line <= origin) {
+        terminal_scroll_down(1);
+    } else {
+        terminal_move_cursor_line(-1);
+    }
+}
+
 static void terminal_handle_csi(char final) {
     int n = csi_param(1);
     if (n < 1) n = 1;
@@ -428,6 +493,12 @@ static void terminal_handle_csi(char final) {
     case 'X':
         terminal_erase_chars(n);
         break;
+    case 'S':
+        terminal_scroll_up(n);
+        break;
+    case 'T':
+        terminal_scroll_down(n);
+        break;
     case 'J':
         n = csi_param(0);
         if (n == 0)
@@ -477,6 +548,16 @@ static void terminal_consume_output(const char *buf, ssize_t len) {
                     esc_state = 0;
                 } else if (c == 'c') {
                     terminal_clear_screen();
+                    esc_state = 0;
+                } else if (c == 'D') {
+                    terminal_index();
+                    esc_state = 0;
+                } else if (c == 'E') {
+                    terminal_index();
+                    term_col = 0;
+                    esc_state = 0;
+                } else if (c == 'M') {
+                    terminal_reverse_index();
                     esc_state = 0;
                 } else {
                     esc_state = 0;
@@ -543,6 +624,7 @@ static void terminal_poll(void) {
 static void terminal_write_bytes(const char *s, size_t len) {
     if (term_fd < 0 || !terminal_running()) return;
     terminal_live();
+    terminal_clear_live_tail_for_input();
     while (len > 0) {
         ssize_t n = write(term_fd, s, len);
         if (n > 0) {
