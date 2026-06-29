@@ -42,6 +42,7 @@ static char csi_buf[CSI_BUF_MAX];
 static int csi_len = 0;
 static int term_cols = 80;
 static int term_rows = 12;
+static char term_shell_name[64] = "shell";
 
 static void terminal_reset_buffer(void) {
     memset(term_lines, 0, sizeof(term_lines));
@@ -60,6 +61,7 @@ static bool terminal_running(void) {
     int status = 0;
     pid_t result = waitpid(term_pid, &status, WNOHANG);
     if (result == 0) return true;
+    if (result < 0 && errno == EINTR) return true;
     if (result == term_pid) {
         term_pid = -1;
         if (term_fd >= 0) {
@@ -68,6 +70,10 @@ static bool terminal_running(void) {
         }
     }
     return false;
+}
+
+static void terminal_live(void) {
+    term_scroll = 0;
 }
 
 static void terminal_append_newline(void) {
@@ -188,9 +194,11 @@ static void terminal_append_byte(char c) {
     if (c == '\b' || c == 127) {
         if (term_col > 0) {
             term_col--;
-            if (term_col < (int)len)
-                line[term_col] = '\0';
         }
+        return;
+    }
+    if (c == '\f') {
+        terminal_clear_screen();
         return;
     }
     if (c == '\t') {
@@ -478,6 +486,7 @@ static void terminal_poll(void) {
 
 static void terminal_write_bytes(const char *s, size_t len) {
     if (term_fd < 0 || !terminal_running()) return;
+    terminal_live();
     while (len > 0) {
         ssize_t n = write(term_fd, s, len);
         if (n > 0) {
@@ -540,6 +549,8 @@ static void terminal_spawn(App *app) {
 
     const char *shell = getenv("SHELL");
     if (!shell || !*shell) shell = "/bin/sh";
+    const char *base = strrchr(shell, '/');
+    snprintf(term_shell_name, sizeof(term_shell_name), "%s", base && base[1] ? base + 1 : shell);
 
     struct winsize ws;
     memset(&ws, 0, sizeof(ws));
@@ -553,6 +564,8 @@ static void terminal_spawn(App *app) {
     term_pid = forkpty(&term_fd, NULL, NULL, &ws);
     if (term_pid == 0) {
         setenv("TERM", "xterm-256color", 1);
+        setenv("COLORTERM", "truecolor", 1);
+        setenv("TERM_PROGRAM", "dragon", 1);
         const char *root = app_get_workspace_root(app);
         if (root && *root) chdir(root);
         execl(shell, shell, (char *)NULL);
@@ -574,7 +587,12 @@ static void terminal_spawn(App *app) {
 static void terminal_restart(App *app) {
     if (term_pid > 0) {
         kill(term_pid, SIGHUP);
-        waitpid(term_pid, NULL, WNOHANG);
+        for (int i = 0; i < 8; i++) {
+            pid_t r = waitpid(term_pid, NULL, WNOHANG);
+            if (r == term_pid || (r < 0 && errno != EINTR))
+                break;
+            usleep(10000);
+        }
     }
     if (term_fd >= 0) {
         close(term_fd);
@@ -646,19 +664,32 @@ void panel_terminal_key(App *app, int key, int mods) {
         if (mods & GLFW_MOD_SHIFT) terminal_write_bytes("\x1b[Z", 3);
         else terminal_write_bytes("\t", 1);
         return;
-    case GLFW_KEY_UP: terminal_write_bytes("\x1b[A", 3); return;
-    case GLFW_KEY_DOWN: terminal_write_bytes("\x1b[B", 3); return;
+    case GLFW_KEY_UP:
+        if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5A", 6);
+        else if (mods & GLFW_MOD_SHIFT) terminal_write_bytes("\x1b[1;2A", 6);
+        else if (mods & GLFW_MOD_ALT) terminal_write_bytes("\x1b[1;3A", 6);
+        else terminal_write_bytes("\x1b[A", 3);
+        return;
+    case GLFW_KEY_DOWN:
+        if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5B", 6);
+        else if (mods & GLFW_MOD_SHIFT) terminal_write_bytes("\x1b[1;2B", 6);
+        else if (mods & GLFW_MOD_ALT) terminal_write_bytes("\x1b[1;3B", 6);
+        else terminal_write_bytes("\x1b[B", 3);
+        return;
     case GLFW_KEY_RIGHT:
         if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5C", 6);
+        else if (mods & GLFW_MOD_SHIFT) terminal_write_bytes("\x1b[1;2C", 6);
         else if (mods & GLFW_MOD_ALT) terminal_write_bytes("\033f", 2);
         else terminal_write_bytes("\x1b[C", 3);
         return;
     case GLFW_KEY_LEFT:
         if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5D", 6);
+        else if (mods & GLFW_MOD_SHIFT) terminal_write_bytes("\x1b[1;2D", 6);
         else if (mods & GLFW_MOD_ALT) terminal_write_bytes("\033b", 2);
         else terminal_write_bytes("\x1b[D", 3);
         return;
     case GLFW_KEY_DELETE: terminal_write_bytes("\x1b[3~", 4); return;
+    case GLFW_KEY_INSERT: terminal_write_bytes("\x1b[2~", 4); return;
     case GLFW_KEY_HOME:
         if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5H", 6);
         else terminal_write_bytes("\x1b[H", 3);
@@ -722,6 +753,7 @@ void panel_terminal_key(App *app, int key, int mods) {
 void panel_terminal_input(App *app, unsigned int c) {
     (void)app;
     if (!term_open || c < 32) return;
+    terminal_live();
     char out[4];
     size_t len = 0;
     if (c < 0x80) {
@@ -775,7 +807,7 @@ void panel_terminal_render(Gui *g, App *app) {
 
     char title[128];
     bool running = terminal_running();
-    snprintf(title, sizeof(title), "Terminal");
+    snprintf(title, sizeof(title), "Terminal  %s", term_shell_name);
     font_draw(&g->font, r, title, px + pad_x, py + 7.0f,
               t->accent[0], t->accent[1], t->accent[2], 1.0f);
 
@@ -838,7 +870,7 @@ void panel_terminal_render(Gui *g, App *app) {
 
     char footer[160];
     if (term_scroll > 0)
-        snprintf(footer, sizeof(footer), "scrolled +%d  PageDown: newer  Ctrl-End: live  Ctrl-Shift-r: restart  Esc: hide", term_scroll);
+        snprintf(footer, sizeof(footer), "scrolled +%d  PageDown: newer  Ctrl-End: live  typing returns live  Esc: hide", term_scroll);
     else if (!running)
         snprintf(footer, sizeof(footer), "stopped  Enter/Ctrl-Shift-r: restart  Ctrl-~: toggle  Esc: hide");
     else
