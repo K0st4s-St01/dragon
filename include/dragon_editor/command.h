@@ -57,6 +57,7 @@ void     cmd_lsp_stop(App *app);
 void     cmd_lsp_restart(App *app);
 void     cmd_workspace_symbols(App *app);
 void     cmd_workspace_diagnostics(App *app);
+void     cmd_plugins(App *app);
 
 /* New commands */
 void     cmd_goto_alternate(App *app);

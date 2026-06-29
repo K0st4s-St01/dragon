@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "dragon_editor/buffer.h"
 #include "dragon_editor/cursor.h"
@@ -4060,6 +4061,91 @@ static void test_lang_settings_detect(void) {
     PASS();
 }
 
+static void test_config_language_entries(void) {
+    TEST(config_language_entries);
+    char oldcwd[1024];
+    ASSERT(getcwd(oldcwd, sizeof(oldcwd)) != NULL);
+    char dir[] = "/tmp/dragon-config-lang-XXXXXX";
+    ASSERT(mkdtemp(dir) != NULL);
+    ASSERT(chdir(dir) == 0);
+    FILE *f = fopen("dragon.toml", "w");
+    ASSERT(f != NULL);
+    fputs("[[language]]\n"
+          "id = \"nix\"\n"
+          "extensions = [\"nix\"]\n"
+          "tab_width = 2\n"
+          "line_comment = \"#\"\n"
+          "tree_sitter = \"nix\"\n"
+          "lsp_command = \"nil\"\n"
+          "lsp_args = [\"--stdio\"]\n", f);
+    fclose(f);
+
+    Config *cfg = config_load();
+    int ok = cfg && cfg->language_count == 1 &&
+             strcmp(cfg->languages[0].id, "nix") == 0 &&
+             strcmp(cfg->languages[0].extensions[0], "nix") == 0 &&
+             cfg->languages[0].tab_width == 2 &&
+             strcmp(cfg->languages[0].line_comment, "#") == 0 &&
+             strcmp(cfg->languages[0].tree_sitter, "nix") == 0 &&
+             strcmp(cfg->languages[0].lsp_command, "nil") == 0 &&
+             cfg->languages[0].lsp_arg_count == 1;
+    language_registry_load_config(cfg);
+    const LanguageSettings *ls = language_settings_get("nix");
+    ok = ok && strcmp(language_id_for_extension("nix"), "nix") == 0 &&
+         strcmp(language_treesitter_for_extension(".nix"), "nix") == 0 &&
+         ls && ls->tab_width == 2 && ls->line_comment && strcmp(ls->line_comment, "#") == 0;
+    language_registry_load_config(NULL);
+    config_free(cfg);
+    ASSERT(chdir(oldcwd) == 0);
+    ASSERT_TRUE(ok);
+    PASS();
+}
+
+static void test_config_plugin_manifest(void) {
+    TEST(config_plugin_manifest);
+    char oldcwd[1024];
+    ASSERT(getcwd(oldcwd, sizeof(oldcwd)) != NULL);
+    char dir[] = "/tmp/dragon-plugin-config-XXXXXX";
+    ASSERT(mkdtemp(dir) != NULL);
+    ASSERT(chdir(dir) == 0);
+    ASSERT(mkdir("plugins", 0777) == 0);
+    ASSERT(mkdir("plugins/gleam", 0777) == 0);
+    FILE *f = fopen("dragon.toml", "w");
+    ASSERT(f != NULL);
+    fputs("[[plugin]]\n"
+          "path = \"plugins/gleam\"\n"
+          "enabled = true\n", f);
+    fclose(f);
+    f = fopen("plugins/gleam/dragon-plugin.toml", "w");
+    ASSERT(f != NULL);
+    fputs("[plugin]\n"
+          "name = \"gleam-tools\"\n"
+          "version = \"0.1\"\n"
+          "description = \"Gleam language support\"\n"
+          "\n"
+          "[[language]]\n"
+          "id = \"gleam\"\n"
+          "extensions = [\"gleam\"]\n"
+          "tab_width = 2\n"
+          "line_comment = \"//\"\n"
+          "tree_sitter = \"gleam\"\n"
+          "lsp_command = \"gleam\"\n"
+          "lsp_args = [\"lsp\"]\n", f);
+    fclose(f);
+
+    Config *cfg = config_load();
+    int ok = cfg && cfg->plugin_count == 1 && cfg->language_count == 1 &&
+             cfg->plugins[0].enabled == 1 && cfg->plugins[0].loaded == 1 &&
+             cfg->plugins[0].language_count == 1 &&
+             strcmp(cfg->plugins[0].name, "gleam-tools") == 0 &&
+             strcmp(cfg->languages[0].id, "gleam") == 0 &&
+             strcmp(cfg->languages[0].lsp_command, "gleam") == 0;
+    config_free(cfg);
+    ASSERT(chdir(oldcwd) == 0);
+    ASSERT_TRUE(ok);
+    PASS();
+}
+
 /* ================================================================
  * MAIN
  * ================================================================ */
@@ -4437,6 +4523,8 @@ int main(void) {
     test_lang_settings_python();
     test_lang_settings_unknown();
     test_lang_settings_detect();
+    test_config_language_entries();
+    test_config_plugin_manifest();
 
     printf("\n=== Results: %d/%d passed, %d failed ===\n",
            tests_passed, tests_run, tests_failed);

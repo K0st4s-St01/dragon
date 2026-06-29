@@ -692,9 +692,11 @@ App *app_create(int width, int height, const char *title) {
     /* Load configuration and apply theme */
     app->config = config_load();
     theme_apply_config(app->config);
+    language_registry_load_config(app->config);
     
     lsp_manager_init(&app->lsp_manager);
     lsp_config_load_defaults(&app->lsp_manager);
+    lsp_config_load_configured(&app->lsp_manager, app->config);
     app->ts_manager = treesitter_manager_new();
     window_manager_init(&app->window_mgr);
     app->pending_goto_id = -1;

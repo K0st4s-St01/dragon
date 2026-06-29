@@ -1,6 +1,7 @@
 #include "dragon_editor/document.h"
 #include "dragon_editor/lsp.h"
 #include "dragon_editor/treesitter.h"
+#include "dragon_editor/config.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -9,8 +10,11 @@
 #include <regex.h>
 
 #define MAX_CURSORS 64
+#define CUSTOM_LANGUAGE_MAX CONFIG_MAX_LANGUAGES
 
 static char *filepath_to_uri(const char *filepath);
+static ConfigLanguage custom_languages[CUSTOM_LANGUAGE_MAX];
+static int custom_language_count = 0;
 
 static bool language_is_c_family(const char *lang) {
     return lang && (strcmp(lang, "c") == 0 || strcmp(lang, "cpp") == 0 ||
@@ -19,16 +23,27 @@ static bool language_is_c_family(const char *lang) {
 }
 
 static bool language_uses_slash_comments(const char *lang) {
+    const LanguageSettings *ls = language_settings_get(lang);
+    if (ls && ls->line_comment && strcmp(ls->line_comment, "//") == 0)
+        return true;
     return language_is_c_family(lang) ||
            (lang && (strcmp(lang, "javascript") == 0 || strcmp(lang, "typescript") == 0 ||
                      strcmp(lang, "rust") == 0 || strcmp(lang, "go") == 0));
 }
 
 static bool language_uses_hash_comments(const char *lang) {
-    return lang && strcmp(lang, "python") == 0;
+    const LanguageSettings *ls = language_settings_get(lang);
+    if (ls && ls->line_comment && strcmp(ls->line_comment, "#") == 0)
+        return true;
+    return lang && (strcmp(lang, "python") == 0 || strcmp(lang, "sh") == 0 ||
+                    strcmp(lang, "bash") == 0 || strcmp(lang, "yaml") == 0 ||
+                    strcmp(lang, "toml") == 0);
 }
 
 static bool language_is_script(const char *lang) {
+    const LanguageSettings *ls = language_settings_get(lang);
+    if (ls && (ls->line_comment || ls->comment_open))
+        return true;
     return lang && (strcmp(lang, "python") == 0 || strcmp(lang, "javascript") == 0 ||
                     strcmp(lang, "typescript") == 0 || strcmp(lang, "go") == 0 ||
                     strcmp(lang, "rust") == 0);
@@ -3023,21 +3038,7 @@ void document_detect_language(Document *doc) {
     
     ext++;  /* Skip the dot */
     
-    /* Map extensions to language IDs */
-    const char *lang_id = NULL;
-    if (strcmp(ext, "c") == 0) lang_id = "c";
-    else if (strcmp(ext, "h") == 0) lang_id = "c";
-    else if (strcmp(ext, "cpp") == 0 || strcmp(ext, "cc") == 0 || strcmp(ext, "cxx") == 0) lang_id = "cpp";
-    else if (strcmp(ext, "hpp") == 0 || strcmp(ext, "hh") == 0 || strcmp(ext, "hxx") == 0) lang_id = "cpp";
-    else if (strcmp(ext, "m") == 0) lang_id = "objc";  /* Objective-C */
-    else if (strcmp(ext, "mm") == 0) lang_id = "objcpp";  /* Objective-C++ */
-    else if (strcmp(ext, "cu") == 0) lang_id = "cuda";  /* CUDA */
-    else if (strcmp(ext, "rs") == 0) lang_id = "rust";
-    else if (strcmp(ext, "py") == 0) lang_id = "python";
-    else if (strcmp(ext, "go") == 0) lang_id = "go";
-    else if (strcmp(ext, "ts") == 0) lang_id = "typescript";
-    else if (strcmp(ext, "js") == 0) lang_id = "javascript";
-    else if (strcmp(ext, "java") == 0) lang_id = "java";
+    const char *lang_id = language_id_for_extension(ext);
     
     if (lang_id) {
         doc->language_id = malloc(strlen(lang_id) + 1);
@@ -4932,8 +4933,99 @@ static const LanguageSettings language_settings_table[] = {
     { NULL, 0, false, NULL, NULL, NULL, false }
 };
 
+static const char *builtin_language_for_extension(const char *ext) {
+    if (!ext) return NULL;
+    if (ext[0] == '.') ext++;
+    if (strcmp(ext, "c") == 0 || strcmp(ext, "h") == 0) return "c";
+    if (strcmp(ext, "cpp") == 0 || strcmp(ext, "cc") == 0 || strcmp(ext, "cxx") == 0) return "cpp";
+    if (strcmp(ext, "hpp") == 0 || strcmp(ext, "hh") == 0 || strcmp(ext, "hxx") == 0) return "cpp";
+    if (strcmp(ext, "m") == 0) return "objc";
+    if (strcmp(ext, "mm") == 0) return "objcpp";
+    if (strcmp(ext, "cu") == 0) return "cuda";
+    if (strcmp(ext, "rs") == 0) return "rust";
+    if (strcmp(ext, "py") == 0) return "python";
+    if (strcmp(ext, "go") == 0) return "go";
+    if (strcmp(ext, "ts") == 0) return "typescript";
+    if (strcmp(ext, "tsx") == 0) return "typescript";
+    if (strcmp(ext, "js") == 0 || strcmp(ext, "mjs") == 0 || strcmp(ext, "jsx") == 0) return "javascript";
+    if (strcmp(ext, "java") == 0) return "java";
+    if (strcmp(ext, "html") == 0 || strcmp(ext, "htm") == 0) return "html";
+    if (strcmp(ext, "css") == 0) return "css";
+    if (strcmp(ext, "json") == 0) return "json";
+    if (strcmp(ext, "yml") == 0 || strcmp(ext, "yaml") == 0) return "yaml";
+    if (strcmp(ext, "toml") == 0) return "toml";
+    if (strcmp(ext, "md") == 0 || strcmp(ext, "markdown") == 0) return "markdown";
+    if (strcmp(ext, "sh") == 0 || strcmp(ext, "bash") == 0 || strcmp(ext, "zsh") == 0) return "bash";
+    if (strcmp(ext, "zig") == 0) return "zig";
+    return NULL;
+}
+
+static const char *builtin_treesitter_for_extension(const char *ext) {
+    if (!ext) return NULL;
+    if (ext[0] == '.') ext++;
+    if (strcmp(ext, "c") == 0 || strcmp(ext, "h") == 0) return "c";
+    if (strcmp(ext, "cpp") == 0 || strcmp(ext, "cc") == 0 || strcmp(ext, "cxx") == 0) return "c";
+    if (strcmp(ext, "hpp") == 0 || strcmp(ext, "hh") == 0 || strcmp(ext, "hxx") == 0) return "c";
+    if (strcmp(ext, "m") == 0 || strcmp(ext, "mm") == 0 || strcmp(ext, "cu") == 0) return "c";
+    if (strcmp(ext, "py") == 0) return "python";
+    if (strcmp(ext, "js") == 0 || strcmp(ext, "mjs") == 0 || strcmp(ext, "jsx") == 0) return "javascript";
+    if (strcmp(ext, "ts") == 0 || strcmp(ext, "tsx") == 0) return "typescript";
+    if (strcmp(ext, "sh") == 0 || strcmp(ext, "bash") == 0 || strcmp(ext, "zsh") == 0) return "bash";
+    if (strcmp(ext, "lua") == 0) return "lua";
+    if (strcmp(ext, "md") == 0 || strcmp(ext, "markdown") == 0) return "markdown";
+    return NULL;
+}
+
+void language_registry_load_config(const Config *cfg) {
+    custom_language_count = 0;
+    if (!cfg) return;
+    for (int i = 0; i < cfg->language_count && custom_language_count < CUSTOM_LANGUAGE_MAX; i++) {
+        custom_languages[custom_language_count++] = cfg->languages[i];
+    }
+}
+
+const char *language_id_for_extension(const char *extension) {
+    if (!extension) return NULL;
+    const char *ext = extension[0] == '.' ? extension + 1 : extension;
+    for (int i = 0; i < custom_language_count; i++) {
+        const ConfigLanguage *lang = &custom_languages[i];
+        for (int j = 0; j < lang->extension_count; j++) {
+            if (strcmp(lang->extensions[j], ext) == 0)
+                return lang->id;
+        }
+    }
+    return builtin_language_for_extension(ext);
+}
+
+const char *language_treesitter_for_extension(const char *extension) {
+    if (!extension) return NULL;
+    const char *ext = extension[0] == '.' ? extension + 1 : extension;
+    for (int i = 0; i < custom_language_count; i++) {
+        const ConfigLanguage *lang = &custom_languages[i];
+        for (int j = 0; j < lang->extension_count; j++) {
+            if (strcmp(lang->extensions[j], ext) == 0)
+                return lang->tree_sitter[0] ? lang->tree_sitter : lang->id;
+        }
+    }
+    return builtin_treesitter_for_extension(ext);
+}
+
 const LanguageSettings *language_settings_get(const char *language_id) {
     if (!language_id) return NULL;
+    static LanguageSettings custom;
+    for (int i = 0; i < custom_language_count; i++) {
+        ConfigLanguage *lang = &custom_languages[i];
+        if (strcmp(lang->id, language_id) == 0) {
+            custom.language = lang->id;
+            custom.tab_width = lang->tab_width > 0 ? lang->tab_width : 4;
+            custom.use_tabs = lang->use_tabs ? true : false;
+            custom.comment_open = lang->comment_open[0] ? lang->comment_open : NULL;
+            custom.comment_close = lang->comment_close[0] ? lang->comment_close : NULL;
+            custom.line_comment = lang->line_comment[0] ? lang->line_comment : NULL;
+            custom.auto_format = lang->auto_format ? true : false;
+            return &custom;
+        }
+    }
     for (int i = 0; language_settings_table[i].language; i++) {
         if (strcmp(language_settings_table[i].language, language_id) == 0)
             return &language_settings_table[i];

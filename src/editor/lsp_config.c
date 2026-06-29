@@ -46,3 +46,16 @@ void lsp_config_load(LSPManager *manager, const char *config_path) {
     (void)config_path;  /* Unused parameter */
     lsp_config_load_defaults(manager);
 }
+
+void lsp_config_load_configured(LSPManager *manager, const Config *cfg) {
+    if (!manager || !cfg) return;
+    for (int i = 0; i < cfg->language_count; i++) {
+        const ConfigLanguage *lang = &cfg->languages[i];
+        if (!lang->id[0] || !lang->lsp_command[0])
+            continue;
+        const char *args[CONFIG_MAX_LSP_ARGS];
+        for (int j = 0; j < lang->lsp_arg_count; j++)
+            args[j] = lang->lsp_args[j];
+        lsp_manager_add_server(manager, lang->id, lang->lsp_command, args, lang->lsp_arg_count);
+    }
+}

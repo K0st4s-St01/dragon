@@ -12,6 +12,26 @@ auto_format = 0
 auto_hover = 1
 diagnostic_delay_ms = 100
 
+# Add or override language support without recompiling.
+# A configured language can provide file extensions, indentation/comment
+# behavior, a tree-sitter parser name, and an LSP command.
+#[[language]]
+#id = "nix"
+#extensions = ["nix"]
+#tab_width = 2
+#use_tabs = false
+#line_comment = "#"
+#tree_sitter = "nix"
+#lsp_command = "nil"
+#lsp_args = []
+
+# Plugins are TOML manifests that can contribute language entries.
+# If path is a directory, Dragon reads path/dragon-plugin.toml.
+#[[plugin]]
+#name = "gleam-tools"
+#path = "plugins/gleam"
+#enabled = true
+
 # Optional per-color overrides for the selected theme.
 # Values are RGBA floats in the 0.0-1.0 range.
 [theme]

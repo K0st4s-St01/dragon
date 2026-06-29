@@ -2,11 +2,14 @@
 #define DE_LSP_CONFIG_H
 
 #include "lsp.h"
+#include "config.h"
 
 /* Load LSP server configurations from a file */
 void lsp_config_load(LSPManager *manager, const char *config_path);
 
 /* Default configurations for common languages */
 void lsp_config_load_defaults(LSPManager *manager);
+
+void lsp_config_load_configured(LSPManager *manager, const Config *cfg);
 
 #endif

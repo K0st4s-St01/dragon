@@ -917,6 +917,30 @@ src/gui/panels/palette.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.s
 .PHONY : src/gui/panels/palette.c.s
 
+src/gui/panels/plugins.o: src/gui/panels/plugins.c.o
+.PHONY : src/gui/panels/plugins.o
+
+# target to build an object file
+src/gui/panels/plugins.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/plugins.c.o
+.PHONY : src/gui/panels/plugins.c.o
+
+src/gui/panels/plugins.i: src/gui/panels/plugins.c.i
+.PHONY : src/gui/panels/plugins.i
+
+# target to preprocess a source file
+src/gui/panels/plugins.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/plugins.c.i
+.PHONY : src/gui/panels/plugins.c.i
+
+src/gui/panels/plugins.s: src/gui/panels/plugins.c.s
+.PHONY : src/gui/panels/plugins.s
+
+# target to generate assembly for a file
+src/gui/panels/plugins.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dragon_editor.dir/build.make CMakeFiles/dragon_editor.dir/src/gui/panels/plugins.c.s
+.PHONY : src/gui/panels/plugins.c.s
+
 src/gui/panels/rename.o: src/gui/panels/rename.c.o
 .PHONY : src/gui/panels/rename.o
 
@@ -1381,6 +1405,9 @@ help:
 	@echo "... src/gui/panels/palette.o"
 	@echo "... src/gui/panels/palette.i"
 	@echo "... src/gui/panels/palette.s"
+	@echo "... src/gui/panels/plugins.o"
+	@echo "... src/gui/panels/plugins.i"
+	@echo "... src/gui/panels/plugins.s"
 	@echo "... src/gui/panels/rename.o"
 	@echo "... src/gui/panels/rename.i"
 	@echo "... src/gui/panels/rename.s"

@@ -339,6 +339,11 @@ typedef struct {
     bool auto_format;
 } LanguageSettings;
 
+typedef struct Config Config;
+
+void language_registry_load_config(const Config *cfg);
+const char *language_id_for_extension(const char *extension);
+const char *language_treesitter_for_extension(const char *extension);
 const LanguageSettings *language_settings_get(const char *language_id);
 void language_settings_detect(Document *doc, LanguageSettings *out);
 

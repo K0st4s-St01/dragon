@@ -3,7 +3,38 @@
 
 #include <stdint.h>
 
+#define CONFIG_MAX_LANGUAGES 64
+#define CONFIG_MAX_EXTENSIONS 16
+#define CONFIG_MAX_LSP_ARGS 16
+#define CONFIG_MAX_PLUGINS 32
+
 typedef struct {
+    char id[64];
+    char extensions[CONFIG_MAX_EXTENSIONS][24];
+    int extension_count;
+    int tab_width;
+    int use_tabs;
+    char comment_open[24];
+    char comment_close[24];
+    char line_comment[24];
+    int auto_format;
+    char tree_sitter[64];
+    char lsp_command[128];
+    char lsp_args[CONFIG_MAX_LSP_ARGS][128];
+    int lsp_arg_count;
+} ConfigLanguage;
+
+typedef struct {
+    char name[64];
+    char path[256];
+    char version[32];
+    char description[160];
+    int enabled;
+    int loaded;
+    int language_count;
+} ConfigPlugin;
+
+typedef struct Config {
     /* Editor settings */
     int tab_width;
     int font_size;
@@ -46,6 +77,12 @@ typedef struct {
         int auto_hover;
         int diagnostic_delay_ms;
     } lsp;
+
+    ConfigLanguage languages[CONFIG_MAX_LANGUAGES];
+    int language_count;
+
+    ConfigPlugin plugins[CONFIG_MAX_PLUGINS];
+    int plugin_count;
 } Config;
 
 /* Load config from ./dragon.toml, then ~/.config/dragon/dragon.toml */

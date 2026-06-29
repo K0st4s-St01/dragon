@@ -58,6 +58,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.o.d"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o.d"
+  "CMakeFiles/dragon_editor.dir/src/gui/panels/plugins.c.o"
+  "CMakeFiles/dragon_editor.dir/src/gui/panels/plugins.c.o.d"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.o"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.o.d"
   "CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o"

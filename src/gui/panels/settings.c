@@ -111,6 +111,8 @@ void panel_settings_render(Gui *g, App *app) {
         ADD_INT("lsp.auto_format", cfg->lsp.auto_format);
         ADD_INT("lsp.auto_hover", cfg->lsp.auto_hover);
         ADD_INT("lsp.diagnostic_delay_ms", cfg->lsp.diagnostic_delay_ms);
+        ADD_INT("languages.count", cfg->language_count);
+        ADD_INT("plugins.count", cfg->plugin_count);
         ADD_COLOR("theme.bg", cfg->theme.bg);
         ADD_COLOR("theme.fg", cfg->theme.fg);
         ADD_COLOR("theme.gutter_bg", cfg->theme.gutter_bg);

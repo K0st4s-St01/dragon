@@ -44,6 +44,7 @@ void command_registry_init(void) {
     command_register("lsp-restart",    "LSP restart",         "LSP", cmd_lsp_restart);
     command_register("workspace-symbols", "Workspace symbols", "LSP", cmd_workspace_symbols);
     command_register("workspace-diagnostics", "Workspace diagnostics", "LSP", cmd_workspace_diagnostics);
+    command_register("plugins",        "Plugin manager",     "Workspace", cmd_plugins);
 }
 
 void command_register(const char *name, const char *label,
@@ -253,6 +254,11 @@ void cmd_workspace_symbols(App *app) {
 void cmd_workspace_diagnostics(App *app) {
     extern void panel_workspace_diagnostics_open(App *);
     panel_workspace_diagnostics_open(app);
+}
+
+void cmd_plugins(App *app) {
+    extern void panel_plugins_open(App *);
+    panel_plugins_open(app);
 }
 
 /* New commands */

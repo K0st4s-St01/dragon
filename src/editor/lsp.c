@@ -579,6 +579,36 @@ void lsp_manager_free(LSPManager *manager) {
 
 void lsp_manager_add_server(LSPManager *manager, const char *language_id,
                             const char *server_path, const char **args, int args_count) {
+    if (!manager || !language_id || !server_path) return;
+    for (int i = 0; i < manager->client_count; i++) {
+        LSPClient *existing = &manager->clients[i];
+        if (!existing->language_id || strcmp(existing->language_id, language_id) != 0)
+            continue;
+        lsp_client_stop(existing);
+        free(existing->config.path);
+        if (existing->config.args) {
+            for (int j = 0; j < existing->config.args_count; j++)
+                free(existing->config.args[j]);
+            free(existing->config.args);
+        }
+        existing->config.path = malloc(strlen(server_path) + 1);
+        strcpy(existing->config.path, server_path);
+        existing->config.args = NULL;
+        existing->config.args_count = args_count;
+        if (args_count > 0) {
+            existing->config.args = malloc(args_count * sizeof(char *));
+            for (int j = 0; j < args_count; j++) {
+                existing->config.args[j] = malloc(strlen(args[j]) + 1);
+                strcpy(existing->config.args[j], args[j]);
+            }
+        }
+        existing->status = LSP_STATUS_DISCONNECTED;
+        existing->initialized = false;
+        existing->id = 1;
+        existing->read_len = 0;
+        return;
+    }
+
     if (manager->client_count >= manager->client_capacity) {
         manager->client_capacity = (manager->client_capacity == 0) ? 8 : manager->client_capacity * 2;
         manager->clients = realloc(manager->clients, 

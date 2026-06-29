@@ -37,6 +37,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/xator/dragon/src/gui/panels/lsp_goto_picker.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_goto_picker.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_goto_picker.c.o.d"
   "/home/xator/dragon/src/gui/panels/lsp_hover_panel.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.o.d"
   "/home/xator/dragon/src/gui/panels/palette.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o.d"
+  "/home/xator/dragon/src/gui/panels/plugins.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/plugins.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/plugins.c.o.d"
   "/home/xator/dragon/src/gui/panels/rename.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.o.d"
   "/home/xator/dragon/src/gui/panels/settings.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o.d"
   "/home/xator/dragon/src/gui/panels/space_menu.c" "CMakeFiles/dragon_editor.dir/src/gui/panels/space_menu.c.o" "gcc" "CMakeFiles/dragon_editor.dir/src/gui/panels/space_menu.c.o.d"

@@ -19,6 +19,7 @@
 #include "panel_code_actions.h"
 #include "panel_palette.h"
 #include "panel_settings.h"
+#include "panel_plugins.h"
 #include "panel_treesitter_inspector.h"
 #include "panel_terminal.h"
 #include "panel_workspace_symbols.h"
@@ -90,6 +91,7 @@ static const CmdCompletion static_cmds[] = {
     {"lsp-restart", "Restart LSP servers", false},
     {"workspace-symbols", "Workspace symbols", false},
     {"workspace-diagnostics", "Workspace diagnostics", false},
+    {"plugins", "Plugin manager", false},
     {"tree-sitter-subtree", "Tree-sitter inspector", false},
     {"ts-subtree", "Tree-sitter inspector", false},
     {"tree-sitter-highlight-name", "Tree-sitter inspector", false},
@@ -142,7 +144,7 @@ void input_cmd_reset(void) {
     cmd_buf[0] = '\0';
     cmd_len = 0;
     cmd_completion_selected = 0;
-    command_completion_update();
+    cmd_completion_count = 0;
 }
 
 const char *input_cmd_get(void) {
@@ -437,6 +439,7 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
         if (panel_space_menu_is_open()) { panel_space_menu_close(app); return; }
         if (panel_palette_is_open()) { panel_palette_close(app); return; }
         if (panel_settings_is_open()) { panel_settings_close(app); return; }
+        if (panel_plugins_is_open()) { panel_plugins_close(app); return; }
         if (panel_treesitter_inspector_is_open()) { panel_treesitter_inspector_close(app); return; }
         if (panel_workspace_symbols_is_open()) { panel_workspace_symbols_close(app); return; }
         if (panel_workspace_diagnostics_is_open()) { panel_workspace_diagnostics_close(app); return; }
@@ -479,6 +482,11 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
 
     if (panel_settings_is_open()) {
         panel_settings_key(app, key);
+        return;
+    }
+
+    if (panel_plugins_is_open()) {
+        panel_plugins_key(app, key);
         return;
     }
 
@@ -1321,6 +1329,7 @@ static void handle_normal_key(App *app, int key, int action, int mods) {
         !(mods & GLFW_MOD_CONTROL) && !(mods & GLFW_MOD_ALT)) {
         mode_set(mode, MODE_COMMAND);
         input_cmd_reset();
+        command_completion_update();
         return;
     }
 
