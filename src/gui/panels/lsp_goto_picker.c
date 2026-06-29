@@ -25,6 +25,81 @@ typedef struct {
 static LSPGotoEntry lsp_goto_entries[64];
 static int lsp_goto_count = 0;
 
+static int hex_value(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return 10 + c - 'a';
+    if (c >= 'A' && c <= 'F') return 10 + c - 'A';
+    return -1;
+}
+
+static bool uri_to_path(const char *uri, char *out, size_t out_size) {
+    if (!uri || !out || out_size == 0) return false;
+
+    const char *path = uri;
+    if (strncmp(path, "file://", 7) == 0) {
+        path += 7;
+        if (strncmp(path, "localhost/", 10) == 0)
+            path += 9;
+        else if (path[0] != '/') {
+            const char *slash = strchr(path, '/');
+            path = slash ? slash : path;
+        }
+    }
+
+    size_t len = 0;
+    for (const char *p = path; *p && len < out_size - 1; p++) {
+        if (*p == '%' && p[1] && p[2]) {
+            int hi = hex_value(p[1]);
+            int lo = hex_value(p[2]);
+            if (hi >= 0 && lo >= 0) {
+                out[len++] = (char)((hi << 4) | lo);
+                p += 2;
+                continue;
+            }
+        }
+        out[len++] = *p;
+    }
+    out[len] = '\0';
+    return out[0] != '\0';
+}
+
+static const char *display_path(const char *uri) {
+    const char *path = uri;
+    if (path && strncmp(path, "file://", 7) == 0)
+        path += 7;
+    if (path && strncmp(path, "localhost/", 10) == 0)
+        path += 9;
+    return path ? path : "";
+}
+
+static bool goto_entry_matches_doc(const LSPGotoEntry *entry, Document *doc) {
+    if (!entry || !doc || !doc->filepath) return false;
+
+    char path[1024];
+    if (!uri_to_path(entry->uri, path, sizeof(path)))
+        return false;
+    return strcmp(path, doc->filepath) == 0;
+}
+
+static bool jump_to_entry(App *app, const LSPGotoEntry *entry) {
+    if (!app || !entry) return false;
+
+    char path[1024];
+    if (!uri_to_path(entry->uri, path, sizeof(path)))
+        return false;
+
+    app_open_file(app, path);
+    Document *doc = (Document *)app_get_doc(app);
+    if (!doc || !goto_entry_matches_doc(entry, doc))
+        return false;
+
+    doc->cursor_count = 1;
+    cursor_clear_selection(&doc->cursors[0]);
+    document_cursor_to(doc, entry->line, entry->character);
+    document_sync_viewport_to_cursor(doc);
+    return true;
+}
+
 void panel_lsp_goto_open(App *app) {
     Document *doc = (Document *)app_get_doc(app);
     
@@ -36,13 +111,9 @@ void panel_lsp_goto_open(App *app) {
     /* If only one result, navigate directly without showing picker */
     if (doc->goto_result_count == 1) {
         LSPGotoResult *res = &doc->goto_results[0];
-        Cursor *cur = &doc->cursors[0];
-        
-        /* Check if it's the same file */
-        if (strstr(res->uri, doc->filepath)) {
-            cur->row = res->line;
-            cur->col = res->character;
-        }
+        LSPGotoEntry entry = {{0}, res->line, res->character, {0}};
+        strncpy(entry.uri, res->uri ? res->uri : "", sizeof(entry.uri) - 1);
+        jump_to_entry(app, &entry);
         return;
     }
     
@@ -62,7 +133,7 @@ void panel_lsp_goto_open(App *app) {
         lsp_goto_entries[lsp_goto_count].character = res->character;
         
         /* Get preview text from goto result line if available */
-        if (strstr(res->uri, doc->filepath)) {
+        if (goto_entry_matches_doc(&lsp_goto_entries[lsp_goto_count], doc)) {
             Buffer *buf = &doc->buffer;
             if (res->line >= 0 && res->line < (int)buffer_line_count(buf)) {
                 const char *line = buffer_line_ptr(buf, res->line);
@@ -83,9 +154,8 @@ void panel_lsp_goto_open(App *app) {
                 lsp_goto_entries[lsp_goto_count].preview[0] = '\0';
             }
         } else {
-            /* Different file - just show the URI */
             snprintf(lsp_goto_entries[lsp_goto_count].preview, 100, 
-                     "in %s", res->uri);
+                     "in %s", display_path(res->uri));
         }
         
         lsp_goto_count++;
@@ -121,16 +191,8 @@ void panel_lsp_goto_key(App *app, int key) {
         lsp_goto_selected = lsp_goto_count > 0 ? lsp_goto_count - 1 : 0;
     } else if (key == GLFW_KEY_ENTER) {
         if (lsp_goto_count > 0) {
-            Document *doc = (Document *)app_get_doc(app);
-            Cursor *cur = &doc->cursors[0];
             LSPGotoEntry *entry = &lsp_goto_entries[lsp_goto_selected];
-            
-            /* Navigate to the result */
-            if (strstr(entry->uri, doc->filepath)) {
-                cur->row = entry->line;
-                cur->col = entry->character;
-            }
-            /* TODO: Handle cross-file navigation */
+            jump_to_entry(app, entry);
         }
         panel_lsp_goto_close(app);
     } else if (key == GLFW_KEY_ESCAPE) {

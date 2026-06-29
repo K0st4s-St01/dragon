@@ -941,8 +941,8 @@ void input_handle_key(App *app, int key, int scancode, int action, int mods) {
     }
 
     if (panel_completion_is_open()) {
-        panel_completion_key(app, key, mods);
-        return;
+        if (panel_completion_key(app, key, mods))
+            return;
     }
 
     /* Route keys to buffer picker when open */

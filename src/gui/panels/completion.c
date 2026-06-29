@@ -174,21 +174,26 @@ static void accept_completion(App *app) {
     panel_completion_close(app);
 }
 
-void panel_completion_key(App *app, int key, int mods) {
-    if (!completion_open) return;
+bool panel_completion_key(App *app, int key, int mods) {
+    if (!completion_open) return false;
     if (key == GLFW_KEY_UP ||
                (key == GLFW_KEY_TAB && (mods & GLFW_MOD_SHIFT)) ||
                (key == GLFW_KEY_P && (mods & GLFW_MOD_CONTROL))) {
         if (completion_selected > 0) completion_selected--;
+        return true;
     } else if (key == GLFW_KEY_DOWN || key == GLFW_KEY_TAB ||
         (key == GLFW_KEY_N && (mods & GLFW_MOD_CONTROL))) {
         if (completion_selected < completion_count - 1) completion_selected++;
+        return true;
     } else if (key == GLFW_KEY_ENTER) {
         accept_completion(app);
+        return true;
     } else if (key == GLFW_KEY_ESCAPE || (key == GLFW_KEY_C && (mods & GLFW_MOD_CONTROL))) {
         panel_completion_close(app);
+        return true;
     } else {
         panel_completion_close(app);
+        return false;
     }
 }
 

@@ -30,6 +30,35 @@ static void palette_terminal(App *app) {
     panel_terminal_open(app);
 }
 
+static void palette_lsp_hover(App *app) {
+    extern void panel_lsp_hover_request(App *);
+    panel_lsp_hover_request(app);
+}
+
+static void palette_document_symbols(App *app) {
+    extern void panel_symbols_picker_open(App *);
+    panel_symbols_picker_open(app);
+}
+
+static void palette_document_diagnostics(App *app) {
+    extern void panel_lsp_diagnostics_open(App *);
+    panel_lsp_diagnostics_open(app);
+}
+
+static void palette_rename_symbol(App *app) {
+    extern void panel_rename_open(App *);
+    panel_rename_open(app);
+}
+
+static void palette_code_actions(App *app) {
+    extern void panel_code_actions_open(App *);
+    panel_code_actions_open(app);
+}
+
+static void palette_select_references(App *app) {
+    app_lsp_select_references(app);
+}
+
 static PaletteEntry entries[] = {
     /* File */
     {"Open file",           "ctrl+o",    "File", cmd_open},
@@ -39,6 +68,10 @@ static PaletteEntry entries[] = {
     {"Go to alternate file","ctrl+^",    "File", cmd_goto_alternate},
     {"Open workspace",      ":open-workspace", "File", cmd_open_workspace},
     {"Change directory",    ":cwd",      "File", cmd_change_dir},
+    /* Buffers */
+    {"Next buffer",         ":bn",       "Buffer", cmd_buffer_next},
+    {"Previous buffer",     ":bp",       "Buffer", cmd_buffer_prev},
+    {"Close buffer",        ":bc",       "Buffer", cmd_buffer_close},
     /* Navigation */
     {"Go to top",           "gg",        "Navigation", cmd_goto_top},
     {"Go to bottom",        "G",         "Navigation", cmd_goto_bottom},
@@ -57,6 +90,9 @@ static PaletteEntry entries[] = {
     /* Edit */
     {"Undo",                "u",         "Edit", cmd_undo},
     {"Redo",                "ctrl+y",    "Edit", cmd_redo},
+    {"Copy",                "",          "Edit", cmd_copy},
+    {"Cut",                 "",          "Edit", cmd_cut},
+    {"Paste",               "",          "Edit", cmd_paste},
     {"Delete line",         "dd",        "Edit", cmd_delete_line},
     {"Duplicate line",      "",          "Edit", cmd_duplicate_line},
     {"Move line up",        "",          "Edit", cmd_move_line_up},
@@ -101,6 +137,12 @@ static PaletteEntry entries[] = {
     {"About",               "",          "Help", cmd_about},
     {"Settings",            "",          "Help", cmd_settings},
     {"Tree-sitter subtree", ":ts-subtree", "LSP", cmd_tree_sitter_inspect},
+    {"Hover documentation", "Space k",   "LSP", palette_lsp_hover},
+    {"Document symbols",    "Space s",   "LSP", palette_document_symbols},
+    {"Document diagnostics","Space d",   "LSP", palette_document_diagnostics},
+    {"Rename symbol",       "Space r",   "LSP", palette_rename_symbol},
+    {"Code actions",        "Space a",   "LSP", palette_code_actions},
+    {"Select references",   "Space h",   "LSP", palette_select_references},
     {"LSP restart",         ":lsp-restart", "LSP", cmd_lsp_restart},
     {"LSP stop",            ":lsp-stop", "LSP", cmd_lsp_stop},
     {"Workspace symbols",   "Space S",   "LSP", cmd_workspace_symbols},
