@@ -47,6 +47,7 @@ static int term_margin_bottom = -1;
 static bool term_alt_screen = false;
 static bool term_cursor_visible = true;
 static bool term_bracketed_paste = false;
+static bool term_app_cursor_keys = false;
 static char term_shell_name[64] = "shell";
 
 static void terminal_reset_margins(void) {
@@ -68,6 +69,7 @@ static void terminal_reset_buffer(void) {
     term_alt_screen = false;
     term_cursor_visible = true;
     term_bracketed_paste = false;
+    term_app_cursor_keys = false;
 }
 
 static bool terminal_running(void) {
@@ -88,6 +90,21 @@ static bool terminal_running(void) {
 
 static void terminal_live(void) {
     term_scroll = 0;
+}
+
+static void terminal_write_raw(const char *s, size_t len) {
+    if (term_fd < 0) return;
+    while (len > 0) {
+        ssize_t n = write(term_fd, s, len);
+        if (n > 0) {
+            s += n;
+            len -= (size_t)n;
+        } else if (n < 0 && errno == EINTR) {
+            continue;
+        } else {
+            break;
+        }
+    }
 }
 
 static void terminal_append_newline(void) {
@@ -400,6 +417,36 @@ static bool csi_private_mode(void) {
     return csi_len > 0 && csi_buf[0] == '?';
 }
 
+static int csi_first_digit_index(void) {
+    int i = 0;
+    while (i < csi_len && (csi_buf[i] < '0' || csi_buf[i] > '9') && csi_buf[i] != ';')
+        i++;
+    return i;
+}
+
+static int csi_parse_params(int *out, int max_params, int fallback) {
+    if (!out || max_params <= 0) return 0;
+    int count = 0;
+    int value = 0;
+    bool any = false;
+    for (int i = csi_first_digit_index(); i <= csi_len; i++) {
+        char ch = i < csi_len ? csi_buf[i] : ';';
+        if (ch >= '0' && ch <= '9') {
+            value = value * 10 + (ch - '0');
+            any = true;
+        } else if (ch == ';' || ch == ':') {
+            if (count < max_params)
+                out[count++] = any ? value : fallback;
+            value = 0;
+            any = false;
+        }
+    }
+    if (count == 0) {
+        out[count++] = fallback;
+    }
+    return count;
+}
+
 static void terminal_enter_alt_screen(void) {
     if (term_alt_screen) return;
     terminal_save_cursor();
@@ -423,9 +470,11 @@ static void terminal_leave_alt_screen(void) {
     terminal_clamp_cursor();
 }
 
-static void terminal_handle_private_mode(bool enabled) {
-    int mode = csi_param(0);
+static void terminal_handle_private_mode_value(int mode, bool enabled) {
     switch (mode) {
+    case 1:
+        term_app_cursor_keys = enabled;
+        break;
     case 25:
         term_cursor_visible = enabled;
         break;
@@ -443,6 +492,13 @@ static void terminal_handle_private_mode(bool enabled) {
     default:
         break;
     }
+}
+
+static void terminal_handle_private_mode(bool enabled) {
+    int modes[8];
+    int count = csi_parse_params(modes, 8, 0);
+    for (int i = 0; i < count; i++)
+        terminal_handle_private_mode_value(modes[i], enabled);
 }
 
 static void terminal_delete_chars(int n) {
@@ -638,6 +694,24 @@ static void terminal_handle_csi(char final) {
     case 'u':
         terminal_restore_cursor();
         break;
+    case 'n':
+        n = csi_param(0);
+        if (n == 5) {
+            terminal_write_raw("\x1b[0n", 4);
+        } else if (n == 6) {
+            char reply[32];
+            int row = term_cursor_line - terminal_screen_origin() + 1;
+            int col = term_col + 1;
+            if (row < 1) row = 1;
+            if (row > term_rows) row = term_rows;
+            if (col < 1) col = 1;
+            snprintf(reply, sizeof(reply), "\x1b[%d;%dR", row, col);
+            terminal_write_raw(reply, strlen(reply));
+        }
+        break;
+    case 'm':
+    case 'q':
+        break;
     default:
         break;
     }
@@ -740,17 +814,7 @@ static void terminal_write_bytes(const char *s, size_t len) {
     if (term_fd < 0 || !terminal_running()) return;
     terminal_live();
     terminal_clear_live_tail_for_input();
-    while (len > 0) {
-        ssize_t n = write(term_fd, s, len);
-        if (n > 0) {
-            s += n;
-            len -= (size_t)n;
-        } else if (n < 0 && errno == EINTR) {
-            continue;
-        } else {
-            break;
-        }
-    }
+    terminal_write_raw(s, len);
 }
 
 static void terminal_compute_layout(Gui *g, App *app,
@@ -871,6 +935,59 @@ bool panel_terminal_is_open(void) {
     return term_open;
 }
 
+static int terminal_modifier_code(int mods) {
+    bool shift = (mods & GLFW_MOD_SHIFT) != 0;
+    bool alt = (mods & GLFW_MOD_ALT) != 0;
+    bool ctrl = (mods & GLFW_MOD_CONTROL) != 0;
+    if (shift && alt && ctrl) return 8;
+    if (alt && ctrl) return 7;
+    if (shift && ctrl) return 6;
+    if (ctrl) return 5;
+    if (shift && alt) return 4;
+    if (alt) return 3;
+    if (shift) return 2;
+    return 1;
+}
+
+static void terminal_write_csi_key(char final, int mods) {
+    int code = terminal_modifier_code(mods);
+    char seq[16];
+    if (code <= 1) {
+        snprintf(seq, sizeof(seq), "\x1b[%c", final);
+    } else {
+        snprintf(seq, sizeof(seq), "\x1b[1;%d%c", code, final);
+    }
+    terminal_write_bytes(seq, strlen(seq));
+}
+
+static void terminal_write_cursor_key(char normal_final, char app_final, int mods) {
+    if ((mods & GLFW_MOD_ALT) && !(mods & (GLFW_MOD_CONTROL | GLFW_MOD_SHIFT))) {
+        if (normal_final == 'C') {
+            terminal_write_bytes("\033f", 2);
+            return;
+        }
+        if (normal_final == 'D') {
+            terminal_write_bytes("\033b", 2);
+            return;
+        }
+    }
+    if ((mods & (GLFW_MOD_SHIFT | GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0 && term_app_cursor_keys) {
+        char seq[3] = {'\x1b', 'O', app_final};
+        terminal_write_bytes(seq, sizeof(seq));
+        return;
+    }
+    terminal_write_csi_key(normal_final, mods);
+}
+
+static void terminal_paste_text(const char *text) {
+    if (!text || !*text) return;
+    if (term_bracketed_paste)
+        terminal_write_bytes("\x1b[200~", 6);
+    terminal_write_bytes(text, strlen(text));
+    if (term_bracketed_paste)
+        terminal_write_bytes("\x1b[201~", 6);
+}
+
 void panel_terminal_key(App *app, int key, int mods) {
     if (!term_open) return;
     terminal_poll();
@@ -903,6 +1020,10 @@ void panel_terminal_key(App *app, int key, int mods) {
         terminal_restart(app);
         return;
     }
+    if ((mods & GLFW_MOD_CONTROL) && (mods & GLFW_MOD_SHIFT) && key == GLFW_KEY_V) {
+        terminal_paste_text(app_get_clipboard(app));
+        return;
+    }
     if (key == GLFW_KEY_ENTER && !terminal_running()) {
         terminal_spawn(app);
         return;
@@ -919,38 +1040,30 @@ void panel_terminal_key(App *app, int key, int mods) {
         else terminal_write_bytes("\t", 1);
         return;
     case GLFW_KEY_UP:
-        if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5A", 6);
-        else if (mods & GLFW_MOD_SHIFT) terminal_write_bytes("\x1b[1;2A", 6);
-        else if (mods & GLFW_MOD_ALT) terminal_write_bytes("\x1b[1;3A", 6);
-        else terminal_write_bytes("\x1b[A", 3);
+        terminal_write_cursor_key('A', 'A', mods);
         return;
     case GLFW_KEY_DOWN:
-        if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5B", 6);
-        else if (mods & GLFW_MOD_SHIFT) terminal_write_bytes("\x1b[1;2B", 6);
-        else if (mods & GLFW_MOD_ALT) terminal_write_bytes("\x1b[1;3B", 6);
-        else terminal_write_bytes("\x1b[B", 3);
+        terminal_write_cursor_key('B', 'B', mods);
         return;
     case GLFW_KEY_RIGHT:
-        if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5C", 6);
-        else if (mods & GLFW_MOD_SHIFT) terminal_write_bytes("\x1b[1;2C", 6);
-        else if (mods & GLFW_MOD_ALT) terminal_write_bytes("\033f", 2);
-        else terminal_write_bytes("\x1b[C", 3);
+        terminal_write_cursor_key('C', 'C', mods);
         return;
     case GLFW_KEY_LEFT:
-        if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5D", 6);
-        else if (mods & GLFW_MOD_SHIFT) terminal_write_bytes("\x1b[1;2D", 6);
-        else if (mods & GLFW_MOD_ALT) terminal_write_bytes("\033b", 2);
-        else terminal_write_bytes("\x1b[D", 3);
+        terminal_write_cursor_key('D', 'D', mods);
         return;
     case GLFW_KEY_DELETE: terminal_write_bytes("\x1b[3~", 4); return;
     case GLFW_KEY_INSERT: terminal_write_bytes("\x1b[2~", 4); return;
     case GLFW_KEY_HOME:
-        if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5H", 6);
-        else terminal_write_bytes("\x1b[H", 3);
+        if ((mods & (GLFW_MOD_SHIFT | GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0 && term_app_cursor_keys)
+            terminal_write_bytes("\x1bOH", 3);
+        else
+            terminal_write_csi_key('H', mods);
         return;
     case GLFW_KEY_END:
-        if (mods & GLFW_MOD_CONTROL) terminal_write_bytes("\x1b[1;5F", 6);
-        else terminal_write_bytes("\x1b[F", 3);
+        if ((mods & (GLFW_MOD_SHIFT | GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0 && term_app_cursor_keys)
+            terminal_write_bytes("\x1bOF", 3);
+        else
+            terminal_write_csi_key('F', mods);
         return;
     default: break;
     }
@@ -1066,10 +1179,11 @@ void panel_terminal_render(Gui *g, App *app) {
               t->accent[0], t->accent[1], t->accent[2], 1.0f);
 
     char meta[128];
-    snprintf(meta, sizeof(meta), "%s%s%s  %dx%d  %d lines",
+    snprintf(meta, sizeof(meta), "%s%s%s%s  %dx%d  %d lines",
              running ? "running" : "stopped",
              term_alt_screen ? "  alt" : "",
              term_bracketed_paste ? "  paste" : "",
+             term_app_cursor_keys ? "  app-keys" : "",
              term_cols, term_rows, term_line_count);
     float meta_x = px + pw - font_text_width(&g->font, meta) - 14.0f;
     if (meta_x < px + 120.0f) meta_x = px + 120.0f;
@@ -1131,7 +1245,7 @@ void panel_terminal_render(Gui *g, App *app) {
     else if (!running)
         snprintf(footer, sizeof(footer), "stopped  Enter/Ctrl-Shift-r: restart  Ctrl-~: toggle  Esc: hide");
     else
-        snprintf(footer, sizeof(footer), "live  PageUp/PageDown: scrollback  Ctrl-Shift-r: restart  Ctrl-~: toggle  Esc: hide");
+        snprintf(footer, sizeof(footer), "live  PageUp/PageDown: scrollback  Ctrl-Shift-V: paste  Ctrl-Shift-r: restart  Esc: hide");
     font_draw(&g->font, r, footer, px + pad_x, py + ph - footer_h + 5.0f,
               0.62f, 0.66f, 0.68f, 0.95f);
 }

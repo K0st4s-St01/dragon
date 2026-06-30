@@ -99,10 +99,10 @@ CMakeFiles/dragon_editor.dir/src/core/app.c.o: /home/xator/dragon/src/core/app.c
   /usr/include/sys/types.h \
   /usr/include/tree_sitter/api.h \
   /usr/include/unistd.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/core/command.c.o: /home/xator/dragon/src/core/command.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -140,9 +140,9 @@ CMakeFiles/dragon_editor.dir/src/core/command.c.o: /home/xator/dragon/src/core/c
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/core/input.c.o: /home/xator/dragon/src/core/input.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -268,10 +268,10 @@ CMakeFiles/dragon_editor.dir/src/core/input.c.o: /home/xator/dragon/src/core/inp
   /usr/include/sys/stat.h \
   /usr/include/sys/types.h \
   /usr/include/unistd.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/core/mode.c.o: /home/xator/dragon/src/core/mode.c \
   /home/xator/dragon/include/dragon_editor/mode.h \
@@ -289,8 +289,8 @@ CMakeFiles/dragon_editor.dir/src/core/mode.c.o: /home/xator/dragon/src/core/mode
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h
 
 CMakeFiles/dragon_editor.dir/src/core/renderer.c.o: /home/xator/dragon/src/core/renderer.c \
   /home/xator/dragon/include/dragon_editor/renderer.h \
@@ -356,9 +356,9 @@ CMakeFiles/dragon_editor.dir/src/core/renderer.c.o: /home/xator/dragon/src/core/
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/editor/buffer.c.o: /home/xator/dragon/src/editor/buffer.c \
   /home/xator/dragon/include/dragon_editor/buffer.h \
@@ -420,9 +420,9 @@ CMakeFiles/dragon_editor.dir/src/editor/buffer.c.o: /home/xator/dragon/src/edito
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h
 
 CMakeFiles/dragon_editor.dir/src/editor/config.c.o: /home/xator/dragon/src/editor/config.c \
   /home/xator/dragon/vendor/tomlc99/toml.h \
@@ -507,10 +507,10 @@ CMakeFiles/dragon_editor.dir/src/editor/config.c.o: /home/xator/dragon/src/edito
   /usr/include/sys/stat.h \
   /usr/include/sys/types.h \
   /usr/include/unistd.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/editor/cursor.c.o: /home/xator/dragon/src/editor/cursor.c \
   /home/xator/dragon/include/dragon_editor/cursor.h \
@@ -528,8 +528,8 @@ CMakeFiles/dragon_editor.dir/src/editor/cursor.c.o: /home/xator/dragon/src/edito
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h
 
 CMakeFiles/dragon_editor.dir/src/editor/document.c.o: /home/xator/dragon/src/editor/document.c \
   /home/xator/dragon/include/dragon_editor/buffer.h \
@@ -612,12 +612,13 @@ CMakeFiles/dragon_editor.dir/src/editor/document.c.o: /home/xator/dragon/src/edi
   /usr/include/sys/types.h \
   /usr/include/tree_sitter/api.h \
   /usr/include/unistd.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/editor/history.c.o: /home/xator/dragon/src/editor/history.c \
+  /home/xator/dragon/include/dragon_editor/cursor.h \
   /home/xator/dragon/include/dragon_editor/history.h \
   /usr/include/alloca.h \
   /usr/include/bits/atomic_wide_counter.h \
@@ -667,8 +668,8 @@ CMakeFiles/dragon_editor.dir/src/editor/history.c.o: /home/xator/dragon/src/edit
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h
 
 CMakeFiles/dragon_editor.dir/src/editor/lsp.c.o: /home/xator/dragon/src/editor/lsp.c \
   /home/xator/dragon/include/dragon_editor/lsp.h \
@@ -780,10 +781,10 @@ CMakeFiles/dragon_editor.dir/src/editor/lsp.c.o: /home/xator/dragon/src/editor/l
   /usr/include/sys/wait.h \
   /usr/include/time.h \
   /usr/include/unistd.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/editor/lsp_config.c.o: /home/xator/dragon/src/editor/lsp_config.c \
   /home/xator/dragon/include/dragon_editor/config.h \
@@ -851,10 +852,10 @@ CMakeFiles/dragon_editor.dir/src/editor/lsp_config.c.o: /home/xator/dragon/src/e
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/editor/syntax.c.o: /home/xator/dragon/src/editor/syntax.c \
   /home/xator/dragon/include/dragon_editor/syntax.h \
@@ -921,10 +922,10 @@ CMakeFiles/dragon_editor.dir/src/editor/syntax.c.o: /home/xator/dragon/src/edito
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.o: /home/xator/dragon/src/editor/treesitter.c \
   /home/xator/dragon/include/dragon_editor/buffer.h \
@@ -999,10 +1000,10 @@ CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.o: /home/xator/dragon/src/e
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
   /usr/include/tree_sitter/api.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/gui.c.o: /home/xator/dragon/src/gui/gui.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -1080,10 +1081,10 @@ CMakeFiles/dragon_editor.dir/src/gui/gui.c.o: /home/xator/dragon/src/gui/gui.c \
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.o: /home/xator/dragon/src/gui/panel_notification.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -1137,10 +1138,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.o: /home/xator/dragon/
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o: /home/xator/dragon/src/gui/panels/about.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -1190,10 +1191,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o: /home/xator/dragon/src/gu
   /usr/include/stdint.h \
   /usr/include/stdio.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o: /home/xator/dragon/src/gui/panels/buffer_picker.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -1248,10 +1249,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o: /home/xator/drago
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/changed_files.c.o: /home/xator/dragon/src/gui/panels/changed_files.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -1365,10 +1366,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/changed_files.c.o: /home/xator/drago
   /usr/include/sys/ucontext.h \
   /usr/include/sys/wait.h \
   /usr/include/unistd.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o: /home/xator/dragon/src/gui/panels/code_actions.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -1451,10 +1452,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o: /home/xator/dragon
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o: /home/xator/dragon/src/gui/panels/completion.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -1545,10 +1546,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/completion.c.o: /home/xator/dragon/s
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
   /usr/include/unistd.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o: /home/xator/dragon/src/gui/panels/file_browser.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -1653,10 +1654,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o: /home/xator/dragon
   /usr/include/sys/stat.h \
   /usr/include/sys/types.h \
   /usr/include/unistd.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/find_replace.c.o: /home/xator/dragon/src/gui/panels/find_replace.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -1711,10 +1712,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/find_replace.c.o: /home/xator/dragon
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o: /home/xator/dragon/src/gui/panels/goto_line.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -1797,10 +1798,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o: /home/xator/dragon/sr
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/jumplist_picker.c.o: /home/xator/dragon/src/gui/panels/jumplist_picker.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -1855,10 +1856,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/jumplist_picker.c.o: /home/xator/dra
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_diagnostics_picker.c.o: /home/xator/dragon/src/gui/panels/lsp_diagnostics_picker.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -1941,10 +1942,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_diagnostics_picker.c.o: /home/xa
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_goto_picker.c.o: /home/xator/dragon/src/gui/panels/lsp_goto_picker.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -2027,10 +2028,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_goto_picker.c.o: /home/xator/dra
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.o: /home/xator/dragon/src/gui/panels/lsp_hover_panel.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -2113,10 +2114,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.o: /home/xator/dra
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o: /home/xator/dragon/src/gui/panels/palette.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -2201,10 +2202,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o: /home/xator/dragon/src/
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/plugins.c.o: /home/xator/dragon/src/gui/panels/plugins.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -2241,8 +2242,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/plugins.c.o: /home/xator/dragon/src/
   /usr/include/bits/types/__FILE.h \
   /usr/include/bits/types/__fpos64_t.h \
   /usr/include/bits/types/__fpos_t.h \
+  /usr/include/bits/types/__locale_t.h \
   /usr/include/bits/types/__mbstate_t.h \
   /usr/include/bits/types/cookie_io_functions_t.h \
+  /usr/include/bits/types/locale_t.h \
   /usr/include/bits/types/struct_FILE.h \
   /usr/include/bits/typesizes.h \
   /usr/include/bits/wchar.h \
@@ -2254,11 +2257,13 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/plugins.c.o: /home/xator/dragon/src/
   /usr/include/stdc-predef.h \
   /usr/include/stdint.h \
   /usr/include/stdio.h \
+  /usr/include/string.h \
+  /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.o: /home/xator/dragon/src/gui/panels/rename.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -2341,10 +2346,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.o: /home/xator/dragon/src/g
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o: /home/xator/dragon/src/gui/panels/settings.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -2381,8 +2386,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o: /home/xator/dragon/src
   /usr/include/bits/types/__FILE.h \
   /usr/include/bits/types/__fpos64_t.h \
   /usr/include/bits/types/__fpos_t.h \
+  /usr/include/bits/types/__locale_t.h \
   /usr/include/bits/types/__mbstate_t.h \
   /usr/include/bits/types/cookie_io_functions_t.h \
+  /usr/include/bits/types/locale_t.h \
   /usr/include/bits/types/struct_FILE.h \
   /usr/include/bits/typesizes.h \
   /usr/include/bits/wchar.h \
@@ -2394,11 +2401,13 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o: /home/xator/dragon/src
   /usr/include/stdc-predef.h \
   /usr/include/stdint.h \
   /usr/include/stdio.h \
+  /usr/include/string.h \
+  /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/space_menu.c.o: /home/xator/dragon/src/gui/panels/space_menu.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -2453,10 +2462,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/space_menu.c.o: /home/xator/dragon/s
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o: /home/xator/dragon/src/gui/panels/statusbar.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -2522,10 +2531,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o: /home/xator/dragon/sr
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
   /usr/include/time.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.o: /home/xator/dragon/src/gui/panels/symbols_picker.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -2610,10 +2619,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.o: /home/xator/drag
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
   /usr/include/tree_sitter/api.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/terminal.c.o: /home/xator/dragon/src/gui/panels/terminal.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -2766,10 +2775,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/terminal.c.o: /home/xator/dragon/src
   /usr/include/sys/wait.h \
   /usr/include/termios.h \
   /usr/include/unistd.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o: /home/xator/dragon/src/gui/panels/treesitter_inspector.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -2854,10 +2863,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/treesitter_inspector.c.o: /home/xato
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
   /usr/include/tree_sitter/api.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o: /home/xator/dragon/src/gui/panels/workspace_diagnostics.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -2912,10 +2921,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_diagnostics.c.o: /home/xat
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o: /home/xator/dragon/src/gui/panels/workspace_symbols.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -3012,10 +3021,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/workspace_symbols.c.o: /home/xator/d
   /usr/include/sys/stat.h \
   /usr/include/sys/types.h \
   /usr/include/tree_sitter/api.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/text.c.o: /home/xator/dragon/src/gui/text.c \
   /home/xator/dragon/include/dragon_editor/renderer.h \
@@ -3096,10 +3105,10 @@ CMakeFiles/dragon_editor.dir/src/gui/text.c.o: /home/xator/dragon/src/gui/text.c
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/gui/theme.c.o: /home/xator/dragon/src/gui/theme.c \
   /home/xator/dragon/include/dragon_editor/config.h \
@@ -3141,10 +3150,10 @@ CMakeFiles/dragon_editor.dir/src/gui/theme.c.o: /home/xator/dragon/src/gui/theme
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 CMakeFiles/dragon_editor.dir/src/main.c.o: /home/xator/dragon/src/main.c \
   /home/xator/dragon/include/dragon_editor/app.h \
@@ -3177,28 +3186,28 @@ CMakeFiles/dragon_editor.dir/src/main.c.o: /home/xator/dragon/src/main.c \
   /usr/include/stdc-predef.h \
   /usr/include/stdint.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 dragon_editor: /usr/lib/Scrt1.o \
   /usr/lib/crti.o \
   /usr/lib/crtn.o \
   /usr/lib/libGL.so \
-  /usr/lib/libatomic.so \
-  /usr/lib/libatomic_asneeded.so \
   /usr/lib/libc.so \
   /usr/lib/libdl.a \
-  /usr/lib/libgcc_s.so \
   /usr/lib/libgcc_s.so.1 \
-  /usr/lib/libgcc_s_asneeded.so \
   /usr/lib/libglfw.so \
   /usr/lib/libm.so \
   /usr/lib/libtree-sitter.so \
   /usr/lib/libutil.a \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/libgcc.a \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/crtbeginS.o \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/crtendS.o \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/libatomic.a \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/libatomic_asneeded.so \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/libgcc.a \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/libgcc_s.so \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/libgcc_s_asneeded.so \
   /usr/lib/ld-linux-x86-64.so.2 \
   /usr/lib/libGLX.so.0 \
   /usr/lib/libGLdispatch.so.0 \
@@ -3276,21 +3285,29 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/terminal.c.o:
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/symbols_picker.c.o:
 
+CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o:
+
 CMakeFiles/dragon_editor.dir/src/gui/panels/space_menu.c.o:
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/settings.c.o:
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/plugins.c.o:
 
+CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.o:
+
 CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_diagnostics_picker.c.o:
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/code_actions.c.o:
+
+CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o:
 
 CMakeFiles/dragon_editor.dir/src/editor/syntax.c.o:
 
 CMakeFiles/dragon_editor.dir/src/editor/lsp_config.c.o:
 
 CMakeFiles/dragon_editor.dir/src/editor/lsp.c.o:
+
+CMakeFiles/dragon_editor.dir/src/editor/history.c.o:
 
 CMakeFiles/dragon_editor.dir/src/editor/cursor.c.o:
 
@@ -3322,23 +3339,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panel_notification.c.o:
 
 /usr/lib/ld-linux-x86-64.so.2:
 
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/libgcc.a:
-
-CMakeFiles/dragon_editor.dir/src/gui/panels/lsp_hover_panel.c.o:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o:
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/libgcc.a:
 
 /usr/lib/libutil.a:
-
-CMakeFiles/dragon_editor.dir/src/editor/history.c.o:
-
-/usr/lib/libgcc_s_asneeded.so:
-
-/usr/lib/libgcc_s.so:
-
-/usr/lib/libatomic.so:
 
 /usr/lib/libGL.so:
 
@@ -3400,15 +3403,9 @@ CMakeFiles/dragon_editor.dir/src/editor/buffer.c.o:
 
 /home/xator/dragon/include/dragon_editor/panel_buffer_picker.h:
 
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h:
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h:
 
-/home/xator/dragon/include/dragon_editor/panel_symbols_picker.h:
-
-CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h:
-
-/usr/include/dirent.h:
+/home/xator/dragon/include/dragon_editor/panel_jumplist_picker.h:
 
 /usr/include/unistd.h:
 
@@ -3417,6 +3414,8 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/statusbar.c.o:
 /usr/include/sys/cdefs.h:
 
 /home/xator/dragon/include/dragon_editor/panel_code_actions.h:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/libgcc_s_asneeded.so:
 
 /home/xator/dragon/vendor/stb/stb_truetype.h:
 
@@ -3482,6 +3481,8 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/rename.c.o:
 
 /usr/include/bits/local_lim.h:
 
+/usr/include/bits/libc-header-start.h:
+
 /usr/include/bits/types/__mbstate_t.h:
 
 /usr/include/bits/wordsize.h:
@@ -3497,8 +3498,6 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o:
 /usr/include/stdc-predef.h:
 
 /usr/include/sys/ucontext.h:
-
-/usr/lib/libatomic_asneeded.so:
 
 /usr/include/bits/types/struct_timeval.h:
 
@@ -3528,7 +3527,7 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/goto_line.c.o:
 
 /usr/include/bits/types/__locale_t.h:
 
-/home/xator/dragon/include/dragon_editor/panel_jumplist_picker.h:
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h:
 
 /usr/include/bits/cloexec.h:
 
@@ -3594,10 +3593,6 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/file_browser.c.o:
 
 /usr/include/bits/long-double.h:
 
-/home/xator/dragon/src/gui/panels/goto_line.c:
-
-/home/xator/dragon/include/dragon_editor/history.h:
-
 /home/xator/dragon/vendor/glad/include/glad/gl.h:
 
 /home/xator/dragon/include/dragon_editor/panel_completion.h:
@@ -3634,10 +3629,6 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/palette.c.o:
 
 /usr/include/bits/floatn.h:
 
-CMakeFiles/dragon_editor.dir/src/gui/panels/buffer_picker.c.o:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h:
-
 /usr/include/bits/types/__sigset_t.h:
 
 CMakeFiles/dragon_editor.dir/src/gui/panels/about.c.o:
@@ -3654,6 +3645,10 @@ CMakeFiles/dragon_editor.dir/src/core/mode.c.o:
 
 /usr/include/bits/termios-c_cc.h:
 
+/home/xator/dragon/include/dragon_editor/panel_symbols_picker.h:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h:
+
 /home/xator/dragon/include/dragon_editor/mode.h:
 
 /usr/include/bits/atomic_wide_counter.h:
@@ -3665,6 +3660,8 @@ CMakeFiles/dragon_editor.dir/src/core/mode.c.o:
 /usr/include/bits/dirent.h:
 
 /usr/include/bits/byteswap.h:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/libatomic.a:
 
 /usr/include/string.h:
 
@@ -3692,8 +3689,6 @@ CMakeFiles/dragon_editor.dir/src/editor/treesitter.c.o:
 
 /usr/include/bits/sigstack.h:
 
-/usr/include/bits/libc-header-start.h:
-
 CMakeFiles/dragon_editor.dir/src/gui/gui.c.o:
 
 /usr/lib/libxcb.so.1:
@@ -3720,6 +3715,8 @@ CMakeFiles/dragon_editor.dir/src/gui/gui.c.o:
 
 /usr/include/bits/stdio.h:
 
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/crtendS.o:
+
 /usr/include/bits/stdio_lim.h:
 
 /home/xator/dragon/src/gui/panels/panel_find_replace.h:
@@ -3733,6 +3730,12 @@ CMakeFiles/dragon_editor.dir/src/gui/gui.c.o:
 /usr/include/bits/stat.h:
 
 /usr/include/assert.h:
+
+/usr/include/dirent.h:
+
+/home/xator/dragon/include/dragon_editor/history.h:
+
+/home/xator/dragon/src/gui/panels/goto_line.c:
 
 /home/xator/dragon/src/core/mode.c:
 
@@ -3756,6 +3759,8 @@ CMakeFiles/dragon_editor.dir/src/gui/text.c.o:
 
 /usr/include/asm-generic/errno-base.h:
 
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h:
+
 /usr/include/bits/stdint-uintn.h:
 
 /usr/include/asm/errno.h:
@@ -3773,6 +3778,8 @@ CMakeFiles/dragon_editor.dir/src/gui/text.c.o:
 /usr/include/sys/wait.h:
 
 /home/xator/dragon/src/gui/panels/space_menu.c:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/libatomic_asneeded.so:
 
 /usr/include/linux/errno.h:
 
@@ -3807,6 +3814,8 @@ CMakeFiles/dragon_editor.dir/src/core/input.c.o:
 /usr/include/bits/types/stack_t.h:
 
 /usr/include/sys/ttydefaults.h:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/crtbeginS.o:
 
 /usr/include/bits/siginfo-arch.h:
 
@@ -3852,9 +3861,7 @@ CMakeFiles/dragon_editor.dir/src/gui/theme.c.o:
 
 /usr/include/time.h:
 
-/home/xator/dragon/src/gui/panels/palette.c:
-
-/home/xator/dragon/src/editor/lsp_config.c:
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/libgcc_s.so:
 
 /home/xator/dragon/src/core/input.c:
 
@@ -3894,6 +3901,10 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/find_replace.c.o:
 
 /usr/include/linux/ioctl.h:
 
+/home/xator/dragon/src/editor/lsp_config.c:
+
+/home/xator/dragon/src/gui/panels/palette.c:
+
 /usr/include/asm-generic/bitsperlong.h:
 
 /home/xator/dragon/src/gui/panels/statusbar.c:
@@ -3907,6 +3918,12 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/find_replace.c.o:
 /usr/include/asm/ioctl.h:
 
 /usr/include/asm/ioctls.h:
+
+/home/xator/dragon/include/dragon_editor/syntax.h:
+
+/usr/include/bits/termios-c_oflag.h:
+
+/usr/include/asm/sockios.h:
 
 /usr/include/bits/ioctl-types.h:
 
@@ -3926,17 +3943,9 @@ CMakeFiles/dragon_editor.dir/src/gui/panels/find_replace.c.o:
 
 /usr/include/bits/termios-struct.h:
 
-/home/xator/dragon/include/dragon_editor/syntax.h:
-
-/usr/include/asm/sockios.h:
-
-/usr/include/bits/termios-c_oflag.h:
-
 /usr/include/bits/termios-tcflow.h:
 
 /usr/include/sys/ioctl.h:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h:
 
 /home/xator/dragon/src/gui/panels/treesitter_inspector.c:
 

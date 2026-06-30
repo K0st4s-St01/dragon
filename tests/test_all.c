@@ -2458,6 +2458,22 @@ static void test_document_insert_char_multi(void) {
     PASS();
 }
 
+static void test_document_insert_char_multi_deduplicates_same_position(void) {
+    TEST(document_insert_char_multi_deduplicates_same_position);
+    Document *doc = make_doc("abc");
+    doc->cursor_count = 3;
+    for (int i = 0; i < 3; i++) {
+        cursor_init(&doc->cursors[i]);
+        cursor_move_to(&doc->cursors[i], 0, 1);
+    }
+    document_insert_char_multi(doc, 'X');
+    ASSERT_EQ_STR(doc->buffer.text, "aXbc");
+    ASSERT_EQ_INT(doc->cursor_count, 1);
+    ASSERT_EQ_INT(doc->cursors[0].col, 2);
+    free_doc(doc);
+    PASS();
+}
+
 static void test_document_insert_char_multi_undo_redo(void) {
     TEST(document_insert_char_multi_undo_redo);
     Document *doc = make_doc("aaa bbb ccc");
@@ -2516,6 +2532,151 @@ static void test_document_delete_selection_multi(void) {
     ASSERT_EQ_STR(doc->buffer.text, " def ");
     ASSERT_FALSE(doc->cursors[0].has_selection);
     ASSERT_FALSE(doc->cursors[1].has_selection);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_delete_selection_multi_merges_overlaps(void) {
+    TEST(document_delete_selection_multi_merges_overlaps);
+    Document *doc = make_doc("abcdef");
+    doc->cursor_count = 2;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 1);
+    doc->cursors[0].anchor_row = 0;
+    doc->cursors[0].anchor_col = 4;
+    doc->cursors[0].has_selection = true;
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 3);
+    doc->cursors[1].anchor_row = 0;
+    doc->cursors[1].anchor_col = 5;
+    doc->cursors[1].has_selection = true;
+    document_delete_selection(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "af");
+    ASSERT_EQ_INT(doc->cursor_count, 1);
+    ASSERT_FALSE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 1);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_delete_selection_multi_preserves_point_cursors(void) {
+    TEST(document_delete_selection_multi_preserves_point_cursors);
+    Document *doc = make_doc("abcdef");
+    doc->cursor_count = 2;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 1);
+    doc->cursors[0].anchor_row = 0;
+    doc->cursors[0].anchor_col = 3;
+    doc->cursors[0].has_selection = true;
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 5);
+    document_delete_selection(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "adef");
+    ASSERT_EQ_INT(doc->cursor_count, 2);
+    ASSERT_EQ_INT(doc->cursors[0].col, 1);
+    ASSERT_EQ_INT(doc->cursors[1].col, 3);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_insert_char_multi_replaces_selection_and_points(void) {
+    TEST(document_insert_char_multi_replaces_selection_and_points);
+    Document *doc = make_doc("abcdef");
+    doc->cursor_count = 2;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 1);
+    doc->cursors[0].anchor_row = 0;
+    doc->cursors[0].anchor_col = 3;
+    doc->cursors[0].has_selection = true;
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 5);
+    document_insert_char_multi(doc, 'X');
+    ASSERT_EQ_STR(doc->buffer.text, "aXdeXf");
+    ASSERT_EQ_INT(doc->cursor_count, 2);
+    ASSERT_EQ_INT(doc->cursors[0].col, 2);
+    ASSERT_EQ_INT(doc->cursors[1].col, 5);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_insert_char_multi_undo_redo_restores_cursors(void) {
+    TEST(document_insert_char_multi_undo_redo_restores_cursors);
+    Document *doc = make_doc("abcdef");
+    doc->cursor_count = 2;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 1);
+    doc->cursors[0].anchor_row = 0;
+    doc->cursors[0].anchor_col = 3;
+    doc->cursors[0].has_selection = true;
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 5);
+
+    document_insert_char_multi(doc, 'X');
+    ASSERT_EQ_STR(doc->buffer.text, "aXdeXf");
+    ASSERT_EQ_INT(doc->cursor_count, 2);
+
+    document_undo(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "abcdef");
+    ASSERT_EQ_INT(doc->cursor_count, 2);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    int sr, sc, er, ec;
+    cursor_normalize(&doc->cursors[0], &sr, &sc, &er, &ec);
+    ASSERT_EQ_INT(sc, 1);
+    ASSERT_EQ_INT(ec, 3);
+    ASSERT_EQ_INT(doc->cursors[1].col, 5);
+
+    document_redo(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "aXdeXf");
+    ASSERT_EQ_INT(doc->cursor_count, 2);
+    ASSERT_FALSE(doc->cursors[0].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 2);
+    ASSERT_EQ_INT(doc->cursors[1].col, 5);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_newline_multi_updates_later_cursor_positions(void) {
+    TEST(document_newline_multi_updates_later_cursor_positions);
+    Document *doc = make_doc("abcd");
+    doc->cursor_count = 2;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 1);
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 3);
+    document_newline_multi(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "a\nbc\nd");
+    ASSERT_EQ_INT(doc->cursor_count, 2);
+    ASSERT_EQ_INT(doc->cursors[0].row, 1);
+    ASSERT_EQ_INT(doc->cursors[0].col, 0);
+    ASSERT_EQ_INT(doc->cursors[1].row, 2);
+    ASSERT_EQ_INT(doc->cursors[1].col, 0);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_newline_multi_undo_redo_restores_cursors(void) {
+    TEST(document_newline_multi_undo_redo_restores_cursors);
+    Document *doc = make_doc("abcd");
+    doc->cursor_count = 2;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 1);
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 3);
+
+    document_newline_multi(doc);
+    document_undo(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "abcd");
+    ASSERT_EQ_INT(doc->cursor_count, 2);
+    ASSERT_EQ_INT(doc->cursors[0].row, 0);
+    ASSERT_EQ_INT(doc->cursors[0].col, 1);
+    ASSERT_EQ_INT(doc->cursors[1].row, 0);
+    ASSERT_EQ_INT(doc->cursors[1].col, 3);
+
+    document_redo(doc);
+    ASSERT_EQ_STR(doc->buffer.text, "a\nbc\nd");
+    ASSERT_EQ_INT(doc->cursor_count, 2);
+    ASSERT_EQ_INT(doc->cursors[0].row, 1);
+    ASSERT_EQ_INT(doc->cursors[1].row, 2);
     free_doc(doc);
     PASS();
 }
@@ -2655,6 +2816,30 @@ static void test_document_keep_primary_selection(void) {
     PASS();
 }
 
+static void test_document_collapse_selection_multi(void) {
+    TEST(document_collapse_selection_multi);
+    Document *doc = make_doc("abc def");
+    doc->cursor_count = 2;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 0);
+    doc->cursors[0].anchor_row = 0;
+    doc->cursors[0].anchor_col = 3;
+    doc->cursors[0].has_selection = true;
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 4);
+    doc->cursors[1].anchor_row = 0;
+    doc->cursors[1].anchor_col = 7;
+    doc->cursors[1].has_selection = true;
+    document_collapse_selection(doc);
+    ASSERT_EQ_INT(doc->cursor_count, 2);
+    ASSERT_FALSE(doc->cursors[0].has_selection);
+    ASSERT_FALSE(doc->cursors[1].has_selection);
+    ASSERT_EQ_INT(doc->cursors[0].col, 3);
+    ASSERT_EQ_INT(doc->cursors[1].col, 7);
+    free_doc(doc);
+    PASS();
+}
+
 static void test_document_copy_selection_below(void) {
     TEST(document_copy_selection_below);
     Document *doc = make_doc("aaa\nbbb");
@@ -2763,6 +2948,24 @@ static void test_document_remove_primary_selection(void) {
     doc->cursors[0].col = 5;
     document_remove_primary_selection(doc);
     ASSERT_FALSE(doc->cursors[0].has_selection);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_remove_primary_selection_promotes_next_cursor(void) {
+    TEST(document_remove_primary_selection_promotes_next_cursor);
+    Document *doc = make_doc("abc def");
+    doc->cursor_count = 3;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 0);
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 4);
+    cursor_init(&doc->cursors[2]);
+    cursor_move_to(&doc->cursors[2], 0, 6);
+    document_remove_primary_selection(doc);
+    ASSERT_EQ_INT(doc->cursor_count, 2);
+    ASSERT_EQ_INT(doc->cursors[0].col, 4);
+    ASSERT_EQ_INT(doc->cursors[1].col, 6);
     free_doc(doc);
     PASS();
 }
@@ -2938,6 +3141,56 @@ static void test_document_merge_selections(void) {
     doc->cursors[0].col = 5;
     document_merge_selections(doc);
     ASSERT_FALSE(doc->cursors[0].has_selection);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_merge_selections_overlapping_ranges(void) {
+    TEST(document_merge_selections_overlapping_ranges);
+    Document *doc = make_doc("abcdef");
+    doc->cursor_count = 2;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 1);
+    doc->cursors[0].anchor_row = 0;
+    doc->cursors[0].anchor_col = 4;
+    doc->cursors[0].has_selection = true;
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 3);
+    doc->cursors[1].anchor_row = 0;
+    doc->cursors[1].anchor_col = 6;
+    doc->cursors[1].has_selection = true;
+    document_merge_selections(doc);
+    ASSERT_EQ_INT(doc->cursor_count, 1);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    int sr, sc, er, ec;
+    cursor_normalize(&doc->cursors[0], &sr, &sc, &er, &ec);
+    ASSERT_EQ_INT(sc, 1);
+    ASSERT_EQ_INT(ec, 6);
+    free_doc(doc);
+    PASS();
+}
+
+static void test_document_merge_consecutive_selections_touching_ranges(void) {
+    TEST(document_merge_consecutive_selections_touching_ranges);
+    Document *doc = make_doc("abcdef");
+    doc->cursor_count = 2;
+    cursor_init(&doc->cursors[0]);
+    cursor_move_to(&doc->cursors[0], 0, 1);
+    doc->cursors[0].anchor_row = 0;
+    doc->cursors[0].anchor_col = 3;
+    doc->cursors[0].has_selection = true;
+    cursor_init(&doc->cursors[1]);
+    cursor_move_to(&doc->cursors[1], 0, 3);
+    doc->cursors[1].anchor_row = 0;
+    doc->cursors[1].anchor_col = 5;
+    doc->cursors[1].has_selection = true;
+    document_merge_consecutive_selections(doc);
+    ASSERT_EQ_INT(doc->cursor_count, 1);
+    ASSERT_TRUE(doc->cursors[0].has_selection);
+    int sr, sc, er, ec;
+    cursor_normalize(&doc->cursors[0], &sr, &sc, &er, &ec);
+    ASSERT_EQ_INT(sc, 1);
+    ASSERT_EQ_INT(ec, 5);
     free_doc(doc);
     PASS();
 }
@@ -4585,9 +4838,16 @@ int main(void) {
 
     printf("\n[Additional Document Tests - Multi-cursor]\n");
     test_document_insert_char_multi();
+    test_document_insert_char_multi_deduplicates_same_position();
     test_document_insert_char_multi_undo_redo();
     test_document_move_cursor_multi();
     test_document_delete_selection_multi();
+    test_document_delete_selection_multi_merges_overlaps();
+    test_document_delete_selection_multi_preserves_point_cursors();
+    test_document_insert_char_multi_replaces_selection_and_points();
+    test_document_insert_char_multi_undo_redo_restores_cursors();
+    test_document_newline_multi_updates_later_cursor_positions();
+    test_document_newline_multi_undo_redo_restores_cursors();
     test_document_add_cursor_below_above();
     test_document_delete_char_multi();
     test_document_delete_char_multi_undo_redo();
@@ -4598,6 +4858,7 @@ int main(void) {
     test_document_replace_selection_char();
     test_document_replace_selection_yanked();
     test_document_keep_primary_selection();
+    test_document_collapse_selection_multi();
     test_document_copy_selection_below();
     test_document_join_lines_selection();
     test_document_force_selection_forward();
@@ -4609,6 +4870,7 @@ int main(void) {
     test_document_scroll_bottom();
     test_document_shrink_to_line_bounds();
     test_document_remove_primary_selection();
+    test_document_remove_primary_selection_promotes_next_cursor();
 
     printf("\n[Additional Document Tests - View navigation]\n");
     test_document_goto_view_top();
@@ -4632,7 +4894,9 @@ int main(void) {
     printf("\n[Additional Document Tests - Split/Merge selections]\n");
     test_document_split_selection_newlines();
     test_document_merge_selections();
+    test_document_merge_selections_overlapping_ranges();
     test_document_merge_consecutive_selections();
+    test_document_merge_consecutive_selections_touching_ranges();
 
     printf("\n[Additional Document Tests - Align, Jumplist forward]\n");
     test_document_align_selections();

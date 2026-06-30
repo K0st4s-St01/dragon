@@ -17,6 +17,203 @@ static char *run_shell_command(const char *cmd, const char *input, size_t input_
 static ConfigLanguage custom_languages[CUSTOM_LANGUAGE_MAX];
 static int custom_language_count = 0;
 
+typedef struct {
+    int sr, sc;
+    int er, ec;
+    size_t start;
+    size_t end;
+    bool has_selection;
+} CursorRange;
+
+typedef struct {
+    Cursor cursors[MAX_CURSORS];
+    int count;
+} CursorSnapshot;
+
+static void document_normalize_cursors(Document *doc, bool merge_touching);
+
+static void document_clamp_cursor_count(Document *doc) {
+    if (!doc) return;
+    if (doc->cursor_count < 1) doc->cursor_count = 1;
+    if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
+}
+
+static void document_capture_cursor_snapshot(Document *doc, CursorSnapshot *snapshot) {
+    if (!doc || !snapshot) return;
+    document_clamp_cursor_count(doc);
+    snapshot->count = doc->cursor_count;
+    for (int i = 0; i < snapshot->count; i++)
+        snapshot->cursors[i] = doc->cursors[i];
+}
+
+static void document_apply_cursor_snapshot(Document *doc, const Cursor *cursors, int count) {
+    if (!doc || !cursors || count < 1) return;
+    if (count > MAX_CURSORS) count = MAX_CURSORS;
+    doc->cursor_count = count;
+    for (int i = 0; i < count; i++)
+        doc->cursors[i] = cursors[i];
+}
+
+static void history_entry_set_cursor_snapshot(HistoryEntry *entry,
+                                              const CursorSnapshot *before,
+                                              const CursorSnapshot *after) {
+    if (!entry) return;
+    if (before && before->count > 0) {
+        int count = before->count > HISTORY_CURSOR_MAX ? HISTORY_CURSOR_MAX : before->count;
+        entry->before_cursor_count = count;
+        for (int i = 0; i < count; i++)
+            entry->before_cursors[i] = before->cursors[i];
+    }
+    if (after && after->count > 0) {
+        int count = after->count > HISTORY_CURSOR_MAX ? HISTORY_CURSOR_MAX : after->count;
+        entry->after_cursor_count = count;
+        for (int i = 0; i < count; i++)
+            entry->after_cursors[i] = after->cursors[i];
+    }
+}
+
+static void document_attach_group_cursor_snapshot(Document *doc, int group,
+                                                  const CursorSnapshot *before,
+                                                  const CursorSnapshot *after) {
+    if (!doc || group == 0) return;
+    for (int i = 0; i < doc->history.count; i++) {
+        HistoryEntry *entry = &doc->history.entries[i];
+        if (entry->group == group)
+            history_entry_set_cursor_snapshot(entry, before, after);
+    }
+}
+
+static CursorRange cursor_range_for(Document *doc, Cursor *cur) {
+    CursorRange range = {0};
+    range.has_selection = cur->has_selection;
+    if (cur->has_selection) {
+        cursor_normalize(cur, &range.sr, &range.sc, &range.er, &range.ec);
+    } else {
+        range.sr = range.er = cur->row;
+        range.sc = range.ec = cur->col;
+    }
+    range.start = buffer_pos_from_row_col(&doc->buffer, range.sr, range.sc);
+    range.end = buffer_pos_from_row_col(&doc->buffer, range.er, range.ec);
+    if (range.end < range.start) {
+        size_t tmp = range.start;
+        range.start = range.end;
+        range.end = tmp;
+    }
+    return range;
+}
+
+static void sort_cursor_ranges(CursorRange *ranges, int count) {
+    for (int i = 1; i < count; i++) {
+        CursorRange item = ranges[i];
+        int j = i - 1;
+        while (j >= 0 && ranges[j].start > item.start) {
+            ranges[j + 1] = ranges[j];
+            j--;
+        }
+        ranges[j + 1] = item;
+    }
+}
+
+static void set_cursor_from_range(Cursor *cur, const CursorRange *range) {
+    cursor_init(cur);
+    cursor_move_to(cur, range->sr, range->sc);
+    if (range->has_selection && range->end > range->start) {
+        cur->anchor_row = range->er;
+        cur->anchor_col = range->ec;
+        cur->has_selection = true;
+    }
+}
+
+static int collect_cursor_ranges(Document *doc, CursorRange *ranges, bool selections_only) {
+    document_clamp_cursor_count(doc);
+    int count = 0;
+    for (int i = 0; i < doc->cursor_count && count < MAX_CURSORS; i++) {
+        if (selections_only && !doc->cursors[i].has_selection)
+            continue;
+        ranges[count++] = cursor_range_for(doc, &doc->cursors[i]);
+    }
+    sort_cursor_ranges(ranges, count);
+    return count;
+}
+
+static int merge_cursor_ranges(CursorRange *ranges, int count, bool merge_touching) {
+    if (count <= 1) return count;
+    int out = 0;
+    for (int i = 0; i < count; i++) {
+        CursorRange item = ranges[i];
+        bool item_empty = item.end <= item.start;
+        if (out == 0) {
+            ranges[out++] = item;
+            continue;
+        }
+        CursorRange *prev = &ranges[out - 1];
+        bool prev_empty = prev->end <= prev->start;
+        bool duplicate_point = item_empty && prev_empty && item.start == prev->start;
+        bool overlaps = !item_empty && !prev_empty &&
+                        (merge_touching ? item.start <= prev->end : item.start < prev->end);
+        if (duplicate_point) {
+            continue;
+        }
+        if (overlaps) {
+            if (item.end > prev->end) {
+                prev->er = item.er;
+                prev->ec = item.ec;
+                prev->end = item.end;
+            }
+            prev->has_selection = true;
+            continue;
+        }
+        ranges[out++] = item;
+    }
+    return out;
+}
+
+static void document_replace_cursors_from_ranges(Document *doc, CursorRange *ranges, int count) {
+    if (!doc) return;
+    if (count < 1) {
+        doc->cursor_count = 1;
+        cursor_init(&doc->cursors[0]);
+        return;
+    }
+    if (count > MAX_CURSORS) count = MAX_CURSORS;
+    doc->cursor_count = count;
+    for (int i = 0; i < count; i++)
+        set_cursor_from_range(&doc->cursors[i], &ranges[i]);
+}
+
+static void document_normalize_cursors(Document *doc, bool merge_touching) {
+    CursorRange ranges[MAX_CURSORS];
+    int count = collect_cursor_ranges(doc, ranges, false);
+    count = merge_cursor_ranges(ranges, count, merge_touching);
+    document_replace_cursors_from_ranges(doc, ranges, count);
+}
+
+static size_t adjust_pos_after_deleted_ranges(size_t pos, CursorRange *deleted, int deleted_count) {
+    size_t removed_before = 0;
+    for (int i = 0; i < deleted_count; i++) {
+        size_t len = deleted[i].end - deleted[i].start;
+        if (pos >= deleted[i].end) {
+            removed_before += len;
+        } else if (pos >= deleted[i].start) {
+            return deleted[i].start - removed_before;
+        } else {
+            break;
+        }
+    }
+    return pos - removed_before;
+}
+
+static CursorRange cursor_point_range_from_pos(Document *doc, size_t pos) {
+    CursorRange range = {0};
+    buffer_row_col_from_pos(&doc->buffer, pos, &range.sr, &range.sc);
+    range.er = range.sr;
+    range.ec = range.sc;
+    range.start = pos;
+    range.end = pos;
+    range.has_selection = false;
+    return range;
+}
+
 static bool language_is_c_family(const char *lang) {
     return lang && (strcmp(lang, "c") == 0 || strcmp(lang, "cpp") == 0 ||
                     strcmp(lang, "objc") == 0 || strcmp(lang, "objcpp") == 0 ||
@@ -358,45 +555,23 @@ void document_delete_char(Document *doc) {
 
 void document_delete_selection(Document *doc) {
     if (!doc) return;
-    if (doc->cursor_count < 1) doc->cursor_count = 1;
-    if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
-
-    int order[MAX_CURSORS];
-    int count = 0;
-    for (int i = 0; i < doc->cursor_count; i++) {
-        if (doc->cursors[i].has_selection)
-            order[count++] = i;
-    }
+    CursorSnapshot before = {0};
+    document_capture_cursor_snapshot(doc, &before);
+    CursorRange all_ranges[MAX_CURSORS];
+    int all_count = collect_cursor_ranges(doc, all_ranges, false);
+    CursorRange ranges[MAX_CURSORS];
+    int count = collect_cursor_ranges(doc, ranges, true);
+    count = merge_cursor_ranges(ranges, count, true);
     if (count == 0) return;
 
     bool own_group = doc->history.active_group == 0 && count > 1;
     if (own_group)
         history_begin_group(&doc->history);
 
-    for (int i = 1; i < count; i++) {
-        for (int j = i; j > 0; j--) {
-            int ar, ac, ae_r, ae_c;
-            int br, bc, be_r, be_c;
-            cursor_normalize(&doc->cursors[order[j]], &ar, &ac, &ae_r, &ae_c);
-            cursor_normalize(&doc->cursors[order[j - 1]], &br, &bc, &be_r, &be_c);
-            size_t pa = buffer_pos_from_row_col(&doc->buffer, ar, ac);
-            size_t pb = buffer_pos_from_row_col(&doc->buffer, br, bc);
-            if (pa < pb) {
-                int tmp = order[j];
-                order[j] = order[j - 1];
-                order[j - 1] = tmp;
-            } else {
-                break;
-            }
-        }
-    }
-
     for (int i = count - 1; i >= 0; i--) {
-        Cursor *cur = &doc->cursors[order[i]];
-        int sr, sc, er, ec;
-        cursor_normalize(cur, &sr, &sc, &er, &ec);
-        size_t start = buffer_pos_from_row_col(&doc->buffer, sr, sc);
-        size_t end = buffer_pos_from_row_col(&doc->buffer, er, ec);
+        CursorRange *range = &ranges[i];
+        size_t start = range->start;
+        size_t end = range->end;
         if (end < start) continue;
         size_t len = end - start;
         char *deleted = len > 0 ? malloc(len) : NULL;
@@ -404,13 +579,30 @@ void document_delete_selection(Document *doc) {
             memcpy(deleted, doc->buffer.text + start, len);
         buffer_delete(&doc->buffer, start, len);
         if (len > 0 && deleted)
-            history_push_delete(&doc->history, start, deleted, len, sr, sc);
+            history_push_delete(&doc->history, start, deleted, len, range->sr, range->sc);
         free(deleted);
-        cursor_move_to(cur, sr, sc);
-        cursor_clear_selection(cur);
     }
-    if (own_group)
+    CursorRange final_ranges[MAX_CURSORS];
+    int final_count = 0;
+    for (int i = 0; i < count && final_count < MAX_CURSORS; i++) {
+        size_t pos = adjust_pos_after_deleted_ranges(ranges[i].start, ranges, count);
+        final_ranges[final_count++] = cursor_point_range_from_pos(doc, pos);
+    }
+    for (int i = 0; i < all_count && final_count < MAX_CURSORS; i++) {
+        if (all_ranges[i].has_selection)
+            continue;
+        size_t pos = adjust_pos_after_deleted_ranges(all_ranges[i].start, ranges, count);
+        final_ranges[final_count++] = cursor_point_range_from_pos(doc, pos);
+    }
+    sort_cursor_ranges(final_ranges, final_count);
+    final_count = merge_cursor_ranges(final_ranges, final_count, false);
+    document_replace_cursors_from_ranges(doc, final_ranges, final_count);
+    if (own_group) {
+        CursorSnapshot after = {0};
+        document_capture_cursor_snapshot(doc, &after);
+        document_attach_group_cursor_snapshot(doc, doc->history.active_group, &before, &after);
         history_end_group(&doc->history);
+    }
     document_mark_dirty(doc);
 }
 
@@ -677,18 +869,27 @@ void document_undo(Document *doc) {
     int group = e->group;
     int last_row = e->cursor_row;
     int last_col = e->cursor_col;
+    const Cursor *restore_cursors = e->before_cursors;
+    int restore_count = e->before_cursor_count;
     do {
         if (e->type == OP_INSERT) {
             buffer_delete(&doc->buffer, e->pos, e->len);
         } else {
             buffer_insert(&doc->buffer, e->pos, e->text, e->len);
         }
+        if (e->before_cursor_count > 0) {
+            restore_cursors = e->before_cursors;
+            restore_count = e->before_cursor_count;
+        }
         last_row = e->cursor_row;
         last_col = e->cursor_col;
         history_regress(&doc->history);
         e = history_peek_undo(&doc->history);
     } while (group && e && e->group == group);
-    cursor_move_to(cur, last_row, last_col);
+    if (restore_count > 0)
+        document_apply_cursor_snapshot(doc, restore_cursors, restore_count);
+    else
+        cursor_move_to(cur, last_row, last_col);
     document_mark_dirty(doc);
 }
 
@@ -698,20 +899,30 @@ void document_redo(Document *doc) {
     Cursor *cur = &doc->cursors[0];
     int group = e->group;
     size_t new_pos = e->pos;
+    const Cursor *restore_cursors = e->after_cursors;
+    int restore_count = e->after_cursor_count;
     do {
         if (e->type == OP_INSERT) {
             buffer_insert(&doc->buffer, e->pos, e->text, e->len);
         } else {
             buffer_delete(&doc->buffer, e->pos, e->len);
         }
+        if (e->after_cursor_count > 0) {
+            restore_cursors = e->after_cursors;
+            restore_count = e->after_cursor_count;
+        }
         new_pos = e->pos;
         if (e->type == OP_INSERT) new_pos += e->len;
         history_advance(&doc->history);
         e = history_peek_redo(&doc->history);
     } while (group && e && e->group == group);
-    int row, col;
-    buffer_row_col_from_pos(&doc->buffer, new_pos, &row, &col);
-    cursor_move_to(cur, row, col);
+    if (restore_count > 0) {
+        document_apply_cursor_snapshot(doc, restore_cursors, restore_count);
+    } else {
+        int row, col;
+        buffer_row_col_from_pos(&doc->buffer, new_pos, &row, &col);
+        cursor_move_to(cur, row, col);
+    }
     document_mark_dirty(doc);
 }
 
@@ -921,16 +1132,21 @@ void document_clear_cursors(Document *doc) {
         return;
     }
     Cursor primary = doc->cursors[0];
+    cursor_clear_selection(&primary);
     doc->cursor_count = 1;
     doc->cursors[0] = primary;
 }
 
 void document_insert_char_multi(Document *doc, char c) {
     if (!doc) return;
+    CursorSnapshot before = {0};
+    document_capture_cursor_snapshot(doc, &before);
     history_begin_group(&doc->history);
+    int group = doc->history.active_group;
     document_delete_selection(doc);
     if (doc->cursor_count < 1) doc->cursor_count = 1;
     if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
+    document_normalize_cursors(doc, false);
 
     /* Sort cursor indices by buffer position ascending, then iterate descending */
     int order[MAX_CURSORS];
@@ -946,11 +1162,21 @@ void document_insert_char_multi(Document *doc, char c) {
     /* Insert from highest position to lowest so earlier positions aren't invalidated */
     for (int i = doc->cursor_count - 1; i >= 0; i--) {
         Cursor *cur = &doc->cursors[order[i]];
+        int insert_row = cur->row;
+        int insert_col = cur->col;
         size_t pos = buffer_pos_from_row_col(&doc->buffer, cur->row, cur->col);
         buffer_insert(&doc->buffer, pos, &c, 1);
         history_push_insert(&doc->history, pos, &c, 1, cur->row, cur->col);
+        for (int j = i + 1; j < doc->cursor_count; j++) {
+            Cursor *other = &doc->cursors[order[j]];
+            if (other->row == insert_row && other->col > insert_col)
+                other->col++;
+        }
         cur->col++;
     }
+    CursorSnapshot after = {0};
+    document_capture_cursor_snapshot(doc, &after);
+    document_attach_group_cursor_snapshot(doc, group, &before, &after);
     history_end_group(&doc->history);
     document_mark_dirty(doc);
 }
@@ -959,14 +1185,23 @@ void document_delete_char_multi(Document *doc) {
     if (!doc) return;
     for (int i = 0; i < doc->cursor_count; i++) {
         if (doc->cursors[i].has_selection) {
+            CursorSnapshot before = {0};
+            document_capture_cursor_snapshot(doc, &before);
             history_begin_group(&doc->history);
+            int group = doc->history.active_group;
             document_delete_selection(doc);
+            CursorSnapshot after = {0};
+            document_capture_cursor_snapshot(doc, &after);
+            document_attach_group_cursor_snapshot(doc, group, &before, &after);
             history_end_group(&doc->history);
             return;
         }
     }
+    CursorSnapshot before = {0};
+    document_capture_cursor_snapshot(doc, &before);
     if (doc->cursor_count < 1) doc->cursor_count = 1;
     if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
+    document_normalize_cursors(doc, false);
 
     int order[MAX_CURSORS];
     for (int i = 0; i < doc->cursor_count; i++) order[i] = i;
@@ -979,6 +1214,7 @@ void document_delete_char_multi(Document *doc) {
         }
     }
     history_begin_group(&doc->history);
+    int group = doc->history.active_group;
     for (int i = doc->cursor_count - 1; i >= 0; i--) {
         Cursor *cur = &doc->cursors[order[i]];
         if (cur->row == 0 && cur->col == 0) continue;
@@ -994,14 +1230,20 @@ void document_delete_char_multi(Document *doc) {
             cur->col = len;
         }
     }
+    CursorSnapshot after = {0};
+    document_capture_cursor_snapshot(doc, &after);
+    document_attach_group_cursor_snapshot(doc, group, &before, &after);
     history_end_group(&doc->history);
     document_mark_dirty(doc);
 }
 
 void document_newline_multi(Document *doc) {
     if (!doc) return;
+    CursorSnapshot before = {0};
+    document_capture_cursor_snapshot(doc, &before);
     if (doc->cursor_count < 1) doc->cursor_count = 1;
     if (doc->cursor_count > MAX_CURSORS) doc->cursor_count = MAX_CURSORS;
+    document_normalize_cursors(doc, false);
 
     int order[MAX_CURSORS];
     for (int i = 0; i < doc->cursor_count; i++) order[i] = i;
@@ -1014,6 +1256,7 @@ void document_newline_multi(Document *doc) {
         }
     }
     history_begin_group(&doc->history);
+    int group = doc->history.active_group;
     for (int i = doc->cursor_count - 1; i >= 0; i--) {
         Cursor *cur = &doc->cursors[order[i]];
         char nl = '\n';
@@ -1022,7 +1265,12 @@ void document_newline_multi(Document *doc) {
         history_push_insert(&doc->history, pos, &nl, 1, cur->row, cur->col);
         cur->row++;
         cur->col = 0;
+        for (int j = i + 1; j < doc->cursor_count; j++)
+            doc->cursors[order[j]].row++;
     }
+    CursorSnapshot after = {0};
+    document_capture_cursor_snapshot(doc, &after);
+    document_attach_group_cursor_snapshot(doc, group, &before, &after);
     history_end_group(&doc->history);
     document_mark_dirty(doc);
 }
@@ -1360,12 +1608,17 @@ void document_dedent_selection(Document *doc) {
 }
 
 void document_collapse_selection(Document *doc) {
-    Cursor *cur = &doc->cursors[0];
-    if (!cur->has_selection) return;
-    int sr, sc, er, ec;
-    cursor_normalize(cur, &sr, &sc, &er, &ec);
-    cursor_move_to(cur, er, ec);
-    cursor_clear_selection(cur);
+    if (!doc) return;
+    document_clamp_cursor_count(doc);
+    for (int i = 0; i < doc->cursor_count; i++) {
+        Cursor *cur = &doc->cursors[i];
+        if (!cur->has_selection) continue;
+        int sr, sc, er, ec;
+        cursor_normalize(cur, &sr, &sc, &er, &ec);
+        cursor_move_to(cur, er, ec);
+        cursor_clear_selection(cur);
+    }
+    document_normalize_cursors(doc, false);
 }
 
 void document_keep_primary_selection(Document *doc) {
@@ -1692,8 +1945,16 @@ void document_shrink_to_line_bounds(Document *doc) {
 }
 
 void document_remove_primary_selection(Document *doc) {
-    Cursor *cur = &doc->cursors[0];
-    cursor_clear_selection(cur);
+    if (!doc) return;
+    document_clamp_cursor_count(doc);
+    if (doc->cursor_count <= 1) {
+        cursor_clear_selection(&doc->cursors[0]);
+        return;
+    }
+    for (int i = 1; i < doc->cursor_count; i++)
+        doc->cursors[i - 1] = doc->cursors[i];
+    doc->cursor_count--;
+    document_normalize_cursors(doc, false);
 }
 
 void document_goto_line_start(Document *doc) {
@@ -2033,13 +2294,29 @@ void document_split_selection_newlines(Document *doc) {
 }
 
 void document_merge_selections(Document *doc) {
-    Cursor *cur = &doc->cursors[0];
-    cursor_clear_selection(cur);
+    if (!doc) return;
+    document_clamp_cursor_count(doc);
+    if (doc->cursor_count <= 1) {
+        cursor_clear_selection(&doc->cursors[0]);
+        return;
+    }
+    CursorRange ranges[MAX_CURSORS];
+    int count = collect_cursor_ranges(doc, ranges, false);
+    count = merge_cursor_ranges(ranges, count, false);
+    document_replace_cursors_from_ranges(doc, ranges, count);
 }
 
 void document_merge_consecutive_selections(Document *doc) {
-    Cursor *cur = &doc->cursors[0];
-    cursor_clear_selection(cur);
+    if (!doc) return;
+    document_clamp_cursor_count(doc);
+    if (doc->cursor_count <= 1) {
+        cursor_clear_selection(&doc->cursors[0]);
+        return;
+    }
+    CursorRange ranges[MAX_CURSORS];
+    int count = collect_cursor_ranges(doc, ranges, false);
+    count = merge_cursor_ranges(ranges, count, true);
+    document_replace_cursors_from_ranges(doc, ranges, count);
 }
 
 void document_trim_whitespace(Document *doc) {

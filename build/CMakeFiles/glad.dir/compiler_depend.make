@@ -66,16 +66,14 @@ CMakeFiles/glad.dir/vendor/glad/src/glad.c.o: /home/xator/dragon/vendor/glad/src
   /usr/include/sys/cdefs.h \
   /usr/include/sys/select.h \
   /usr/include/sys/types.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h:
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h:
 
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h:
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h:
 
 /usr/include/sys/types.h:
 
@@ -168,6 +166,8 @@ CMakeFiles/glad.dir/vendor/glad/src/glad.c.o: /home/xator/dragon/vendor/glad/src
 /usr/include/bits/wordsize.h:
 
 /usr/include/bits/types/__locale_t.h:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h:
 
 /usr/include/bits/types/__mbstate_t.h:
 

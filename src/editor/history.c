@@ -69,6 +69,8 @@ static void push_entry(History *h, OpType type, size_t pos, const char *text,
     e->cursor_row = cursor_row;
     e->cursor_col = cursor_col;
     e->group = h->active_group;
+    e->before_cursor_count = 0;
+    e->after_cursor_count = 0;
     h->count++;
     h->current = h->count - 1;
 }

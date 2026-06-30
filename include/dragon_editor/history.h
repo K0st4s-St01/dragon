@@ -3,11 +3,14 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include "cursor.h"
 
 typedef enum {
     OP_INSERT,
     OP_DELETE,
 } OpType;
+
+#define HISTORY_CURSOR_MAX 64
 
 typedef struct {
     OpType  type;
@@ -17,6 +20,10 @@ typedef struct {
     int     cursor_row;
     int     cursor_col;
     int     group;
+    Cursor  before_cursors[HISTORY_CURSOR_MAX];
+    Cursor  after_cursors[HISTORY_CURSOR_MAX];
+    int     before_cursor_count;
+    int     after_cursor_count;
 } HistoryEntry;
 
 #define HISTORY_MAX 1024

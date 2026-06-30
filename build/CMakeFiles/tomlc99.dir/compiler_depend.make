@@ -50,23 +50,23 @@ CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: /home/xator/dragon/vendor/tomlc9
   /usr/include/stdlib.h \
   /usr/include/string.h \
   /usr/include/sys/cdefs.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h
 
 
 /usr/include/stdlib.h:
 
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdarg.h:
+
 /usr/include/stdio.h:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdbool.h:
 
 /usr/include/stdint.h:
 
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h:
-
 /usr/include/linux/errno.h:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h:
 
 /usr/include/gnu/stubs.h:
 
@@ -76,9 +76,9 @@ CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: /home/xator/dragon/vendor/tomlc9
 
 /usr/include/ctype.h:
 
-/usr/include/bits/waitstatus.h:
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stdint.h:
 
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h:
+/usr/include/bits/waitstatus.h:
 
 /usr/include/string.h:
 
@@ -95,8 +95,6 @@ CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: /home/xator/dragon/vendor/tomlc9
 /usr/include/bits/types/__mbstate_t.h:
 
 /usr/include/bits/errno.h:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdbool.h:
 
 /usr/include/bits/long-double.h:
 
@@ -135,6 +133,8 @@ CMakeFiles/tomlc99.dir/vendor/tomlc99/toml.c.o: /home/xator/dragon/vendor/tomlc9
 /usr/include/bits/types/__fpos64_t.h:
 
 /usr/include/bits/stdint-least.h:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16/include/stddef.h:
 
 /usr/include/bits/stdint-uintn.h:
 
